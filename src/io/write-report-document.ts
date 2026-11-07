@@ -543,14 +543,30 @@ class Writer {
       ...(section.listsExpenses ? [expenses] : []),
     ]
     let page = firstPage
-    const rows = section.documents.map((entry, index) => {
-      const count = sources[index]?.pageCount ?? 1
-      const pages = count === 1 ? String(page) : `${page}–${page + count - 1}`
-      page += count
-      return [entry.label, entry.document.name, pages, entry.expenseNumbers.join(', ')]
+    const pagesOf = new Map(
+      section.documents.map((entry, index) => {
+        const count = sources[index]?.pageCount ?? 1
+        const pages = count === 1 ? String(page) : `${page}–${page + count - 1}`
+        page += count
+        return [entry, pages] as const
+      }),
+    )
+    const groups =
+      section.subsections.length > 0
+        ? section.subsections
+        : [{ title: undefined, documents: section.documents }]
+    groups.forEach(({ title, documents }, index) => {
+      if (index > 0) flow.down(12)
+      if (title !== undefined) this.sectionHeading(flow, title)
+      const rows = documents.map((entry) => [
+        entry.label,
+        entry.document.name,
+        pagesOf.get(entry) ?? '',
+        entry.expenseNumbers.join(', '),
+      ])
+      this.table(flow, columns, rows)
+      flow.stopContinuing()
     })
-    this.table(flow, columns, rows)
-    flow.stopContinuing()
   }
 
   private copy(entry: LabelledDocument, source: Source): void {

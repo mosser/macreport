@@ -224,4 +224,30 @@ describe('layoutOf', () => {
     ])
     expect(layout.sections.at(-1)?.title).toBe('Bank statements')
   })
+
+  it('splits the additional documents of a business travel in two subsections, and of another report in none', () => {
+    const itinerary = new Document(Kind.additionalDocument, 'itinerary.pdf', new Uint8Array([5]))
+    const travel = layoutOf(report.afterChanging({ additionalDocuments: [itinerary] })).sections[0]
+    expect(
+      travel?.subsections.map(({ title, documents }) => [
+        title,
+        documents.map((entry) => entry.label),
+      ]),
+    ).toEqual([
+      ['Travel justifications', ['A1']],
+      ['Additional documents', ['A2']],
+    ])
+    const justified = layoutOf(report).sections[0]
+    expect(justified?.subsections.map((subsection) => subsection.title)).toEqual([
+      'Travel justifications',
+    ])
+    const elsewhere = report.afterChanging({
+      isBusinessTravel: false,
+      additionalDocuments: [itinerary],
+    })
+    const section = layoutOf(elsewhere).sections[0]
+    expect(section?.documents.map((entry) => entry.document)).toEqual([itinerary])
+    expect(section?.subsections).toEqual([])
+    expect(layoutOf(report).sections[1]?.subsections).toEqual([])
+  })
 })

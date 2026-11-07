@@ -512,6 +512,9 @@ describe('the wizard', () => {
     expect(continueButton()?.disabled).toBe(false)
     continueButton()?.click()
     expect(root.querySelector('h3')?.textContent).toBe('Additional documents')
+    expect([...root.querySelectorAll('h4')].map((heading) => heading.textContent)).toEqual([
+      'Travel justifications',
+    ])
     button('[data-step="0"]')?.click()
     tick('businessTravel', false)
     expect(kept.at(-1)?.travelJustifications).toEqual([])

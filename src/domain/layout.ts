@@ -55,14 +55,26 @@ export interface LabelledDocument {
   readonly expenses: readonly StampedExpense[]
 }
 
+/** A part of a section page, its documents under a subheading of their own. */
+export interface Subsection {
+  readonly title: string
+  readonly documents: readonly LabelledDocument[]
+}
+
 /** The part of the report document holding the documents of one kind. */
 export interface Section {
   readonly kind: Kind
   readonly title: string
   /** Whether its section page lists the expenses each document supports. */
   readonly listsExpenses: boolean
+  /** Its documents, in order. */
   readonly documents: readonly LabelledDocument[]
+  /** How its section page splits its documents under subheadings; none when it does not. */
+  readonly subsections: readonly Subsection[]
 }
+
+/** The subheading of the travel justifications, in the section of additional documents. */
+const travelJustificationsTitle = 'Travel justifications'
 
 /** What the report document holds, worked out from a report without findings. */
 export interface Layout {
@@ -94,10 +106,7 @@ export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
   const expenses = [...report.expenses].sort(byDate)
   const sections = [
-    sectionOfReport(Kind.additionalDocument, [
-      ...report.travelJustifications,
-      ...report.additionalDocuments,
-    ]),
+    sectionOfAdditionalDocuments(report),
     sectionOf(Kind.receipt, expenses),
     sectionOf(Kind.bankStatement, expenses),
   ].filter((section) => section.documents.length > 0)
@@ -216,25 +225,33 @@ function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
     expenseNumbers: stamped.map((expense) => expense.number),
     expenses: stamped,
   }))
-  return { kind, title: kind.plural, listsExpenses: true, documents }
+  return { kind, title: kind.plural, listsExpenses: true, documents, subsections: [] }
 }
 
 /**
  * The section of the documents of the report as a whole: the travel justifications, then the
- * other additional documents, each in the order they were added.
+ * other additional documents, each in the order they were added. Of a business travel, its
+ * section page lists them in two subsections, Travel justifications then Additional documents,
+ * a subsection without documents left out.
  */
-function sectionOfReport(kind: Kind, documents: readonly Document[]): Section {
-  return {
-    kind,
-    title: kind.plural,
-    listsExpenses: false,
-    documents: documents.map((document, rank) => ({
+function sectionOfAdditionalDocuments(report: Report): Section {
+  const kind = Kind.additionalDocument
+  const documents = [...report.travelJustifications, ...report.additionalDocuments].map(
+    (document, rank) => ({
       label: `${kind.letter}${rank + 1}`,
       document,
       expenseNumbers: [],
       expenses: [],
-    })),
-  }
+    }),
+  )
+  const count = report.travelJustifications.length
+  const subsections = report.isBusinessTravel
+    ? [
+        { title: travelJustificationsTitle, documents: documents.slice(0, count) },
+        { title: kind.plural, documents: documents.slice(count) },
+      ].filter((subsection) => subsection.documents.length > 0)
+    : []
+  return { kind, title: kind.plural, listsExpenses: false, documents, subsections }
 }
 
 /** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */

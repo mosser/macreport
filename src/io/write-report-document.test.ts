@@ -368,6 +368,12 @@ describe('writeReportDocument', () => {
       ]),
     )
     expect(additional).not.toContain('Expenses')
+    const at = (text: string, from = 0) => additional?.indexOf(text, from) ?? -1
+    const others = at('Additional documents', 1)
+    expect(at('Travel justifications')).toBeGreaterThan(at('Additional documents'))
+    expect(at('A1')).toBeGreaterThan(at('Travel justifications'))
+    expect(others).toBeGreaterThan(at('A1'))
+    expect(at('A2')).toBeGreaterThan(others)
     expect(justification).toEqual(['A1 · 3 / 9'])
     expect(itineraryPage).toEqual(['Itinerary', 'A2 · 4 / 9'])
     expect(receipts).toEqual(expect.arrayContaining(['Receipts', 'R1']))

@@ -88,7 +88,11 @@ The title of the section, then a table of its documents:
 
 Pages are the pages of the report document. Missing receipt authorizations
 have no name: the column shows the expense's description. The Expenses column
-is left out of the section of additional documents.
+is left out of the section of additional documents. Of a business travel,
+that section page splits its table in two subsections, each under its
+subheading and with its own header: *Travel justifications*, then
+*Additional documents*; a subsection without documents is left out. The
+labels run on from one to the other.
 
 The table continues on the next page when it does not fit, its header
 repeated, as the cover's does. Those pages are all section pages: each is
