@@ -30,16 +30,18 @@ is shown with that rule, and kept once it does.
 | Field | Rule |
 |---|---|
 | Name of claimant | Required. |
-| Position or title | Required. |
+| Position | Required, one of Faculty, Student, Staff, Visitor. |
 | Email | Required, an email address. |
 | Extension | Optional. Written on missing receipt authorizations. |
-| I am a student | When ticked, two more fields are required: **Supervisor**, the supervisor's name, and **Supervisor's email**, an email address. |
+| Supervisor, supervisor's email | Asked of a Student, and then required: the supervisor's name, and an email address. |
+| Host, host's email | Asked of a Visitor, and then required: the host's name, and an email address. |
 | Event | Required. |
 | First day of the event | Required, a calendar date. |
 | Last day of the event | Required, a calendar date, not before the first day. |
 | Account | Required, free text. |
 
-Continue is offered once every required field is valid.
+Choosing another position takes the supervisor or the host out of the
+report. Continue is offered once every required field is valid.
 
 ### 2. Expenses
 
