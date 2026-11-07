@@ -318,9 +318,7 @@ describe('the wizard', () => {
       })
       root.querySelector(`[data-drop="${field}"]`)?.dispatchEvent(drop)
       await vi.waitFor(() =>
-        expect(
-          root.querySelector(`[data-drop="${field}"]`)?.closest('.field')?.textContent,
-        ).toContain(fileName),
+        expect(root.querySelector(`[data-field="${field}"]`)?.textContent).toContain(fileName),
       )
     }
     const elsewhere = new Event('drop', { bubbles: true, cancelable: true })
@@ -446,14 +444,17 @@ describe('the wizard', () => {
     fillReport()
     continueButton()?.click()
     await fillExpense()
+    expect(root.querySelector('[data-drop="receipts"]')).toBeNull()
+    expect(root.querySelector('[data-drop="bankStatements"]')).toBeNull()
     const remove = button('[data-remove="receipts"][data-index="0"]')
     expect(remove?.getAttribute('aria-label')).toBe('Remove')
     expect(remove?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
     remove?.click()
     expect(kept.at(-1)?.expenses[0]?.receipts).toEqual([])
-    expect(
-      root.querySelector('[data-drop="receipts"]')?.closest('.field')?.textContent,
-    ).not.toContain('air-canada.pdf')
+    expect(root.querySelector('[data-drop="receipts"]')).not.toBeNull()
+    expect(root.querySelector('[data-field="receipts"]')?.textContent).not.toContain(
+      'air-canada.pdf',
+    )
     expect(continueButton()?.disabled).toBe(true)
     button('[data-remove="bankStatements"][data-index="0"]')?.click()
     expect(kept.at(-1)?.expenses[0]?.bankStatements).toEqual([])
@@ -471,6 +472,7 @@ describe('the wizard', () => {
     expect(continueButton()?.disabled).toBe(false)
     await add('additionalDocuments', 'itinerary.pdf')
     await add('additionalDocuments', 'poster.png')
+    expect(root.querySelector('[data-drop="additionalDocuments"]')).not.toBeNull()
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
       'itinerary',
       'poster',

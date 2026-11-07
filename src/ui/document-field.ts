@@ -13,6 +13,8 @@ export type ReadFile = (file: File, kind: Kind) => Promise<Document>
 export interface DocumentField {
   readonly field: Field
   readonly kind: Kind
+  /** Whether the field holds one document at most: once it has one, no other can be added. */
+  readonly holdsOneDocument: boolean
   /** The documents of the field, in the order they were added. */
   documentsIn(report: Report): readonly Document[]
   /** The report, with a document added to the field. */
@@ -41,7 +43,10 @@ function documentItem(field: DocumentField, document: Document, index: number): 
   </li>`
 }
 
-/** A zone a file is dropped on, or clicked to choose one, then the documents added, each named. */
+/**
+ * The documents added to a field, each named, then a zone a file is dropped on, or clicked to
+ * choose one; a field that holds one document at most shows no zone once it has it.
+ */
 export function documentFieldOf(field: DocumentField, report: Report): Markup {
   const name = field.field
   const documents = field.documentsIn(report)
@@ -49,15 +54,19 @@ export function documentFieldOf(field: DocumentField, report: Report): Markup {
     documents.length > 0
       ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, document, index))}</ul>`
       : ''
-  return html`<div class="field">
+  const isFull = field.holdsOneDocument && documents.length > 0
+  const zone = isFull
+    ? ''
+    : html`<label class="drop-zone" data-drop="${name}">
+        <input name="${name}" type="file" accept="${accepted}"
+          aria-labelledby="name-of-${name} content-of-${name}" />
+        <span id="content-of-${name}">Drop a file here, or choose one</span>
+      </label>
+      ${fieldRule(name)}`
+  return html`<div class="field" data-field="${name}">
     ${fieldName(name)}
-    <label class="drop-zone" data-drop="${name}">
-      <input name="${name}" type="file" accept="${accepted}"
-        aria-labelledby="name-of-${name} content-of-${name}" />
-      <span id="content-of-${name}">Drop a file here, or choose one</span>
-    </label>
-    ${fieldRule(name)}
     ${list}
+    ${zone}
   </div>`
 }
 
