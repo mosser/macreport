@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Document } from '../domain/document.ts'
 import type { Kind } from '../domain/kind.ts'
@@ -408,16 +409,25 @@ describe('the wizard', () => {
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
       'statement (2)',
     ])
+    const style = document.createElement('style')
+    style.textContent = readFileSync('src/style.css', 'utf8')
+    document.head.append(style)
     const rule = () => root.querySelector<HTMLElement>('[data-name-taken="additionalDocuments-0"]')
-    expect(rule()?.hidden).toBe(true)
+    const isShown = () => {
+      const element = rule()
+      return element !== null && getComputedStyle(element).display !== 'none'
+    }
+    expect(isShown()).toBe(false)
+    expect(root.querySelectorAll('.error:not([hidden])')).toHaveLength(0)
     expect(continueButton()?.disabled).toBe(false)
     type('documentName', 'AIR-CANADA')
-    expect(rule()?.hidden).toBe(false)
+    expect(isShown()).toBe(true)
     expect(rule()?.textContent).toBe('Another document already has this name.')
     expect(continueButton()?.disabled).toBe(true)
     type('documentName', 'Itinerary')
-    expect(rule()?.hidden).toBe(true)
+    expect(isShown()).toBe(false)
     expect(continueButton()?.disabled).toBe(false)
+    style.remove()
   })
 
   it('adds files in the order they were given, however long each takes to read', async () => {

@@ -91,6 +91,7 @@ describe('the draft store', () => {
     ])
     expect(restored.expenses[0]?.bankStatements[0]?.name).toBe('Visa, October')
     expect(restored.expenses[0]?.receipts[0]?.name).toBe('reçu')
+    expect(restored.documents.filter((document) => restored.isNameTaken(document))).toEqual([])
   })
 
   it('keeps every document when a change is kept before the one before it has finished', async () => {
