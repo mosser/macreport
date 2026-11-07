@@ -1,0 +1,17 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+.scannerwork/
+*.local
+*.log
+
+# Only package-lock.json is committed (ADR 0001)
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
+# Reference forms filled in with personal data, a signature among them:
+# kept next to the specification for reading, never committed.
+docs/_*.pdf
