@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { Amount } from './amount.ts'
 import { CalendarDate } from './calendar-date.ts'
+import { Currency } from './currency.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import {
+  alreadyInReportWording,
+  claimedAmountInAnotherCurrencyRule,
+  fieldRules,
   findingsOf,
   findingsOfAdditionalDocumentsStep,
   findingsOfExpensesStep,
   findingsOfReportStep,
   isRequired,
+  missingFieldsOf,
+  requiredWording,
 } from './findings.ts'
 import { Kind } from './kind.ts'
 import { Report } from './report.ts'
@@ -95,6 +101,40 @@ describe('findings of the Expenses step', () => {
     expect(wordings(findingsOfExpensesStep(complete.afterAdding(taxi)))).toEqual([
       'Expense 2026-10-05, Taxi: Bank statement is required.',
     ])
+  })
+
+  it('asks an expense paid in another currency for its foreign amount and currency, not its claimed amount', () => {
+    const paid = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      isPaidInAnotherCurrency: true,
+      receipts: [new Document(Kind.receipt, 'taxi.pdf', new Uint8Array())],
+      bankStatements: [new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array())],
+    })
+    expect(wordings(findingsOfExpensesStep(complete.afterAdding(paid)))).toEqual([
+      'Expense 2026-10-05, Taxi: Foreign amount is required.',
+      'Expense 2026-10-05, Taxi: Currency is required.',
+    ])
+    expect(missingFieldsOf(paid)).toEqual(['foreignAmount', 'currency'])
+    const withForeignAmount = paid.afterChanging({
+      foreignAmount: new Amount(5500),
+      currency: Currency.parse('EUR'),
+    })
+    expect(findingsOfExpensesStep(complete.afterAdding(withForeignAmount))).toEqual([])
+    expect(isRequired('claimedAmount', paid)).toBe(false)
+    expect(isRequired('claimedAmount', new Expense())).toBe(true)
+    expect(isRequired('paidInAnotherCurrency')).toBe(false)
+  })
+
+  it('words the statuses and rules of an expense exactly', () => {
+    expect(requiredWording('receipts')).toBe('Receipt is required.')
+    const visa = new Document(Kind.bankStatement, 'scan.pdf', new Uint8Array(), 'Visa, October')
+    expect(alreadyInReportWording(visa)).toBe('Already in the report, as Visa, October: chosen.')
+    expect(fieldRules.currency).toBe('A three-letter ISO 4217 code, other than CAD.')
+    expect(fieldRules.foreignAmount).toBe('More than zero, at most two decimals.')
+    expect(claimedAmountInAnotherCurrencyRule).toBe(
+      'In Canadian dollars, more than zero, at most two decimals; left empty, McSCert works it out.',
+    )
   })
 
   it('gathers the findings of every step', () => {

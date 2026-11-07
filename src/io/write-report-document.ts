@@ -417,7 +417,7 @@ class Writer {
       }
       this.documentsLine(flow, row.supportingDocuments, columns)
     }
-    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, ''], this.bold)
+    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total.join('\n'), ''], this.bold)
     flow.stopContinuing()
   }
 

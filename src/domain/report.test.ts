@@ -78,6 +78,34 @@ describe('Report', () => {
     expect(report.afterReplacing(expense, replacement).expenses).toEqual([replacement])
   })
 
+  it('removes an expense, and with it the documents no other expense refers to', () => {
+    const visa = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1]))
+    const taxi = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([2]))
+    const train = new Document(Kind.receipt, 'train.pdf', new Uint8Array([3]))
+    const first = new Expense({ receipts: [taxi], bankStatements: [visa] })
+    const second = new Expense({ receipts: [train], bankStatements: [visa] })
+    const report = new Report().afterAdding(first).afterAdding(second)
+    expect(report.documentsOf(Kind.receipt)).toEqual([taxi, train])
+    expect(report.documentsOf(Kind.bankStatement)).toEqual([visa])
+    expect(report.documentsLeavingWith(first)).toEqual([taxi])
+    const removed = report.afterRemovingExpense(first)
+    expect(removed.expenses).toEqual([second])
+    expect(removed.documents).toEqual([train, visa])
+    expect(removed.documentsLeavingWith(second)).toEqual([train, visa])
+    expect(removed.afterRemovingExpense(second).documents).toEqual([])
+  })
+
+  it('finds the document of the same kind and content as a file added again', () => {
+    const visa = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1, 2]))
+    const report = new Report().afterAdding(new Expense({ bankStatements: [visa] }))
+    const again = new Document(Kind.bankStatement, 'copy.pdf', new Uint8Array([1, 2]))
+    expect(report.documentLike(again)).toBe(visa)
+    const asReceipt = new Document(Kind.receipt, 'visa.pdf', new Uint8Array([1, 2]))
+    expect(report.documentLike(asReceipt)).toBeUndefined()
+    const other = new Document(Kind.bankStatement, 'other.pdf', new Uint8Array([3]))
+    expect(report.documentLike(other)).toBeUndefined()
+  })
+
   it('keeps only the claimant for a new report', () => {
     const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
     const report = new Report({
@@ -133,7 +161,7 @@ describe('Report', () => {
     expect(named.travelJustifications).toEqual([invitation])
     const programme = named.afterRenaming(invitation, 'Programme').travelJustifications[0]
     expect(programme?.name).toBe('Programme')
-    const removed = report.afterRemoving(poster).afterRemoving(statement)
+    const removed = report.afterRemovingDocument(poster).afterRemovingDocument(statement)
     expect(removed.additionalDocuments).toEqual([])
     expect(removed.expenses[0]?.bankStatements).toEqual([])
     expect(removed.travelJustifications).toEqual([invitation])

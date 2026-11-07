@@ -32,6 +32,16 @@ export class Document {
     this.content = content
   }
 
+  /** Whether the other document has the same content, byte for byte, whatever its name. */
+  hasSameContentAs(other: Document): boolean {
+    const { content } = this
+    return (
+      content === other.content ||
+      (content.length === other.content.length &&
+        content.every((byte, index) => byte === other.content[index]))
+    )
+  }
+
   /** The same document, named otherwise; a name left empty is the file name, without extension. */
   afterNaming(name: string): Document {
     return new Document(this.kind, this.fileName, this.content, name)

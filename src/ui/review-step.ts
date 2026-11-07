@@ -44,7 +44,7 @@ function coverOf(layout: Layout, linkOf: LinkOf): Markup {
       <thead><tr>
         <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th>
       </tr></thead>
-      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total}</td></tr></tbody>
+      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total.map((line) => html`<div>${line}</div>`)}</td></tr></tbody>
     </table>`
 }
 

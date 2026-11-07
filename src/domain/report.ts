@@ -187,13 +187,38 @@ export class Report {
     })
   }
 
+  /**
+   * The same report, without one of its expenses: a receipt or a bank statement no other expense
+   * refers to leaves the report with it.
+   */
+  afterRemovingExpense(expense: Expense): Report {
+    const expenses = this.expenses.filter((claimed) => claimed !== expense)
+    return new Report({ ...this.fields(), expenses })
+  }
+
+  /** The receipts and bank statements that leave the report with an expense removed. */
+  documentsLeavingWith(expense: Expense): readonly Document[] {
+    const kept = new Set(this.afterRemovingExpense(expense).documents)
+    return [...new Set(expense.documents)].filter((document) => !kept.has(document))
+  }
+
+  /** The documents of a kind in the report, each once, in the order of the steps. */
+  documentsOf(kind: Kind): readonly Document[] {
+    return this.documents.filter((document) => document.kind === kind)
+  }
+
+  /** The document of the report of the same kind and content as the one given, if there is one. */
+  documentLike(document: Document): Document | undefined {
+    return this.documentsOf(document.kind).find((other) => other.hasSameContentAs(document))
+  }
+
   /** The same report, with a document named otherwise wherever it is. */
   afterRenaming(document: Document, name: string): Report {
     return this.afterReplacingDocument(document, [document.afterNaming(name)])
   }
 
   /** The same report, without a document: no expense refers to it, nor is it of the report. */
-  afterRemoving(document: Document): Report {
+  afterRemovingDocument(document: Document): Report {
     return this.afterReplacingDocument(document, [])
   }
 

@@ -179,7 +179,7 @@ export function listenToDocumentFields(
     button.addEventListener('click', () => {
       const document = documentOf(button)
       if (document === undefined) return
-      context.change(context.report.afterRemoving(document))
+      context.change(context.report.afterRemovingDocument(document))
       context.refresh()
     })
   }

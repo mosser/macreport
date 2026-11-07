@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Amount } from './amount.ts'
 import { CalendarDate } from './calendar-date.ts'
+import { Currency } from './currency.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
@@ -119,7 +120,36 @@ describe('layoutOf', () => {
         ],
       },
     ])
-    expect(layout.total).toBe('$1,012.35')
+    expect(layout.total).toEqual(['$1,012.35'])
+  })
+
+  it('totals the claimed amounts, then, by currency, the foreign amounts of the expenses without one', () => {
+    const euro = Currency.parse('EUR')
+    const yen = Currency.parse('JPY')
+    const paid = (cents: number, currency: Currency | undefined, claimed?: Amount) =>
+      flight.afterChanging({
+        isPaidInAnotherCurrency: true,
+        foreignAmount: new Amount(cents),
+        currency,
+        claimedAmount: claimed,
+      })
+    const layout = layoutOf(
+      report
+        .afterAdding(paid(5500, euro))
+        .afterAdding(paid(300000, yen))
+        .afterAdding(paid(1000, euro))
+        .afterAdding(paid(64000, euro, new Amount(8710))),
+    )
+    expect(layout.expenses.map((row) => [row.foreignAmount, row.claimedAmount])).toEqual([
+      ['', '$1,012.35'],
+      ['EUR 55.00', ''],
+      ['JPY 3,000.00', ''],
+      ['EUR 10.00', ''],
+      ['EUR 640.00', '$87.10'],
+    ])
+    expect(layout.total).toEqual(['$1,099.45', 'EUR 65.00', 'JPY 3,000.00'])
+    const foreignOnly = report.afterReplacing(flight, paid(5500, euro))
+    expect(layoutOf(foreignOnly).total).toEqual(['EUR 55.00'])
   })
 
   it('names a document as the Claimant named it, on the cover', () => {
@@ -220,7 +250,7 @@ describe('layoutOf', () => {
       [1, 'Taxi', ['R1', 'S1']],
       [2, 'Air Canada, YYZ–CDG return', ['R2', 'S1']],
     ])
-    expect(layout.total).toBe('$1,099.45')
+    expect(layout.total).toEqual(['$1,099.45'])
     expect(layout.sections[2]?.documents).toEqual([
       {
         label: 'S1',

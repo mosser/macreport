@@ -2,6 +2,7 @@ import { IDBFactory } from 'fake-indexeddb'
 import { describe, expect, it } from 'vitest'
 import { Amount } from '../domain/amount.ts'
 import { CalendarDate } from '../domain/calendar-date.ts'
+import { Currency } from '../domain/currency.ts'
 import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
@@ -142,6 +143,35 @@ describe('the draft store', () => {
     expect(await keysOf()).toEqual(before)
   })
 
+  it('keeps several expenses, their foreign amounts, and a bank statement they share once', async () => {
+    const factory = new IDBFactory()
+    const taxi = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      isPaidInAnotherCurrency: true,
+      foreignAmount: new Amount(5500),
+      currency: Currency.parse('EUR'),
+      bankStatements: [statement],
+    })
+    const half = new Expense({ isPaidInAnotherCurrency: true, currency: Currency.parse('JPY') })
+    await (await openDraftStore(factory)).keep(report.afterAdding(taxi).afterAdding(half))
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.foreignAmountText)).toEqual([
+      '',
+      'EUR 55.00',
+      '',
+    ])
+    expect(restored.expenses.map((expense) => expense.isPaidInAnotherCurrency)).toEqual([
+      false,
+      true,
+      true,
+    ])
+    expect(restored.expenses[1]?.claimedAmount).toBeUndefined()
+    expect(restored.expenses[2]?.currency?.code).toBe('JPY')
+    expect(restored.expenses[1]?.bankStatements[0]).toBe(restored.expenses[0]?.bankStatements[0])
+    expect(restored.documents).toHaveLength(2)
+  })
+
   it('keeps a report half-done, and deletes a document no expense refers to any more', async () => {
     const factory = new IDBFactory()
     const store = await openDraftStore(factory)
@@ -210,6 +240,8 @@ describe('the draft store', () => {
         expenses: [
           { claimedAmount: -3, receipts: ['a', 'b', 'e', 'missing'], bankStatements: 'b' },
           'not an expense',
+          { isPaidInAnotherCurrency: 'yes', foreignAmount: 5500, currency: 'EUR' },
+          { isPaidInAnotherCurrency: true, foreignAmount: 1.5, currency: 'CAD' },
         ],
       },
       {
@@ -225,7 +257,13 @@ describe('the draft store', () => {
     expect(restored.position).toBeUndefined()
     expect(restored.email).toBeUndefined()
     expect(restored.firstDay).toBeUndefined()
-    expect(restored.expenses).toHaveLength(2)
+    expect(restored.expenses).toHaveLength(4)
+    expect(restored.expenses[2]?.isPaidInAnotherCurrency).toBe(false)
+    expect(restored.expenses[2]?.foreignAmount).toBeUndefined()
+    expect(restored.expenses[2]?.currency).toBeUndefined()
+    expect(restored.expenses[3]?.isPaidInAnotherCurrency).toBe(true)
+    expect(restored.expenses[3]?.foreignAmount).toBeUndefined()
+    expect(restored.expenses[3]?.currency).toBeUndefined()
     expect(restored.expenses[0]?.claimedAmount).toBeUndefined()
     expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual(['a.pdf'])
     expect(restored.expenses[0]?.receipts[0]?.name).toBe('a')
