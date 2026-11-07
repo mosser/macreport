@@ -35,6 +35,14 @@ Options considered for the library:
 - **`@cantoo/pdf-lib`.** A fork of pdf-lib with the same API, maintained and
   released through 2026, MIT.
 
+Options considered for the font engine, which pdf-lib needs to embed a font:
+
+- **`@pdf-lib/fontkit`**, pdf-lib's own, last released in 2021. The fork
+  takes it for the newer engine and calls its subsetter the newer way, which
+  fails: with it, a font can only be embedded whole.
+- **`@cantoo/fontkit`**, the fork's companion, based on fontkit 2, MIT, and
+  the engine the fork recommends.
+
 Options considered for the fonts:
 
 - **The standard Helvetica.** Nothing to embed; refuses common European names.
@@ -47,7 +55,7 @@ Options considered for the fonts:
 ## Decision
 
 - **`@cantoo/pdf-lib`**, exact-pinned, is the only PDF library, with
-  **`@pdf-lib/fontkit`**, exact-pinned, to embed fonts. Both are used in
+  **`@cantoo/fontkit`**, exact-pinned, to embed fonts. Both are used in
   `src/io/` only: `src/domain/` and `src/ui/` never import them.
 - **Reading** a PDF document checks that it opens, that it is not protected by
   a password, and counts its pages. A protected PDF is refused when added, with
@@ -95,7 +103,7 @@ Options considered for the fonts:
 
 A change is compliant with this ADR when:
 
-- `@cantoo/pdf-lib` and `@pdf-lib/fontkit` are the only PDF libraries in
+- `@cantoo/pdf-lib` and `@cantoo/fontkit` are the only PDF libraries in
   `package.json`, exact-pinned;
 - only files under `src/io/` import them;
 - the report document writer takes its order, labels, numbers, totals and
