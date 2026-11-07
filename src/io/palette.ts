@@ -14,15 +14,17 @@ export interface Palette {
   readonly rule: Colour
 }
 
-const hexColour = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i
+/** A hexadecimal colour, in its long form or in the short form a minifier writes. */
+const hexColour = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i
 
 function colourOf(token: string, value: string): Colour {
-  const match = hexColour.exec(value.trim())
-  if (match === null) {
+  const digits = hexColour.exec(value.trim())?.[1]
+  if (digits === undefined) {
     throw new TypeError(`The palette token ${token} is not a colour: '${value}'`)
   }
-  const channel = (hex: string | undefined) => Number.parseInt(hex ?? '0', 16) / 255
-  return { red: channel(match[1]), green: channel(match[2]), blue: channel(match[3]) }
+  const long = digits.length === 3 ? [...digits].map((digit) => digit + digit).join('') : digits
+  const channel = (start: number) => Number.parseInt(long.slice(start, start + 2), 16) / 255
+  return { red: channel(0), green: channel(2), blue: channel(4) }
 }
 
 /**

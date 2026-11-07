@@ -17,6 +17,14 @@ describe('paletteFrom', () => {
     expect(palette.black).toEqual({ red: 0, green: 0, blue: 0 })
   })
 
+  it('reads the tokens as the build writes them, shortened where each channel is a pair', () => {
+    const shortened = (hex: string) =>
+      /^#(.)\1(.)\2(.)\3$/i.test(hex) ? `#${hex[1]}${hex[3]}${hex[5]}` : hex
+    const read = (token: string) => tokens.get(token) ?? ''
+    expect(shortened(read('--mac-black'))).toHaveLength(4)
+    expect(paletteFrom((token) => shortened(read(token)))).toEqual(paletteFrom(read))
+  })
+
   it('refuses a token that is not a colour', () => {
     expect(() => paletteFrom(() => 'maroon')).toThrow(TypeError)
   })
