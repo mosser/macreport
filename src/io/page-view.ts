@@ -25,8 +25,7 @@ export interface PageView {
 
 /** A rotation in degrees, any multiple of 90, as one of the four quarter turns. */
 export function rotationOf(degrees: number): Rotation {
-  const quarter = ((((Math.round(degrees / 90) * 90) % 360) + 360) % 360) as Rotation
-  return quarter
+  return ((((Math.round(degrees / 90) * 90) % 360) + 360) % 360) as Rotation
 }
 
 /** How a page with this crop box and rotation shows on screen. */
