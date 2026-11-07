@@ -34,12 +34,14 @@ git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null && die "the tag $tag 
 [ -z "$(git ls-remote --tags origin "refs/tags/$tag")" ] || die "the tag $tag already exists on origin"
 gh release view "$tag" >/dev/null 2>&1 && die "the GitHub release $tag already exists"
 bash scripts/release-notes.sh "$version" >/dev/null 2>&1 && die "CHANGELOG.md already has a section [$version]"
-current=$(node -p "require('./package.json').version")
-node -e '
-const [next, current] = process.argv.slice(1).map((v) => v.split(".").map(Number))
-const order = next.map((part, i) => part - current[i]).find((d) => d !== 0) ?? 0
+latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
+if [ -n "$latest" ]; then
+  node -e '
+const [next, latest] = process.argv.slice(1).map((v) => v.split(".").map(Number))
+const order = next.map((part, i) => part - latest[i]).find((d) => d !== 0) ?? 0
 process.exit(order > 0 ? 0 : 1)
-' "$version" "$current" || die "$version is not higher than the current version $current"
+' "$version" "${latest#v}" || die "$version is not higher than the latest release $latest"
+fi
 
 # Something to release.
 bash scripts/release-notes.sh Unreleased >/dev/null || die "nothing to release"
@@ -52,7 +54,7 @@ undo() {
 }
 trap 'echo "release: failed, main is back at ${start:0:7}" >&2; undo' ERR
 
-npm version "$version" --no-git-tag-version >/dev/null
+npm version "$version" --no-git-tag-version --allow-same-version >/dev/null
 today=$(date +%Y-%m-%d)
 awk -v section="## [$version] - $today" '
   !done && $0 == "## [Unreleased]" { print; print ""; print section; done = 1; next }

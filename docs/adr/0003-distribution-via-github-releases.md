@@ -42,7 +42,7 @@ Both come from `.github/workflows/release.yml`.
 
 - **Cutting a release.** `scripts/release.sh vX.Y.Z`, run on an up-to-date,
   clean `main`, is the only way to start one. It refuses a version that is not
-  `vX.Y.Z`, that is not higher than the current one, or that already exists as
+  `vX.Y.Z`, that is not higher than the latest release, or that already exists as
   a tag (locally or on `origin`), as a GitHub release, or as a section of
   `CHANGELOG.md`; and it refuses an empty `[Unreleased]` section. It sets the
   version in `package.json` and `package-lock.json`, renames `[Unreleased]` to
