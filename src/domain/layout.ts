@@ -277,7 +277,11 @@ function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
  * characters, an ellipsis when it is longer.
  */
 function cut(text: string): string {
-  const characters = [...text.replace(/\s*\n\s*/g, ' ')]
+  const oneLine = text
+    .split('\n')
+    .map((line) => line.trim())
+    .join(' ')
+  const characters = [...oneLine]
   return characters.length > stampedDescriptionLength
     ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
     : characters.join('')
