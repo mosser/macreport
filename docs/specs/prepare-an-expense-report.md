@@ -20,7 +20,10 @@ on an empty report.
 
 The steps follow one another; Back returns to the previous one, and the
 stepper lets the Claimant go back to any step already reached. Every change is
-kept in the draft as soon as it is made.
+kept in the draft as soon as it is made, incomplete as it may be: a required
+field left empty, an expense whose receipt is still to come. What a field
+needs is shown next to it; a value typed that does not follow its field's rule
+is shown with that rule, and kept once it does.
 
 ### 1. Report
 
@@ -81,10 +84,13 @@ whatever its name says. It is refused, with the reason, when it is:
 - damaged, or a PDF without pages;
 - a PDF protected by a password.
 
-A file already in the report, with the same content, is not added twice:
-added from an expense as a receipt or a bank statement, the document already
-there is chosen; added as an additional document, it is refused, naming the
-document it already is. Adding several files at once handles each on its own.
+A file already in the report, with the same content, is not added twice. Added
+from an expense as a receipt or a bank statement when it is already a
+document of that same kind, the document already there is chosen. Otherwise,
+already a document of another kind or added again as an additional document,
+it is refused, naming the document it already is, by its kind and its file
+name: a document has one kind. Adding several files at once handles each on
+its own.
 
 ### 4. Review
 
@@ -102,10 +108,13 @@ pages. Then the findings, if any.
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as
 `expense-report-<first day of the event>-<claimant>.pdf`, the name of the
-claimant in lower case, without accents, words joined by hyphens. The step
-then says it is saved, with the file name; that each missing receipt
-authorization, when there is one, is to be signed; and that the draft, bank
-statements included, stays in this browser until New report.
+claimant in lower case, without accents, words joined by hyphens. The browser
+does not tell the system whether it wrote the file or the Claimant cancelled,
+so the step says the report document was handed to the browser, with its file
+name, and keeps Save the report on offer to hand it over again. It also says
+that each missing receipt authorization, when there is one, is to be signed,
+and that the draft, bank statements included, stays in this browser until
+New report.
 
 Saving does not discard the draft: the Claimant may change the report and
 save it again. The draft goes when the Claimant starts a new report.

@@ -118,7 +118,9 @@ A change is compliant with this ADR when:
 - no `biome-ignore` or `@ts-expect-error` is added without a comment saying
   why;
 - `tsconfig.app.json` lists neither `node` nor Vitest in `types`, and no file
-  outside `*.test.ts` imports a test file, `vitest` or a `node:` module;
+  of the app project (`src/` without the `*.test.ts` files) imports a test
+  file, `vitest` or a `node:` module; the test files, `vite.config.ts` and
+  `scripts/*.ts` may use Node;
 - `sonar-project.properties` holds no `sonar.projectKey` and no
   `sonar.organization`, and no other file sets `sonar.*` except the CI step
   passing those two from secrets.

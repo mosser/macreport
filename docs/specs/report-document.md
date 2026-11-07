@@ -11,7 +11,8 @@ once the report is done: it stands alone, read with any PDF reader.
    kinds: receipts, missing receipt authorizations, bank statements,
    additional documents. A kind without documents has no section.
 
-Each section is its section page, then its documents, one after the other.
+Each section is its section page, on one page or more, then its documents,
+one after the other.
 
 | Section | Order of its documents |
 |---|---|
@@ -25,7 +26,9 @@ R1, R2, and so on.
 ## Pages
 
 - Generated pages (cover, section pages, missing receipt authorizations) are
-  US Letter, portrait, with three-quarter-inch margins.
+  US Letter, portrait, with three-quarter-inch margins. A text wraps within
+  its column or its line, never clipped; what does not fit a page continues
+  on the next one, as each part below says.
 - A PDF document keeps every page as it is: size, orientation and content.
 - An image document is placed on a Letter page of its own, portrait or
   landscape to match the image, scaled down to fit the margins and never
@@ -73,10 +76,15 @@ Pages are the pages of the report document. Missing receipt authorizations
 have no file: the column shows the expense's description. The Expenses column
 is left out of the section of additional documents.
 
+The table continues on the next page when it does not fit, its header
+repeated, as the cover's does. Those pages are all section pages: each is
+stamped as one, and the section's documents start after the last of them.
+
 ## Missing receipt authorization
 
-One page per expense with a missing receipt, which reproduces McMaster's
-Missing Receipt Authorization Form, filled in. Under the McSCert logo:
+One per expense with a missing receipt, which reproduces McMaster's Missing
+Receipt Authorization Form, filled in, on one page when it fits. Under the
+McSCert logo:
 
 > **Missing Receipt Authorization Form**
 >
@@ -106,6 +114,13 @@ for reimbursement from other sources or institutions.* and the lines
 *Signature of Claimant* (left blank), *Printed Name* (the claimant), *Title*
 (the position), *Extension* (from the report, blank when not given) and
 *Email* (the claimant's).
+
+A field's value wraps over as many lines as it needs: a reason, a payee or a
+description, a long list of meal attendees included, is never cut. When the
+form no longer fits a page, it continues on the next one, and the
+certification and the signature lines stay together on its last page, so
+that what is signed is under the signature. The form's label and stamp cover
+all its pages.
 
 ## Stamp
 

@@ -57,8 +57,10 @@ Options considered for the fonts:
   whatever its file name says, and that the library can embed it.
 - **Writing** the report document is one function of `src/io/` that takes the
   report's layout from the domain (ADR 0007) and returns the bytes of the PDF.
-  It draws, copies, stamps and links; it never orders, numbers, labels or
-  totals, and the target of every link comes from the layout.
+  It draws, copies, paginates, stamps and links; it never orders, numbers,
+  labels or totals, and what every link goes to comes from the layout. Text
+  wraps, never clipped, and a generated part longer than a page continues on
+  the next (ADR 0007: pagination is the writer's).
 - **Fonts.** Noto Sans Regular and Bold (SIL Open Font License 1.1), cut down
   to the Latin, Greek and Cyrillic alphabets and common punctuation, are kept
   in `src/assets/fonts/` with their licence and a note of how they were cut

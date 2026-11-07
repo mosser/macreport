@@ -119,8 +119,9 @@ first.
   imported only under `src/io/`. The report document embeds Noto Sans Regular
   and Bold from `src/assets/fonts/`, subset, and no other font.
   Password-protected PDFs are refused.
-- The report document writer draws, copies, stamps and links; it never orders,
-  numbers, labels or totals: the layout comes from the domain.
+- The report document writer draws, copies, paginates, stamps and links; it
+  never orders, numbers, labels or totals: the layout comes from the domain.
+  Text wraps, never clipped; a generated part longer than a page continues.
 
 ### ADR 0007: object model
 
