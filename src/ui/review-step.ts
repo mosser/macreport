@@ -47,7 +47,7 @@ type Outcome =
 
 /** What the step says of the last save, only while the report is the one saved. */
 function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boolean): Markup {
-  if (outcome === undefined || outcome.report !== report) {
+  if (outcome?.report !== report) {
     return html``
   }
   if ('isFailed' in outcome) {
