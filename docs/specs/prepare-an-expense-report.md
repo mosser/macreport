@@ -61,9 +61,6 @@ chosen by several expenses. Removing an expense, or a document from an
 expense, takes out of the report any receipt or bank statement no expense
 refers to any more.
 
-The step reminds the Claimant that bank statements are redacted before they
-are added: the system does not redact.
-
 Continue is offered once there is at least one expense and every expense
 follows the rules above.
 

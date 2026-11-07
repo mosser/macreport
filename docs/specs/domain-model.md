@@ -27,7 +27,7 @@ document.
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind. A document is in the report once, whatever the number of expenses that refer to it. |
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
 | Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense. |
-| Bank statement | A document an expense refers to: a bank or credit card statement showing the charge, redacted by the Claimant beforehand. Added from an expense, and often referred to by several. |
+| Bank statement | A document an expense refers to: a bank or credit card statement showing the charge. Added from an expense, and often referred to by several. The Claimant redacts it, before adding it or in the saved report document; the system does not redact. |
 | Additional document | A document of the report as a whole, which no expense refers to: an invitation letter, a conference confirmation, an itinerary, a poster, boarding passes, notes. |
 | Missing receipt authorization | McMaster's Missing Receipt Authorization Form, written by the system for one expense with a missing receipt, filled in with what the report knows, and left for the Claimant to sign. It is not a file the Claimant adds. |
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |

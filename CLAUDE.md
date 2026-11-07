@@ -160,8 +160,7 @@ first.
 - **No narrating text**, in the interface or in the report document: no
   sentence that introduces a screen or a section, restates its heading or
   explains how to read it. Text is content, a heading or label, a status, a
-  finding, or a notice a decision asks for (the draft notice of ADR 0008, the
-  redaction reminder of ADR 0010).
+  finding, or a notice a decision asks for (the draft notice of ADR 0008).
 - Words are the glossary's, in the interface as in the code.
 
 ## Git

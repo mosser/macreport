@@ -62,9 +62,12 @@ The report document is written as `docs/specs/report-document.md` says:
   supports.
 - **Text the embedded font cannot write is a finding**, never replaced: the
   Claimant decides how to write it (ADR 0006).
-- **No redaction.** Drawing over a PDF hides text on screen and leaves it in
-  the file, so the system does not offer it: bank statements are redacted
-  before they are added, and the Expenses step says so.
+- **Redaction is the Claimant's, before or after.** The Claimant redacts a
+  bank statement before adding it, or redacts the saved report document with
+  a PDF reader's redaction tool, which works on it since the pages of PDF
+  documents are copied with their text. The system does not redact: drawing
+  over a PDF hides text on screen and leaves it in the file, which would look
+  like redaction without being one.
 
 ## Consequences
 
