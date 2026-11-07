@@ -410,7 +410,9 @@ describe('the wizard', () => {
       'statement (2)',
     ])
     const style = document.createElement('style')
-    style.textContent = readFileSync('src/style.css', 'utf8')
+    // The rule of the browser's own stylesheet that hides [hidden], which happy-dom does not
+    // have, then the page's, which must not override it.
+    style.textContent = `[hidden] { display: none; }\n${readFileSync('src/style.css', 'utf8')}`
     document.head.append(style)
     const rule = () => root.querySelector<HTMLElement>('[data-name-taken="additionalDocuments-0"]')
     const isShown = () => {
