@@ -3,34 +3,37 @@ import type { Rotation } from './page-view.ts'
 /** The Exif tag that says how a photo is turned. */
 const orientationTag = 0x0112
 
-/**
- * The quarter turn, clockwise, that shows a JPEG image upright, as the Exif orientation a phone
- * writes says: 6 is a quarter, 3 a half, 8 three quarters. A mirrored orientation is shown with
- * its turn only. An image without one, or that is not a JPEG, shows as it is stored.
- */
-export function orientationOf(content: Uint8Array): Rotation {
-  try {
-    const data = new DataView(content.buffer, content.byteOffset, content.byteLength)
-    return turnOf(exifOrientationOf(data))
-  } catch {
-    // A header cut short: the image shows as it is stored.
-    return 0
-  }
+/** How an image shows upright: mirrored left to right first when it is, then turned clockwise. */
+export interface Orientation {
+  readonly isMirrored: boolean
+  readonly turn: Rotation
 }
 
-function turnOf(orientation: number | undefined): Rotation {
-  switch (orientation) {
-    case 3:
-    case 4:
-      return 180
-    case 5:
-    case 8:
-      return 270
-    case 6:
-    case 7:
-      return 90
-    default:
-      return 0
+const asStored: Orientation = { isMirrored: false, turn: 0 }
+
+/** Each Exif orientation but the first, as a mirror and a turn. */
+const orientations: Readonly<Record<number, Orientation>> = {
+  2: { isMirrored: true, turn: 0 },
+  3: { isMirrored: false, turn: 180 },
+  4: { isMirrored: true, turn: 180 },
+  5: { isMirrored: true, turn: 270 },
+  6: { isMirrored: false, turn: 90 },
+  7: { isMirrored: true, turn: 90 },
+  8: { isMirrored: false, turn: 270 },
+}
+
+/**
+ * How a JPEG image shows upright, as the Exif orientation a phone writes says: 6 is a quarter
+ * turn, 3 a half, 8 three quarters, and 2, 4, 5 and 7 the same mirrored. An image without one, or
+ * that is not a JPEG, shows as it is stored.
+ */
+export function orientationOf(content: Uint8Array): Orientation {
+  try {
+    const data = new DataView(content.buffer, content.byteOffset, content.byteLength)
+    return orientations[exifOrientationOf(data) ?? 1] ?? asStored
+  } catch {
+    // A header cut short: the image shows as it is stored.
+    return asStored
   }
 }
 

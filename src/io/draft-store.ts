@@ -137,9 +137,18 @@ class IndexedDraftStore implements DraftStore {
    * named otherwise is a copy with the same content, and keeps its identifier.
    */
   private readonly identifiers = new WeakMap<Uint8Array, string>()
+  /** The last write asked for: each waits for the one before it to finish. */
+  private queue: Promise<unknown> = Promise.resolve()
 
   constructor(database: IDBDatabase) {
     this.database = database
+  }
+
+  /** Runs a write once the writes asked for before it have finished. */
+  private inTurn<T>(write: () => Promise<T>): Promise<T> {
+    const next = this.queue.then(write)
+    this.queue = next.catch(() => undefined)
+    return next
   }
 
   async restore(): Promise<Report> {
@@ -164,17 +173,25 @@ class IndexedDraftStore implements DraftStore {
     }
   }
 
-  /** Keeps the report, all of it or nothing: a write that fails is undone. */
-  async keep(report: Report): Promise<boolean> {
+  /**
+   * Keeps the report, all of it or nothing: a write that fails is undone. Writes are kept one
+   * after the other, so that each knows the identifiers the one before it gave.
+   */
+  keep(report: Report): Promise<boolean> {
+    return this.inTurn(() => this.write(report))
+  }
+
+  private async write(report: Report): Promise<boolean> {
     let transaction: IDBTransaction | undefined
     try {
       transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       const store = transaction.objectStore(documentStore)
-      const kept = new Set<string>()
+      /** The identifier of each content this transaction keeps, and refers to. */
+      const chosen = new Map<Uint8Array, string>()
       /** Contents written by this transaction: their identifiers hold once it commits. */
       const written = new Map<Uint8Array, string>()
       for (const document of documentsOf(report)) {
-        let identifier = this.identifiers.get(document.content) ?? written.get(document.content)
+        let identifier = this.identifiers.get(document.content) ?? chosen.get(document.content)
         if (identifier === undefined) {
           identifier = crypto.randomUUID()
           written.set(document.content, identifier)
@@ -185,12 +202,13 @@ class IndexedDraftStore implements DraftStore {
           }
           store.put(record, identifier)
         }
-        kept.add(identifier)
+        chosen.set(document.content, identifier)
       }
+      const kept = new Set(chosen.values())
       for (const key of await result(store.getAllKeys())) {
         if (typeof key !== 'string' || !kept.has(key)) store.delete(key)
       }
-      transaction.objectStore(draftStore).put(this.recordOf(report, written), draftKey)
+      transaction.objectStore(draftStore).put(recordOf(report, chosen), draftKey)
       await completed(transaction)
       for (const [content, identifier] of written) {
         this.identifiers.set(content, identifier)
@@ -202,7 +220,11 @@ class IndexedDraftStore implements DraftStore {
     }
   }
 
-  async discard(): Promise<boolean> {
+  discard(): Promise<boolean> {
+    return this.inTurn(() => this.clear())
+  }
+
+  private async clear(): Promise<boolean> {
     try {
       const transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       transaction.objectStore(draftStore).clear()
@@ -233,45 +255,43 @@ class IndexedDraftStore implements DraftStore {
     this.identifiers.set(content, identifier)
     return new Document(kind, fileName, content, name)
   }
+}
 
-  private recordOf(
-    report: Report,
-    written: ReadonlyMap<Uint8Array, string>,
-  ): Record<string, unknown> {
-    const identifier = (document: Document) =>
-      this.identifiers.get(document.content) ?? written.get(document.content) ?? ''
-    const expenses: ExpenseRecord[] = report.expenses.map((expense) => ({
-      ...(expense.date === undefined ? {} : { date: expense.date.toString() }),
-      ...(expense.description === undefined ? {} : { description: expense.description }),
-      ...(expense.claimedAmount === undefined
-        ? {}
-        : { claimedAmount: expense.claimedAmount.cents }),
-      receipts: expense.receipts.map(identifier),
-      bankStatements: expense.bankStatements.map(identifier),
-    }))
-    const names = Object.fromEntries(
-      documentsOf(report)
-        .filter((document) => document.name !== document.afterNaming('').name)
-        .map((document) => [identifier(document), document.name]),
-    )
-    return {
-      claimantName: report.claimantName,
-      position: report.position,
-      email: report.email,
-      supervisorName: report.supervisorName,
-      supervisorEmail: report.supervisorEmail,
-      hostName: report.hostName,
-      hostEmail: report.hostEmail,
-      purpose: report.purpose,
-      isBusinessTravel: report.isBusinessTravel,
-      firstDay: report.firstDay?.toString(),
-      lastDay: report.lastDay?.toString(),
-      account: report.account,
-      expenses,
-      travelJustifications: report.travelJustifications.map(identifier),
-      additionalDocuments: report.additionalDocuments.map(identifier),
-      names,
-    }
+/** What IndexedDB keeps of a report, its documents by the identifiers its transaction chose. */
+function recordOf(
+  report: Report,
+  chosen: ReadonlyMap<Uint8Array, string>,
+): Record<string, unknown> {
+  const identifier = (document: Document) => chosen.get(document.content) ?? ''
+  const expenses: ExpenseRecord[] = report.expenses.map((expense) => ({
+    ...(expense.date === undefined ? {} : { date: expense.date.toString() }),
+    ...(expense.description === undefined ? {} : { description: expense.description }),
+    ...(expense.claimedAmount === undefined ? {} : { claimedAmount: expense.claimedAmount.cents }),
+    receipts: expense.receipts.map(identifier),
+    bankStatements: expense.bankStatements.map(identifier),
+  }))
+  const names = Object.fromEntries(
+    documentsOf(report)
+      .filter((document) => document.name !== document.afterNaming('').name)
+      .map((document) => [identifier(document), document.name]),
+  )
+  return {
+    claimantName: report.claimantName,
+    position: report.position,
+    email: report.email,
+    supervisorName: report.supervisorName,
+    supervisorEmail: report.supervisorEmail,
+    hostName: report.hostName,
+    hostEmail: report.hostEmail,
+    purpose: report.purpose,
+    isBusinessTravel: report.isBusinessTravel,
+    firstDay: report.firstDay?.toString(),
+    lastDay: report.lastDay?.toString(),
+    account: report.account,
+    expenses,
+    travelJustifications: report.travelJustifications.map(identifier),
+    additionalDocuments: report.additionalDocuments.map(identifier),
+    names,
   }
 }
 

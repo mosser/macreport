@@ -1,13 +1,17 @@
 import fontkit from '@cantoo/fontkit'
 import {
   clip,
+  concatTransformationMatrix,
   degrees,
   endPath,
-  type PDFArray,
+  PDFArray,
   PDFContentStream,
+  PDFDict,
   PDFDocument,
   type PDFFont,
   type PDFImage,
+  PDFName,
+  PDFNumber,
   type PDFPage,
   popGraphicsState,
   pushGraphicsState,
@@ -29,8 +33,8 @@ import type {
   SupportingDocument,
 } from '../domain/layout.ts'
 import { bytesOf } from './inlined.ts'
-import { orientationOf } from './orientation.ts'
-import { fitOf, type PageView, portraitRotationOf, type Rotation, viewOf } from './page-view.ts'
+import { type Orientation, orientationOf } from './orientation.ts'
+import { type Box, fitOf, type PageView, portraitRotationOf, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
 
 /** What the report document is written from. */
@@ -113,7 +117,7 @@ interface Place {
 /** A document ready for its pages: a PDF's pages copied, or an image to place on a page of its own. */
 type Source =
   | { readonly pages: readonly PDFPage[]; readonly pageCount: number }
-  | { readonly image: PDFImage; readonly turn: Rotation; readonly pageCount: 1 }
+  | { readonly image: PDFImage; readonly orientation: Orientation; readonly pageCount: 1 }
 
 /**
  * Writes the report document of a layout: the cover, then each section, its section pages and
@@ -163,11 +167,12 @@ function formatOf(content: Uint8Array): 'pdf' | 'jpeg' | 'png' {
 async function sourceOf(pdf: PDFDocument, document: Document): Promise<Source> {
   const format = formatOf(document.content)
   if (format === 'png') {
-    return { image: await pdf.embedPng(document.content), turn: 0, pageCount: 1 }
+    const orientation = { isMirrored: false, turn: 0 } as const
+    return { image: await pdf.embedPng(document.content), orientation, pageCount: 1 }
   }
   if (format === 'jpeg') {
-    const turn = orientationOf(document.content)
-    return { image: await pdf.embedJpg(document.content), turn, pageCount: 1 }
+    const orientation = orientationOf(document.content)
+    return { image: await pdf.embedJpg(document.content), orientation, pageCount: 1 }
   }
   const source = await PDFDocument.load(document.content)
   const pages = await pdf.copyPages(source, source.getPageIndices())
@@ -579,17 +584,23 @@ class Writer {
     }
     // The image is placed as it is stored, on a page turned as its orientation says, within the
     // margins of a Letter page, so that the stamp never covers it.
-    const { image, turn } = source
+    const { image, orientation } = source
     const box = { x: 0, y: 0, width: image.width, height: image.height }
-    const fit = fitOf(box, turn, letter, margin)
+    const fit = fitOf(box, orientation.turn, letter, margin)
     const page = this.pdf.addPage([fit.box.width, fit.box.height])
-    page.drawImage(image, {
-      x: -fit.box.x,
-      y: -fit.box.y,
-      width: image.width * fit.scale,
-      height: image.height * fit.scale,
-    })
-    page.setRotation(degrees(turn))
+    const [x, width] = [-fit.box.x, image.width * fit.scale]
+    if (orientation.isMirrored) {
+      // Mirrored left to right, about the middle of the image.
+      page.pushOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(-1, 0, 0, 1, 2 * x + width, 0),
+      )
+    }
+    page.drawImage(image, { x, y: -fit.box.y, width, height: image.height * fit.scale })
+    if (orientation.isMirrored) {
+      page.pushOperators(popGraphicsState())
+    }
+    page.setRotation(degrees(orientation.turn))
     this.pages.push({ page: turnedPortrait(page), entry })
     this.markFirstPage(entry, this.pages.length - 1)
   }
@@ -769,6 +780,7 @@ function fittedToLetter(page: PDFPage): PDFPage {
     ),
     stream(popGraphicsState()),
   )
+  withoutHiddenAnnotations(page, crop)
   page.scaleAnnotations(fit.scale, fit.scale)
   const { x, y, width, height } = fit.box
   for (const setBox of [
@@ -781,6 +793,26 @@ function fittedToLetter(page: PDFPage): PDFPage {
     setBox.call(page, x, y, width, height)
   }
   return page
+}
+
+/**
+ * Takes out of a page the annotations wholly outside its crop box, which it hid and a Letter page
+ * would show: a comment, a link or a form field cropped away.
+ */
+function withoutHiddenAnnotations(page: PDFPage, crop: Box): void {
+  const annotations = page.node.Annots()
+  for (let index = (annotations?.size() ?? 0) - 1; index >= 0; index -= 1) {
+    const rect = annotations?.lookupMaybe(index, PDFDict)?.lookupMaybe(PDFName.of('Rect'), PDFArray)
+    const [left, bottom, right, top] = [0, 1, 2, 3].map(
+      (corner) => rect?.lookupMaybe(corner, PDFNumber)?.asNumber() ?? Number.NaN,
+    ) as [number, number, number, number]
+    const isHidden =
+      Math.max(left, right) <= crop.x ||
+      Math.min(left, right) >= crop.x + crop.width ||
+      Math.max(bottom, top) <= crop.y ||
+      Math.min(bottom, top) >= crop.y + crop.height
+    if (isHidden) annotations?.remove(index)
+  }
 }
 
 /** The page, turned a quarter when it would show landscape: every page shows portrait. */

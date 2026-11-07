@@ -431,13 +431,27 @@ describe('writeReportDocument', () => {
     expect(a4).toContain(`0 0 ${595 * factor} ${842 * factor} re`)
   })
 
-  it('keeps a Letter page as it is, never enlarges a small one, and keeps hidden what its crop box hid', async () => {
+  it('keeps a Letter page as it is, never enlarges a small one, and keeps hidden what its crop box hid, annotations included', async () => {
     const source = await PDFDocument.create()
     const font = await source.embedFont(StandardFonts.Helvetica)
     source.addPage([612, 792]).drawText('Letter', { x: 50, y: 50, size: 12, font })
     const till = source.addPage([226, 600])
     till.drawText('Till', { x: 50, y: 50, size: 12, font })
     till.setCropBox(20, 30, 180, 500)
+    const notes: Record<string, number[]> = {
+      inside: [40, 40, 80, 80],
+      outside: [190, 550, 220, 590],
+      across: [180, 500, 220, 560],
+    }
+    for (const [contents, rect] of Object.entries(notes)) {
+      const note = source.context.obj({
+        Type: 'Annot',
+        Subtype: 'Square',
+        Rect: rect,
+        Contents: contents,
+      })
+      till.node.addAnnot(source.context.register(note))
+    }
     const receipt = new Document(Kind.receipt, 'till.pdf', await source.save())
     const report = await reportOf('Taxi')
     const expense = report.expenses[0]
@@ -454,14 +468,19 @@ describe('writeReportDocument', () => {
     const wrapper = decoded(streamsOf(pdf, page)[0])
     expect(wrapper).toMatch(/20 30 180 500 re\s+W\s+n\s+1 0 0 1 0 0 cm/)
     expect(textsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 4 / 6'])
+    const kept = (page.node.Annots()?.asArray() ?? [])
+      .map((reference) => pdf.context.lookup(reference, PDFDict))
+      .filter((annotation) => annotation.get(PDFName.of('Subtype')) === PDFName.of('Square'))
+      .map((annotation) => annotation.lookup(PDFName.of('Contents'))?.toString())
+    expect(kept).toEqual(['/inside', '/across'])
   })
 
-  it('shows a photo upright, turned as its Exif orientation says', async () => {
+  it('shows a photo upright, mirrored and turned as its Exif orientation says', async () => {
     const report = await reportOf('Taxi')
     const expense = report.expenses[0]
     if (expense === undefined) throw new TypeError('No expense')
     const pages = await Promise.all(
-      [undefined, 6].map(async (orientation) => {
+      [undefined, 6, 7].map(async (orientation) => {
         const photo = new Document(Kind.receipt, 'photo.jpg', jpegOf(400, 300, orientation))
         const pdf = await written(
           report.afterReplacing(expense, expense.afterChanging({ receipts: [photo] })),
@@ -469,9 +488,20 @@ describe('writeReportDocument', () => {
         return pdf.getPage(2)
       }),
     )
-    const [stored, turned] = pages
+    const [stored, turned, mirrored] = pages
     expect(stored?.getRotation().angle).toBe(270)
     expect(turned?.getRotation().angle).toBe(90)
+    expect(mirrored?.getRotation().angle).toBe(90)
+    const mirror = /-1 0 0 1 [\d.]+ 0 cm/
+    for (const [page, isMirrored] of [
+      [stored, false],
+      [turned, false],
+      [mirrored, true],
+    ] as const) {
+      if (page === undefined) throw new TypeError('No page')
+      const content = streamsOf(page.doc, page).map(decoded).join('\n')
+      expect(mirror.test(content)).toBe(isMirrored)
+    }
     for (const page of pages) {
       if (page === undefined) throw new TypeError('No page')
       expect([page.getWidth(), page.getHeight()]).toEqual([792, 612])

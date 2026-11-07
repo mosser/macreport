@@ -22,30 +22,39 @@ function jpegOf(orientation?: number, isLittleEndian = false): Uint8Array {
 }
 
 describe('orientationOf', () => {
+  const turn = (content: Uint8Array) => orientationOf(content).turn
+  const isMirrored = (content: Uint8Array) => orientationOf(content).isMirrored
+
   it('turns a photo as its Exif orientation says, in either byte order', () => {
-    expect(orientationOf(jpegOf(1))).toBe(0)
-    expect(orientationOf(jpegOf(6))).toBe(90)
-    expect(orientationOf(jpegOf(3, true))).toBe(180)
-    expect(orientationOf(jpegOf(8, true))).toBe(270)
+    expect(orientationOf(jpegOf(1))).toEqual({ isMirrored: false, turn: 0 })
+    expect(orientationOf(jpegOf(6))).toEqual({ isMirrored: false, turn: 90 })
+    expect(orientationOf(jpegOf(3, true))).toEqual({ isMirrored: false, turn: 180 })
+    expect(orientationOf(jpegOf(8, true))).toEqual({ isMirrored: false, turn: 270 })
   })
 
-  it('turns a mirrored photo by its turn only', () => {
-    expect([2, 4, 5, 7].map((orientation) => orientationOf(jpegOf(orientation)))).toEqual([
-      0, 180, 270, 90,
+  it('mirrors a mirrored photo, then turns it', () => {
+    const mirrored = [2, 4, 5, 7].map((orientation) => orientationOf(jpegOf(orientation)))
+    expect(mirrored).toEqual([
+      { isMirrored: true, turn: 0 },
+      { isMirrored: true, turn: 180 },
+      { isMirrored: true, turn: 270 },
+      { isMirrored: true, turn: 90 },
     ])
+    expect(orientationOf(jpegOf(9))).toEqual({ isMirrored: false, turn: 0 })
   })
 
   it('shows as stored an image without orientation, not a JPEG, or cut short', () => {
-    expect(orientationOf(jpegOf())).toBe(0)
-    expect(orientationOf(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(0)
-    expect(orientationOf(jpegOf(6).slice(0, 30))).toBe(0)
+    expect(turn(jpegOf())).toBe(0)
+    expect(turn(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(0)
+    expect(turn(jpegOf(6).slice(0, 30))).toBe(0)
     const scan = new Uint8Array([0xff, 0xd8, 0xff, 0xda, 0, 2, ...jpegOf(6).slice(2)])
-    expect(orientationOf(scan)).toBe(0)
+    expect(turn(scan)).toBe(0)
     const notTiff = jpegOf(6)
     notTiff[15] = 0
-    expect(orientationOf(notTiff)).toBe(0)
+    expect(turn(notTiff)).toBe(0)
     const noOrientation = jpegOf(6)
     noOrientation[23] = 0x13
-    expect(orientationOf(noOrientation)).toBe(0)
+    expect(turn(noOrientation)).toBe(0)
+    expect(isMirrored(jpegOf(2).slice(0, 30))).toBe(false)
   })
 })

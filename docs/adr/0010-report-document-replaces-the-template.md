@@ -94,9 +94,10 @@ The report document is written as `docs/specs/report-document.md` says:
   so that the report document prints evenly and each page stays as close to
   its own size as it can: a document is read at the size it was written. An
   image, whose size in pixels says nothing of its size on paper, is fitted
-  within the margins, so that the stamp never covers it. A JPEG photo is turned as its
-  Exif orientation says first: phones store a photo as the camera held it
-  and note how to turn it, which the PDF library does not read.
+  within the margins, so that the stamp never covers it. A JPEG photo is
+  turned, and mirrored, as its Exif orientation says first: phones store a
+  photo as the camera held it and note how to turn it, which the PDF library
+  does not read.
 - **A label per document** (R3), used on section pages and in the **stamp**
   on every page with the numbers of the expenses the document supports and
   the page number out of the total, so that a printed copy can be followed

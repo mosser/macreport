@@ -49,8 +49,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
-- A photo taken with a phone shows upright: a JPEG image is turned as its
-  Exif orientation says, where it could show on its side.
+- A photo taken with a phone shows upright: a JPEG image is turned, and
+  mirrored, as its Exif orientation says, where it could show on its side.
+- A receipt or a bank statement could be missing from the draft when the page
+  was opened again, if the report changed while the file was being kept: the
+  draft is now kept one change after the other.
 
 ### Known limitations
 

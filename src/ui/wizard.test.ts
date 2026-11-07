@@ -14,6 +14,8 @@ let discarded: number
 let isDiscarded: boolean
 let isSaved: boolean
 let reading: Promise<void>
+/** How long reading a file takes, by its name, when not as long as any other. */
+let readings: Map<string, Promise<void>>
 
 function options(draft = new Report(), isDraftKept = true): WizardOptions {
   return {
@@ -31,7 +33,7 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
     logo: 'logo.png',
     confirm: () => confirmation,
     readFile: async (file: File, kind: Kind) => {
-      await reading
+      await (readings.get(file.name) ?? reading)
       return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
     },
     saveReport: async (report: Report) => {
@@ -101,6 +103,7 @@ beforeEach(() => {
   isDiscarded = true
   isSaved = true
   reading = Promise.resolve()
+  readings = new Map()
   mountWizard(root, options())
 })
 
@@ -394,6 +397,37 @@ describe('the wizard', () => {
     await vi.waitFor(() =>
       expect(root.querySelector<HTMLElement>('[data-notice="discard"]')?.hidden).toBe(true),
     )
+  })
+
+  it('adds files in the order they were given, however long each takes to read', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    const finished: (() => void)[] = []
+    for (const fileName of ['first.pdf', 'second.pdf']) {
+      readings.set(
+        fileName,
+        new Promise((resolve) => {
+          finished.push(resolve)
+        }),
+      )
+      const input = root.querySelector<HTMLInputElement>('input[name="additionalDocuments"]')
+      Object.defineProperty(input, 'files', {
+        value: [new File(['%PDF-1.7'], fileName)],
+        configurable: true,
+      })
+      input?.dispatchEvent(new Event('change'))
+    }
+    finished[1]?.()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(root.textContent).not.toContain('second.pdf')
+    finished[0]?.()
+    await vi.waitFor(() => expect(root.textContent).toContain('second.pdf'))
+    expect(kept.at(-1)?.additionalDocuments.map((document) => document.fileName)).toEqual([
+      'first.pdf',
+      'second.pdf',
+    ])
   })
 
   it('does not add to a new report a file still being read when New report was clicked', async () => {

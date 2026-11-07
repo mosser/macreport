@@ -93,6 +93,24 @@ describe('the draft store', () => {
     expect(restored.expenses[0]?.receipts[0]?.name).toBe('reçu')
   })
 
+  it('keeps every document when a change is kept before the one before it has finished', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    const named = report.afterRenaming(statement, 'Visa, October')
+    const renamed = named.afterRenaming(named.expenses[0]?.bankStatements[0] ?? statement, 'Visa')
+    expect(await Promise.all([store.keep(report), store.keep(named), store.keep(renamed)])).toEqual(
+      [true, true, true],
+    )
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual([
+      'reçu.pdf',
+    ])
+    expect(restored.expenses[0]?.bankStatements.map((document) => document.name)).toEqual(['Visa'])
+    const [kept, discarded] = await Promise.all([store.keep(report), store.discard()])
+    expect([kept, discarded]).toEqual([true, true])
+    expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
+  })
+
   it('keeps the content of a document once, however many times the Claimant names it', async () => {
     const factory = new IDBFactory()
     const store = await openDraftStore(factory)

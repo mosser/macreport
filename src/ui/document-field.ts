@@ -71,6 +71,12 @@ export function documentFieldOf(field: DocumentField, report: Report): Markup {
 }
 
 /**
+ * The last file added to the report of each wizard: the next is added once it is, so that files
+ * are added in the order the Claimant gave them, however long each takes to read.
+ */
+const lastAdded = new WeakMap<Context, Promise<unknown>>()
+
+/**
  * Listens to the document fields of a panel: a file chosen or dropped is added, a name typed
  * names its document, and Remove takes a document out of the report.
  */
@@ -86,15 +92,23 @@ export function listenToDocumentFields(
       Number(element.dataset.index)
     ]
 
-  /** Chosen or dropped, a file goes through the same handler. */
+  /** Chosen or dropped, a file goes through the same handler; files are read side by side. */
   const add = async (name: string | undefined, file: File | undefined) => {
     const field = fieldNamed(name)
     if (field === undefined || file === undefined) return
     const session = context.session
-    const document = await readFile(file, field.kind)
-    if (context.session !== session) return
-    context.change(field.afterAdding(context.report, document))
-    context.refresh()
+    const reading = readFile(file, field.kind)
+    const adding = (lastAdded.get(context) ?? Promise.resolve()).then(async () => {
+      const document = await reading
+      if (context.session !== session) return
+      context.change(field.afterAdding(context.report, document))
+      context.refresh()
+    })
+    lastAdded.set(
+      context,
+      adding.catch(() => undefined),
+    )
+    await adding
   }
   for (const element of panel.querySelectorAll<HTMLInputElement>('input[type="file"]')) {
     element.addEventListener('change', () => {

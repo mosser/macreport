@@ -33,10 +33,10 @@ function sectionsOf(layout: Layout): Markup[] {
   return layout.sections.map((section) => {
     const expenses = (cell: Markup) => (section.listsExpenses ? cell : '')
     const table = (documents: Section['documents']) => {
-      const rows = documents.map(
-        (entry) =>
-          html`<tr><td>${entry.label}</td><td>${entry.document.name}</td>${expenses(html`<td>${entry.expenseNumbers.join(', ')}</td>`)}</tr>`,
-      )
+      const rows = documents.map((entry) => {
+        const numbers = html`<td>${entry.expenseNumbers.join(', ')}</td>`
+        return html`<tr><td>${entry.label}</td><td>${entry.document.name}</td>${expenses(numbers)}</tr>`
+      })
       return html`<table class="section">
         <thead><tr><th>Label</th><th>Name</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
         <tbody>${rows}</tbody>

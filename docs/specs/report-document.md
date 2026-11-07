@@ -40,8 +40,8 @@ R1, R2, and so on.
 - An image document is placed on a Letter page of its own, across the page
   when it is wider than tall: scaled down to fit the three-quarter-inch
   margins when it is larger, never enlarged, and centred.
-- A JPEG image is first turned as its Exif orientation says, so that a photo
-  taken with a phone shows upright.
+- A JPEG image is first mirrored and turned as its Exif orientation says, so
+  that a photo taken with a phone shows upright.
 
 ## Cover
 
