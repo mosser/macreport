@@ -116,7 +116,7 @@ export function reviewStep(
       panel.innerHTML = html`<h2>Review</h2>
         ${coverOf(layout, linkOf)}
         ${sectionsOf(layout, linkOf)}
-        <button class="primary" data-action="save">Save the report</button>
+        <button class="primary save" data-action="save">Save the report</button>
         ${statusOf(outcome, report, isDraftKept())}`.text
       panel.querySelector('[data-action="save"]')?.addEventListener('click', () => {
         saveReport(report)

@@ -27,6 +27,8 @@
   /* Errors: half pink, half maroon, 4.85:1 on white (ADR 0002). */
   --color-error: color-mix(in srgb, var(--mac-accent-pink) 50%, var(--mac-maroon));
   --color-ok: var(--mac-accent-green);
+  /* Links: a lighter maroon, 70% maroon and 30% white, 5.43:1 on white (ADR 0002). */
+  --color-link: color-mix(in srgb, var(--mac-maroon) 70%, var(--mac-white));
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -40,6 +42,7 @@
     --color-tint: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-black));
     --color-error: var(--mac-accent-pink);
     --color-ok: var(--mac-accent-lime);
+    --color-link: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-white));
   }
 }
 
@@ -253,6 +256,20 @@ td {
 
 tr.total td {
   font-weight: 600;
+}
+
+a {
+  color: var(--color-link);
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--color-accent);
+}
+
+/* Save the report stands apart from the last table above it. */
+button.save {
+  margin-top: 1rem;
 }
 
 /* An expense on two lines: its fields, then its documents, under one rule. */
