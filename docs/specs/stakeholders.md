@@ -6,8 +6,8 @@ The system has exactly one user role: the **Claimant**, a member of the
 McMaster Centre for Software Certification (McSCert), faculty, student or
 staff, or one of its visitors, who spent money on McSCert's behalf and asks
 to be reimbursed. They prepare one expense report at a time, on their own
-computer, and hand the saved report to McSCert's administration. There is no administrator role and no reviewer
-interface.
+computer, and hand the saved report to McSCert's administration. There is
+no administrator role and no reviewer interface.
 
 ## Stakeholders
 
