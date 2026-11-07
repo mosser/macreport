@@ -18,11 +18,13 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** v0.1.0, a minimal viable product on the `mvp` branch: one
-report, exactly one expense with one receipt and one bank statement, saved as
-the report document (cover, receipt and bank statement sections, stamps). Not
-yet built: several expenses, missing receipts, additional documents, cash,
-foreign amounts, some links, refusing a file, and font findings. The
+**Current state:** v0.1.0, plus unreleased additional documents: one report,
+exactly one expense with one receipt and one bank statement, travel
+justifications and additional documents, every document named, saved as the
+report document (cover with Entered boxes, sections, stamps). Not yet built:
+several expenses, missing receipts, cash, foreign amounts, the number of pages
+on the Additional documents step, some links, refusing a file, and font
+findings. The
 specification and the ADRs describe the full system; code follows them.
 
 ## Where things live

@@ -13,7 +13,14 @@ import regularFont from '../assets/fonts/NotoSans-Regular.ttf?inline'
 import logoImage from '../assets/mcscert-left-col.png?inline'
 import type { CalendarDate } from '../domain/calendar-date.ts'
 import type { Document } from '../domain/document.ts'
-import type { LabelledDocument, Layout, Section, StampedExpense } from '../domain/layout.ts'
+import type {
+  ExpenseRow,
+  LabelledDocument,
+  Layout,
+  Section,
+  StampedExpense,
+  SupportingDocument,
+} from '../domain/layout.ts'
 import { bytesOf } from './inlined.ts'
 import { type PageView, portraitRotationOf, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
@@ -38,11 +45,25 @@ const bodySize = 10
 const tableSize = 9
 const stampSize = 8
 const leading = 1.35
+/** The side of an expense's Entered box. */
+const enteredSize = 10
 
 /** A column of a table: its title and its width in points. */
 interface Column {
   readonly title: string
   readonly width: number
+}
+
+/**
+ * A cell of a table: a text, or documents named one per line, each name a link to the first page
+ * of its document.
+ */
+type Cell = string | readonly SupportingDocument[]
+
+/** A line of a cell, and the label of the document it is a link to, when it is one. */
+interface CellLine {
+  readonly text: string
+  readonly label?: string
 }
 
 /** A page of the report document, and the document it belongs to when it belongs to one. */
@@ -115,7 +136,8 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
   pdf.setAuthor(writing.layout.author)
   pdf.setCreator(`McSCert Expense Report v${writing.version}`)
   pdf.setProducer(`McSCert Expense Report v${writing.version}`)
-  return pdf.save()
+  // The Entered boxes are drawn when added; updating them on saving would embed a font of its own.
+  return pdf.save({ updateFieldAppearances: false })
 }
 
 /** Whether the bytes are a PDF, a JPEG image or a PNG image, from their first bytes. */
@@ -340,31 +362,53 @@ class Writer {
     flow.down(12)
     this.heading(flow, 'Expenses')
     const columns: Column[] = [
-      { title: '#', width: 22 },
-      { title: 'Date', width: 62 },
-      { title: 'Description', width: 170 },
-      { title: 'Foreign amount', width: 72 },
-      { title: 'Claimed (CAD)', width: 76 },
-      { title: 'Supporting documents', width: 102 },
+      { title: '#', width: 20 },
+      { title: 'Date', width: 58 },
+      { title: 'Description', width: 132 },
+      { title: 'Foreign amount', width: 62 },
+      { title: 'Claimed (CAD)', width: 68 },
+      { title: 'Supporting documents', width: 116 },
+      { title: 'Entered', width: 48 },
     ]
     this.table(flow, columns, [])
     for (const row of layout.expenses) {
-      const cells = [
+      const cells: Cell[] = [
         String(row.number),
         row.date,
         row.description,
         row.foreignAmount,
         row.claimedAmount,
-        row.supportingDocuments.join(', '),
+        row.supportingDocuments,
+        '',
       ]
-      const linked = { column: 5, targets: row.supportingDocuments.map((label) => ({ label })) }
-      const place = this.tableRow(flow, columns, cells, this.regular, false, linked)
+      const place = this.tableRow(flow, columns, cells, this.regular)
       if (place !== undefined) {
         this.expenseRows.set(row.number, place)
+        this.enteredBox(row, place, columns)
       }
     }
-    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, ''], this.bold)
+    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, '', ''], this.bold)
     flow.stopContinuing()
+  }
+
+  /**
+   * The Entered box of an expense, in the last column of its row: an empty form field a reader
+   * ticks on screen, or by hand on a printed copy.
+   */
+  private enteredBox(row: ExpenseRow, place: Place, columns: readonly Column[]): void {
+    const last = columns.at(-1)
+    const left = margin + columns.slice(0, -1).reduce((sum, column) => sum + column.width, 0)
+    const box = this.pdf.getForm().createCheckBox(`Entered, expense ${row.number}`)
+    box.addToPage(place.page, {
+      x: left + ((last?.width ?? 0) - enteredSize) / 2,
+      y: place.top - 4 - enteredSize,
+      width: enteredSize,
+      height: enteredSize,
+      textColor: colourOf(this.palette.maroon),
+      backgroundColor: colourOf(this.palette.white),
+      borderColor: colourOf(this.palette.black),
+      borderWidth: 0.75,
+    })
   }
 
   writeSection(section: Section, sources: readonly Source[]): void {
@@ -479,18 +523,19 @@ class Writer {
   ): void {
     this.paragraph(flow, section.title, this.bold, 16, this.palette.maroon)
     flow.down(6)
+    const expenses: Column = { title: 'Expenses', width: 130 }
     const columns: Column[] = [
       { title: 'Label', width: 50 },
-      { title: 'File', width: 254 },
+      { title: 'Name', width: section.listsExpenses ? 254 : 254 + expenses.width },
       { title: 'Pages', width: 70 },
-      { title: 'Expenses', width: 130 },
+      ...(section.listsExpenses ? [expenses] : []),
     ]
     let page = firstPage
     const rows = section.documents.map((entry, index) => {
       const count = sources[index]?.pageCount ?? 1
       const pages = count === 1 ? String(page) : `${page}–${page + count - 1}`
       page += count
-      return [entry.label, entry.document.fileName, pages, entry.expenseNumbers.join(', ')]
+      return [entry.label, entry.document.name, pages, entry.expenseNumbers.join(', ')]
     })
     this.table(flow, columns, rows)
     flow.stopContinuing()
@@ -554,7 +599,7 @@ class Writer {
   }
 
   /** A table: its header, repeated at the top of every page it continues on, then its rows. */
-  private table(flow: Flow, columns: readonly Column[], rows: readonly string[][]): void {
+  private table(flow: Flow, columns: readonly Column[], rows: readonly Cell[][]): void {
     const header = () => {
       this.tableRow(
         flow,
@@ -573,20 +618,19 @@ class Writer {
 
   /**
    * A row whose cells wrap; a row taller than what is left of the page continues on the next.
-   * The labels of a linked cell become links to their documents. Gives where the row starts.
+   * The name of a document in a cell is a link to its document. Gives where the row starts.
    */
   private tableRow(
     flow: Flow,
     columns: readonly Column[],
-    cells: readonly string[],
+    cells: readonly Cell[],
     font: PDFFont,
     isHeader = false,
-    linked?: { readonly column: number; readonly targets: readonly { label: string }[] },
   ): Place | undefined {
     const padding = 4
     const lineHeight = tableSize * leading
     const wrapped = columns.map((column, index) =>
-      wrap(cells[index] ?? '', font, tableSize, column.width - padding * 2),
+      linesOf(cells[index] ?? '', font, column.width - padding * 2),
     )
     const lineCount = Math.max(...wrapped.map((lines) => lines.length))
     const colour = isHeader ? this.palette.maroon : this.palette.black
@@ -598,12 +642,10 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const text = wrapped[index]?.[line]
-        if (text !== undefined && text !== '') {
-          flow.text(text, x + padding, font, tableSize, colour)
-          if (linked?.column === index) {
-            this.linkLabels(flow, text, x + padding, font, linked.targets)
-          }
+        const cellLine = wrapped[index]?.[line]
+        if (cellLine !== undefined && cellLine.text !== '') {
+          flow.text(cellLine.text, x + padding, font, tableSize, colour)
+          this.linkLine(flow, cellLine, x + padding, font)
         }
         x += column.width
       }
@@ -614,31 +656,30 @@ class Writer {
     return place
   }
 
-  /** Links each label found in a line of text drawn at x to the first page of its document. */
-  private linkLabels(
-    flow: Flow,
-    text: string,
-    x: number,
-    font: PDFFont,
-    targets: readonly { label: string }[],
-  ): void {
+  /** Links a line of a cell drawn at x to the first page of its document, when it names one. */
+  private linkLine(flow: Flow, line: CellLine, x: number, font: PDFFont): void {
     const page = flow.page
-    if (page === undefined) return
-    let from = 0
-    for (const target of targets) {
-      const at = text.indexOf(target.label, from)
-      if (at < 0) continue
-      from = at + target.label.length
-      this.links.push({
-        page,
-        x: x + font.widthOfTextAtSize(text.slice(0, at), tableSize),
-        y: flow.cursor - tableSize - 2,
-        width: font.widthOfTextAtSize(target.label, tableSize),
-        height: tableSize + 3,
-        target,
-      })
-    }
+    if (page === undefined || line.label === undefined) return
+    this.links.push({
+      page,
+      x,
+      y: flow.cursor - tableSize - 2,
+      width: font.widthOfTextAtSize(line.text, tableSize),
+      height: tableSize + 3,
+      target: { label: line.label },
+    })
   }
+}
+
+/** The lines a cell wraps into within a width: a document's name starts a line of its own. */
+function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
+  if (typeof cell === 'string') {
+    return wrap(cell, font, tableSize, width).map((text) => ({ text }))
+  }
+  const lines = cell.flatMap(({ label, name }) =>
+    wrap(name, font, tableSize, width).map((text) => ({ text, label })),
+  )
+  return lines.length > 0 ? lines : [{ text: '' }]
 }
 
 /** The page, turned a quarter when it would show landscape: every page shows portrait. */

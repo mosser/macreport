@@ -73,6 +73,56 @@ describe('the draft store', () => {
     expect(expense?.bankStatements[0]?.kind).toBe(Kind.bankStatement)
   })
 
+  it('keeps the travel justifications, the additional documents and the name of each document', async () => {
+    const factory = new IDBFactory()
+    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array([3]))
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([4]))
+    const justified = report
+      .afterChanging({ travelJustifications: [invitation], additionalDocuments: [poster] })
+      .afterRenaming(statement, 'Visa, October')
+      .afterRenaming(invitation, 'Invitation from ICSE')
+    expect(await (await openDraftStore(factory)).keep(justified)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(
+      restored.travelJustifications.map((document) => [document.name, document.fileName]),
+    ).toEqual([['Invitation from ICSE', 'invitation.pdf']])
+    expect(restored.additionalDocuments.map((document) => [document.name, document.kind])).toEqual([
+      ['poster.png', Kind.additionalDocument],
+    ])
+    expect(restored.expenses[0]?.bankStatements[0]?.name).toBe('Visa, October')
+    expect(restored.expenses[0]?.receipts[0]?.name).toBe('reçu.pdf')
+  })
+
+  it('keeps the content of a document once, however many times the Claimant names it', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    await store.keep(report)
+    const keysOf = () =>
+      new Promise<IDBValidKey[]>((resolve) => {
+        const request = factory.open('macreport', 2)
+        request.onsuccess = () => {
+          const all = request.result.transaction('documents').objectStore('documents').getAllKeys()
+          all.onsuccess = () => resolve(all.result)
+        }
+      })
+    const before = await keysOf()
+    let named = report
+    for (const name of ['V', 'Vi', 'Visa']) {
+      const current = named.expenses[0]?.bankStatements[0] ?? statement
+      named = named.afterRenaming(current, name)
+      expect(await store.keep(named)).toBe(true)
+    }
+    expect(await keysOf()).toEqual(before)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.bankStatements[0]?.name).toBe('Visa')
+    const reopened = await openDraftStore(factory)
+    const again = await reopened.restore()
+    expect(
+      await reopened.keep(again.afterRenaming(again.expenses[0]?.receipts[0] ?? receipt, 'Hotel')),
+    ).toBe(true)
+    expect(await keysOf()).toEqual(before)
+  })
+
   it('keeps a report half-done, and deletes a document no expense refers to any more', async () => {
     const factory = new IDBFactory()
     const store = await openDraftStore(factory)
@@ -136,13 +186,16 @@ describe('the draft store', () => {
         email: 'not an email',
         isBusinessTravel: false,
         firstDay: '2026-10-03',
+        names: { a: 42, b: 'Statement' },
+        travelJustifications: ['a', 'missing'],
         expenses: [
-          { claimedAmount: -3, receipts: ['a', 'b', 'missing'], bankStatements: 'b' },
+          { claimedAmount: -3, receipts: ['a', 'b', 'e', 'missing'], bankStatements: 'b' },
           'not an expense',
         ],
       },
       {
         a: { letter: 'R', fileName: 'a.pdf', content: new Uint8Array([1]) },
+        e: { letter: 'R', fileName: ' ', content: new Uint8Array([5]) },
         b: { letter: 'S', fileName: 'b.pdf', content: new Uint8Array([2]) },
         c: { letter: 'X', fileName: 'c.pdf', content: new Uint8Array([3]) },
         d: 'not a document',
@@ -156,7 +209,10 @@ describe('the draft store', () => {
     expect(restored.expenses).toHaveLength(2)
     expect(restored.expenses[0]?.claimedAmount).toBeUndefined()
     expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual(['a.pdf'])
+    expect(restored.expenses[0]?.receipts[0]?.name).toBe('a.pdf')
     expect(restored.expenses[0]?.bankStatements).toEqual([])
+    expect(restored.travelJustifications).toEqual([])
+    expect(restored.additionalDocuments).toEqual([])
     await written(factory, 'not a report', {})
     expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
   })

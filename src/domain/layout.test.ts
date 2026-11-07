@@ -9,6 +9,7 @@ import { Report } from './report.ts'
 
 const receipt = new Document(Kind.receipt, 'air-canada.pdf', new Uint8Array([1]))
 const statement = new Document(Kind.bankStatement, 'statement-october.pdf', new Uint8Array([2]))
+const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array([4]))
 
 const flight = new Expense({
   date: new CalendarDate(2026, 10, 3),
@@ -29,6 +30,7 @@ const report = new Report({
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   account: '20-123-456',
+  travelJustifications: [invitation],
 }).afterAdding(flight)
 
 describe('layoutOf', () => {
@@ -95,6 +97,7 @@ describe('layoutOf', () => {
     expect(
       layoutOf(report).attachedInformation.map(({ kind, isAttached }) => [kind.name, isAttached]),
     ).toEqual([
+      ['Travel justification', true],
       ['Receipt', true],
       ['Missing receipt authorization', false],
       ['Bank statement', true],
@@ -102,7 +105,7 @@ describe('layoutOf', () => {
     ])
   })
 
-  it('numbers the expenses, labels their supporting documents and totals them', () => {
+  it('numbers the expenses, names their supporting documents and totals them', () => {
     const layout = layoutOf(report)
     expect(layout.expenses).toEqual([
       {
@@ -111,16 +114,35 @@ describe('layoutOf', () => {
         description: 'Air Canada, YYZ–CDG return',
         foreignAmount: '',
         claimedAmount: '$1,012.35',
-        supportingDocuments: ['R1', 'S1'],
+        supportingDocuments: [
+          { label: 'R1', name: 'air-canada.pdf' },
+          { label: 'S1', name: 'statement-october.pdf' },
+        ],
       },
     ])
     expect(layout.total).toBe('$1,012.35')
   })
 
-  it('opens a section per kind held, receipts first, each document with the expenses it supports', () => {
+  it('names a document as the Claimant named it, on the cover', () => {
+    const named = report.afterRenaming(statement, 'Visa, October')
+    expect(layoutOf(named).expenses[0]?.supportingDocuments).toEqual([
+      { label: 'R1', name: 'air-canada.pdf' },
+      { label: 'S1', name: 'Visa, October' },
+    ])
+  })
+
+  it('opens a section per kind held, travel justifications first, receipts next, each document with the expenses it supports', () => {
     const sections = layoutOf(report).sections
-    expect(sections.map((section) => section.title)).toEqual(['Receipts', 'Bank statements'])
+    expect(sections.map((section) => section.title)).toEqual([
+      'Travel justifications',
+      'Receipts',
+      'Bank statements',
+    ])
+    expect(sections.map((section) => section.listsExpenses)).toEqual([false, true, true])
     expect(sections[0]?.documents).toEqual([
+      { label: 'J1', document: invitation, expenseNumbers: [], expenses: [] },
+    ])
+    expect(sections[1]?.documents).toEqual([
       {
         label: 'R1',
         document: receipt,
@@ -128,7 +150,7 @@ describe('layoutOf', () => {
         expenses: [{ number: 1, name: 'Expense 1: Air Canada, YYZ–CDG return' }],
       },
     ])
-    expect(sections[1]?.documents).toEqual([
+    expect(sections[2]?.documents).toEqual([
       {
         label: 'S1',
         document: statement,
@@ -143,14 +165,14 @@ describe('layoutOf', () => {
       flight,
       flight.afterChanging({ description: 'Dinner with the programme committee of ICSE' }),
     )
-    expect(layoutOf(dinner).sections[0]?.documents[0]?.expenses).toEqual([
+    expect(layoutOf(dinner).sections[1]?.documents[0]?.expenses).toEqual([
       { number: 1, name: 'Expense 1: Dinner with the programme comm…' },
     ])
     const exactly = report.afterReplacing(
       flight,
       flight.afterChanging({ description: 'Ζ'.repeat(30) }),
     )
-    expect(layoutOf(exactly).sections[0]?.documents[0]?.expenses[0]?.name).toBe(
+    expect(layoutOf(exactly).sections[1]?.documents[0]?.expenses[0]?.name).toBe(
       `Expense 1: ${'Ζ'.repeat(30)}`,
     )
   })
@@ -166,13 +188,17 @@ describe('layoutOf', () => {
     })
     const layout = layoutOf(report.afterAdding(taxi))
     expect(
-      layout.expenses.map((row) => [row.number, row.description, row.supportingDocuments]),
+      layout.expenses.map((row) => [
+        row.number,
+        row.description,
+        row.supportingDocuments.map((document) => document.label),
+      ]),
     ).toEqual([
       [1, 'Taxi', ['R1', 'S1']],
       [2, 'Air Canada, YYZ–CDG return', ['R2', 'S1']],
     ])
     expect(layout.total).toBe('$1,099.45')
-    expect(layout.sections[1]?.documents).toEqual([
+    expect(layout.sections[2]?.documents).toEqual([
       {
         label: 'S1',
         document: statement,
@@ -183,5 +209,22 @@ describe('layoutOf', () => {
         ],
       },
     ])
+  })
+
+  it('closes with the additional documents, in the order they were added, labelled A', () => {
+    const itinerary = new Document(Kind.additionalDocument, 'itinerary.pdf', new Uint8Array([5]))
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([6]))
+    const layout = layoutOf(report.afterChanging({ additionalDocuments: [itinerary, poster] }))
+    const last = layout.sections.at(-1)
+    expect(last?.title).toBe('Additional documents')
+    expect(last?.listsExpenses).toBe(false)
+    expect(last?.documents.map((entry) => [entry.label, entry.document])).toEqual([
+      ['A1', itinerary],
+      ['A2', poster],
+    ])
+    expect(layout.attachedInformation.at(-1)).toEqual({
+      kind: Kind.additionalDocument,
+      isAttached: true,
+    })
   })
 })

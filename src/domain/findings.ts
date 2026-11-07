@@ -2,7 +2,7 @@ import type { Expense } from './expense.ts'
 import type { Report } from './report.ts'
 
 /** The step of the wizard a finding is about. */
-export type FindingStep = 'Report' | 'Expenses'
+export type FindingStep = 'Report' | 'Expenses' | 'Additional documents'
 
 /** Something that stands between the draft and its report document, worded for the Claimant. */
 export interface Finding {
@@ -10,7 +10,10 @@ export interface Finding {
   readonly wording: string
 }
 
-/** The name of each field of the report and of an expense, as the interface and findings say it. */
+/**
+ * The name of each field of the report, of an expense and of a document, as the interface and
+ * findings say it.
+ */
 export const fieldNames = {
   claimantName: 'Name of claimant',
   position: 'Position',
@@ -29,9 +32,12 @@ export const fieldNames = {
   claimedAmount: 'Claimed amount (CAD)',
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
+  travelJustifications: 'Travel justification',
+  additionalDocuments: 'Additional document',
+  documentName: 'Name',
 } as const
 
-/** A field of the report or of an expense. */
+/** A field of the report, of an expense or of a document. */
 export type Field = keyof typeof fieldNames
 
 /** What a field needs besides being filled in, shown next to it; absent when nothing more. */
@@ -44,10 +50,17 @@ export const fieldRules: Partial<Record<Field, string>> = {
   claimedAmount: 'In Canadian dollars, more than zero, at most two decimals.',
   receipts: 'A PDF, a JPEG image or a PNG image.',
   bankStatements: 'A PDF, a JPEG image or a PNG image.',
+  travelJustifications:
+    'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
+  additionalDocuments: 'A PDF, a JPEG image or a PNG image.',
 }
 
 /** The fields that are optional; every other field, when asked, is required. */
-const optionalFields: ReadonlySet<Field> = new Set<Field>(['businessTravel'])
+const optionalFields: ReadonlySet<Field> = new Set<Field>([
+  'businessTravel',
+  'additionalDocuments',
+  'documentName',
+])
 
 /** Whether a field must be filled in, marked with an asterisk next to its name. */
 export function isRequired(field: Field): boolean {
@@ -116,7 +129,18 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
   })
 }
 
+/** A business travel without a travel justification: it has at least one. */
+export function findingsOfAdditionalDocumentsStep(report: Report): readonly Finding[] {
+  return report.isBusinessTravel && report.travelJustifications.length === 0
+    ? [missing('Additional documents', 'travelJustifications')]
+    : []
+}
+
 /** Every finding of the report: a report with none can be saved as a report document. */
 export function findingsOf(report: Report): readonly Finding[] {
-  return [...findingsOfReportStep(report), ...findingsOfExpensesStep(report)]
+  return [
+    ...findingsOfReportStep(report),
+    ...findingsOfExpensesStep(report),
+    ...findingsOfAdditionalDocumentsStep(report),
+  ]
 }

@@ -140,9 +140,31 @@ textarea {
   font-weight: 600;
 }
 
-.added {
+/* The documents added to a field: each named, its file name beside, and Remove. */
+.documents {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.document {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.document-name {
+  flex: 1 1 16rem;
+  margin-bottom: 0;
+}
+
+.file-name {
   font-size: 0.9rem;
   color: var(--color-ok);
+  overflow-wrap: anywhere;
+  padding-bottom: 0.45rem;
 }
 
 button {

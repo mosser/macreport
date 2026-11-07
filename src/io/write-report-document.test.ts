@@ -61,9 +61,6 @@ async function reportOf(description: string): Promise<Report> {
     position: 'Faculty',
     email: 'zoe@mcmaster.ca',
     purpose: 'ICSE 2026',
-    isBusinessTravel: true,
-    firstDay: new CalendarDate(2026, 10, 3),
-    lastDay: new CalendarDate(2026, 10, 7),
     account: '20-123-456',
   }).afterAdding(
     new Expense({
@@ -173,12 +170,13 @@ function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
 /** The links of a page: the number of the page each goes to, how, and where it is clicked. */
 function linksOf(pdf: PDFDocument, page: PDFPage) {
   const references = pdf.getPages().map((each) => each.ref.toString())
-  const annotations = page.node.Annots()?.asArray() ?? []
-  return annotations.map((reference) => {
-    const annotation = pdf.context.lookup(reference, PDFDict)
+  const annotations = (page.node.Annots()?.asArray() ?? [])
+    .map((reference) => pdf.context.lookup(reference, PDFDict))
+    .filter((annotation) => annotation.get(PDFName.of('Subtype')) === PDFName.of('Link'))
+  return annotations.map((annotation) => {
     const destination = annotation.lookup(PDFName.of('Dest'), PDFArray)
     const top = destination.lookupMaybe(3, PDFNumber)?.asNumber()
-    const [left = 0, , right = 0] = annotation
+    const [left = 0, bottom = 0, right = 0] = annotation
       .lookup(PDFName.of('Rect'), PDFArray)
       .asArray()
       .map((value) => (value as PDFNumber).asNumber())
@@ -187,6 +185,7 @@ function linksOf(pdf: PDFDocument, page: PDFPage) {
       how: destination.lookup(1, PDFName).asString(),
       ...(top === undefined ? {} : { top }),
       left,
+      bottom,
       width: right - left,
     }
   })
@@ -200,7 +199,7 @@ function shown(page: PDFPage): number[] {
 }
 
 describe('writeReportDocument', () => {
-  it("links each label of an expense's row to its document, and each page of a document back to the row", async () => {
+  it("links each name of an expense's row to its document, and each page of a document back to the row", async () => {
     const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
     const pages = pdf.getPages()
     const [cover, receipts, boarding, pass, statements, statement] = pages.map((page) =>
@@ -210,7 +209,8 @@ describe('writeReportDocument', () => {
       [3, '/Fit'],
       [6, '/Fit'],
     ])
-    expect(cover?.[0]?.left).toBeLessThan(cover?.[1]?.left ?? 0)
+    expect(cover?.[0]?.left).toBe(cover?.[1]?.left)
+    expect(cover?.[0]?.bottom).toBeGreaterThan(cover?.[1]?.bottom ?? 0)
     expect(receipts).toEqual([])
     expect(statements).toEqual([])
     for (const links of [boarding, pass, statement]) {
@@ -258,20 +258,31 @@ describe('writeReportDocument', () => {
         '2026-11-07',
         'Name of claimant',
         'Zoë Łukasiewicz',
-        'Dates',
-        '2026-10-03 to 2026-10-07',
+        'Travel justifications',
         'Receipts',
         'Bank statements',
         'Missing receipt authorizations',
+        'Additional documents',
         'Air Canada, YYZ–CDG return',
         '$1,012.35',
-        'R1, S1',
+        'air-canada.pdf',
+        'statement-octobre.png',
+        'Entered',
         'Total',
         '1 / 6',
       ]),
     )
     expect(receipts).toEqual(
-      expect.arrayContaining(['Receipts', 'R1', 'air-canada.pdf', '3–4', '1', '2 / 6']),
+      expect.arrayContaining([
+        'Receipts',
+        'Name',
+        'Expenses',
+        'R1',
+        'air-canada.pdf',
+        '3–4',
+        '1',
+        '2 / 6',
+      ]),
     )
     expect(boarding).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
     expect(pass).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
@@ -279,6 +290,66 @@ describe('writeReportDocument', () => {
       expect.arrayContaining(['Bank statements', 'S1', 'statement-octobre.png', '6', '5 / 6']),
     )
     expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
+  })
+
+  it('opens with the travel justifications, closes with the additional documents, and calls each document by its name', async () => {
+    const invitation = new Document(Kind.travelJustification, 'invitation.png', png)
+    const itinerary = new Document(
+      Kind.additionalDocument,
+      'itinerary.pdf',
+      await pdfOf([[612, 792]], 'Itinerary'),
+    )
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const statement = report.expenses[0]?.bankStatements[0]
+    if (statement === undefined) throw new TypeError('No bank statement')
+    const travel = report
+      .afterChanging({
+        isBusinessTravel: true,
+        firstDay: new CalendarDate(2026, 10, 3),
+        lastDay: new CalendarDate(2026, 10, 7),
+        travelJustifications: [invitation],
+        additionalDocuments: [itinerary],
+      })
+      .afterRenaming(statement, 'Visa, October')
+      .afterRenaming(invitation, 'Invitation from ICSE')
+    const pdf = await written(travel)
+    const texts = pdf.getPages().map((page) => textsOf(pdf, page))
+    expect(texts).toHaveLength(10)
+    const [cover, justifications, justification, , , , statements, , additional, last] = texts
+    expect(cover).toEqual(expect.arrayContaining(['air-canada.pdf', 'Visa, October', '1 / 10']))
+    expect(justifications).toEqual(
+      expect.arrayContaining(['Travel justifications', 'Name', 'J1', 'Invitation from ICSE', '3']),
+    )
+    expect(justifications).not.toContain('Expenses')
+    expect(justification).toEqual(['J1 · 3 / 10'])
+    expect(statements).toEqual(expect.arrayContaining(['S1', 'Visa, October', '1']))
+    expect(additional).toEqual(
+      expect.arrayContaining(['Additional documents', 'A1', 'itinerary.pdf', '10']),
+    )
+    expect(additional).not.toContain('Expenses')
+    expect(last).toEqual(['Itinerary', 'A1 · 10 / 10'])
+  })
+
+  it('gives each expense an Entered box on the cover, empty, which needs no font of its own', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const taxi = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      claimedAmount: new Amount(8710),
+      receipts: report.expenses[0]?.receipts ?? [],
+      bankStatements: report.expenses[0]?.bankStatements ?? [],
+    })
+    const pdf = await written(report.afterAdding(taxi))
+    const boxes = pdf.getForm().getFields()
+    expect(boxes.map((box) => box.getName())).toEqual(['Entered, expense 1', 'Entered, expense 2'])
+    const cover = pdf.getPage(0).ref
+    for (const box of boxes) {
+      const checkBox = pdf.getForm().getCheckBox(box.getName())
+      expect(checkBox.isChecked()).toBe(false)
+      expect(checkBox.acroField.getWidgets()[0]?.P()).toBe(cover)
+    }
+    const acroForm = pdf.catalog.lookup(PDFName.of('AcroForm'), PDFDict)
+    expect(acroForm.get(PDFName.of('DR'))).toBeUndefined()
   })
 
   it('keeps the size of every page of a PDF document, and shows every page portrait', async () => {

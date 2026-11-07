@@ -14,12 +14,12 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the account, the expenses and the additional documents. There is one report at a time. |
+| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the account, the expenses, the travel justifications and the additional documents. There is one report at a time. |
 | Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. The report of a student or a postdoctoral fellow names their supervisor, a visitor's their host. |
 | Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
 | Purpose | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit, equipment. A report is not necessarily for an event. |
-| Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates. |
+| Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates and travel justifications. |
 | Dates | The first and the last day of a business travel. One day when they are the same. |
 | Account | The account the Claimant suggests the expenses be charged to, as free text. |
 | Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipts or the reason it has none, and its bank statements unless it was paid in cash. |
@@ -28,11 +28,13 @@ document.
 | Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt, shown for information. The system converts nothing and asks for no exchange rate. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has at least one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
-| Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind. A document is in the report once, whatever the number of expenses that refer to it. |
+| Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
+| Name | What a document is called in the report and in the report document: its file name, unless the Claimant gives it another. |
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
 | Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense. |
 | Bank statement | A document an expense refers to: a bank or credit card statement showing the charge. Added from an expense, and often referred to by several. The Claimant redacts it, before adding it or in the saved report document; the system does not redact. |
-| Additional document | A document of the report as a whole, which no expense refers to: an invitation letter, a conference confirmation, an itinerary, a poster, boarding passes, notes. |
+| Travel justification | A document of a business travel as a whole that justifies the travel: an invitation letter, a conference programme, an acceptance notification. A business travel has at least one. |
+| Additional document | Any other document of the report as a whole, which no expense refers to: an itinerary, a poster, boarding passes, notes. |
 | Missing receipt authorization | McMaster's Missing Receipt Authorization Form, written by the system for one expense with a missing receipt, filled in with what the report knows, and left for the Claimant to sign. It is not a file the Claimant adds. |
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
@@ -44,15 +46,17 @@ document.
 | Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
 | Save | The system hands the report document to the browser, which writes it on the Claimant's computer. The document is built in the browser: nothing is fetched or sent over a network. |
 | Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and their total. |
+| Entered | The box of an expense on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense. |
 | Section | The part of the report document holding the documents of one kind, opened by its section pages. |
-| Section page | A page that opens a section: its title and the list of its documents, each with its label, its pages and the expenses it supports. The list continues on as many section pages as it needs. |
+| Section page | A page that opens a section: its title and the list of its documents, each with its label, its name, its pages and the expenses it supports. The list continues on as many section pages as it needs. |
 | Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |
-| Link | A label or an expense number in the report document that a reader clicks, on screen, to go to the document's first page or to the expense's row on the cover. |
+| Link | A label, a document's name or an expense number in the report document that a reader clicks, on screen, to go to the document's first page or to the expense's row on the cover. |
 
 ### Kinds of document
 
 | Kind | Letter | Where it comes from |
 |---|---|---|
+| Travel justification | J | Added by the Claimant to a business travel |
 | Receipt | R | Added by the Claimant from an expense |
 | Missing receipt authorization | M | Written by the system, one per expense with a missing receipt |
 | Bank statement | S | Added by the Claimant from an expense |
@@ -65,6 +69,7 @@ The order of this table is the order of the sections in the report document.
 ```mermaid
 classDiagram
   Report "1" *-- "*" Expense : claims
+  Report "1" *-- "*" Document : travel justifications
   Report "1" *-- "*" Document : additional documents
   Expense "*" --> "0..*" Document : receipts
   Expense "*" --> "0..*" Document : bank statements
@@ -76,4 +81,7 @@ classDiagram
   in cash has none.
 - A receipt or a bank statement belongs to the report while an expense refers
   to it. One bank statement often supports every expense of a trip.
-- Additional documents belong to the report, not to an expense.
+- A business travel has at least one travel justification; another report has
+  none.
+- Travel justifications and additional documents belong to the report, not to
+  an expense.

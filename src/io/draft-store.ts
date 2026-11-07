@@ -36,7 +36,10 @@ interface ExpenseRecord {
   readonly bankStatements: readonly string[]
 }
 
-/** What IndexedDB keeps of a document: its kind by its letter, its name and its bytes. */
+/**
+ * What IndexedDB keeps of a document, once: its kind by its letter, its file name and its bytes.
+ * Its name, which the Claimant changes as they type, is kept with the report.
+ */
 interface DocumentRecord {
   readonly letter: string
   readonly fileName: string
@@ -90,12 +93,16 @@ function failure(error: DOMException | null): Error {
   return error ?? new Error('The browser did not say why it failed')
 }
 
-/** The documents of a report: the receipts and bank statements of its expenses, each once. */
+/**
+ * The documents of a report, each once: its travel justifications, the receipts and bank
+ * statements of its expenses, and its additional documents.
+ */
 function documentsOf(report: Report): Document[] {
-  const documents = report.expenses.flatMap((expense) => [
-    ...expense.receipts,
-    ...expense.bankStatements,
-  ])
+  const documents = [
+    ...report.travelJustifications,
+    ...report.expenses.flatMap((expense) => [...expense.receipts, ...expense.bankStatements]),
+    ...report.additionalDocuments,
+  ]
   return [...new Set(documents)]
 }
 
@@ -125,8 +132,11 @@ const nothingKept: DraftStore = {
 class IndexedDraftStore implements DraftStore {
   readonly isKept = true
   private readonly database: IDBDatabase
-  /** The identifier of each document, given when it is first kept. */
-  private readonly identifiers = new WeakMap<Document, string>()
+  /**
+   * The identifier of each document, given when it is first kept, by its content: a document
+   * named otherwise is a copy with the same content, and keeps its identifier.
+   */
+  private readonly identifiers = new WeakMap<Uint8Array, string>()
 
   constructor(database: IDBDatabase) {
     this.database = database
@@ -137,14 +147,16 @@ class IndexedDraftStore implements DraftStore {
       const transaction = this.database.transaction([draftStore, documentStore], 'readonly')
       const record = await result(transaction.objectStore(draftStore).get(draftKey))
       const documents = new Map<string, Document>()
+      const names = namesOf(record)
       const store = transaction.objectStore(documentStore)
       const [keys, records] = await Promise.all([
         result(store.getAllKeys()),
         result(store.getAll()),
       ])
       keys.forEach((key, index) => {
-        const document = typeof key === 'string' ? this.documentOf(key, records[index]) : undefined
-        if (document !== undefined) documents.set(key as string, document)
+        if (typeof key !== 'string') return
+        const document = this.documentOf(key, records[index], names.get(key))
+        if (document !== undefined) documents.set(key, document)
       })
       return reportOf(record, documents)
     } catch {
@@ -159,13 +171,13 @@ class IndexedDraftStore implements DraftStore {
       transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       const store = transaction.objectStore(documentStore)
       const kept = new Set<string>()
-      /** Documents written by this transaction: their identifiers hold once it commits. */
-      const written = new Map<Document, string>()
+      /** Contents written by this transaction: their identifiers hold once it commits. */
+      const written = new Map<Uint8Array, string>()
       for (const document of documentsOf(report)) {
-        let identifier = this.identifiers.get(document)
+        let identifier = this.identifiers.get(document.content) ?? written.get(document.content)
         if (identifier === undefined) {
           identifier = crypto.randomUUID()
-          written.set(document, identifier)
+          written.set(document.content, identifier)
           const record: DocumentRecord = {
             letter: document.kind.letter,
             fileName: document.fileName,
@@ -180,8 +192,8 @@ class IndexedDraftStore implements DraftStore {
       }
       transaction.objectStore(draftStore).put(this.recordOf(report, written), draftKey)
       await completed(transaction)
-      for (const [document, identifier] of written) {
-        this.identifiers.set(document, identifier)
+      for (const [content, identifier] of written) {
+        this.identifiers.set(content, identifier)
       }
       return true
     } catch {
@@ -202,24 +214,32 @@ class IndexedDraftStore implements DraftStore {
     }
   }
 
-  private documentOf(identifier: string, record: unknown): Document | undefined {
+  private documentOf(
+    identifier: string,
+    record: unknown,
+    name: string | undefined,
+  ): Document | undefined {
     if (typeof record !== 'object' || record === null) return undefined
     const { letter, fileName, content } = record as Record<string, unknown>
     const kind = Kind.all.find((each) => each.letter === letter)
-    if (kind === undefined || typeof fileName !== 'string' || !(content instanceof Uint8Array)) {
+    if (
+      kind === undefined ||
+      typeof fileName !== 'string' ||
+      fileName.trim() === '' ||
+      !(content instanceof Uint8Array)
+    ) {
       return undefined
     }
-    const document = new Document(kind, fileName, content)
-    this.identifiers.set(document, identifier)
-    return document
+    this.identifiers.set(content, identifier)
+    return new Document(kind, fileName, content, name)
   }
 
   private recordOf(
     report: Report,
-    written: ReadonlyMap<Document, string>,
+    written: ReadonlyMap<Uint8Array, string>,
   ): Record<string, unknown> {
     const identifier = (document: Document) =>
-      this.identifiers.get(document) ?? written.get(document) ?? ''
+      this.identifiers.get(document.content) ?? written.get(document.content) ?? ''
     const expenses: ExpenseRecord[] = report.expenses.map((expense) => ({
       ...(expense.date === undefined ? {} : { date: expense.date.toString() }),
       ...(expense.description === undefined ? {} : { description: expense.description }),
@@ -229,6 +249,11 @@ class IndexedDraftStore implements DraftStore {
       receipts: expense.receipts.map(identifier),
       bankStatements: expense.bankStatements.map(identifier),
     }))
+    const names = Object.fromEntries(
+      documentsOf(report)
+        .filter((document) => document.name !== document.fileName)
+        .map((document) => [identifier(document), document.name]),
+    )
     return {
       claimantName: report.claimantName,
       position: report.position,
@@ -243,8 +268,22 @@ class IndexedDraftStore implements DraftStore {
       lastDay: report.lastDay?.toString(),
       account: report.account,
       expenses,
+      travelJustifications: report.travelJustifications.map(identifier),
+      additionalDocuments: report.additionalDocuments.map(identifier),
+      names,
     }
   }
+}
+
+/** The name of each document the Claimant named otherwise than its file, by its identifier. */
+function namesOf(record: unknown): Map<string, string> {
+  const names = (record as { names?: unknown } | undefined)?.names
+  if (typeof names !== 'object' || names === null) return new Map()
+  return new Map(
+    Object.entries(names).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string',
+    ),
+  )
 }
 
 /** The report a record holds, keeping only what follows the rules of each field. */
@@ -286,6 +325,8 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
     lastDay: isBusinessTravel ? date(fields.lastDay) : undefined,
     account: text(fields.account),
     expenses,
+    travelJustifications: documentsAmong(fields.travelJustifications, Kind.travelJustification),
+    additionalDocuments: documentsAmong(fields.additionalDocuments, Kind.additionalDocument),
   }).afterChanging({})
 }
 

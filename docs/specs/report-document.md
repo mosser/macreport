@@ -8,8 +8,9 @@ once the report is done: it stands alone, read with any PDF reader.
 
 1. The **cover**, on one page or more.
 2. One **section** per kind of document the report holds, in the order of the
-   kinds: receipts, missing receipt authorizations, bank statements,
-   additional documents. A kind without documents has no section.
+   kinds: travel justifications, receipts, missing receipt authorizations,
+   bank statements, additional documents. A kind without documents has no
+   section.
 
 Each section is its section page, on one page or more, then its documents,
 one after the other.
@@ -18,7 +19,7 @@ one after the other.
 |---|---|
 | Receipts, bank statements | By the number of the first expense they support, then in the order they were added. |
 | Missing receipt authorizations | By the number of their expense. |
-| Additional documents | In the order they were added. |
+| Travel justifications, additional documents | In the order they were added. |
 
 A document's label is the letter of its kind and its rank in its section:
 R1, R2, and so on.
@@ -48,23 +49,26 @@ the template's fields and its table, so that nothing else needs filling in.
 - **Report fields.** Name of claimant, position, email, then the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
   email for a visitor; purpose, the dates of a business travel, account.
-- **Attached information.** The four kinds of document, in their order, each
-  with a box ticked when its section exists. The labels are in the table of
-  expenses, not here.
+- **Attached information.** The five kinds of document, in their order, each
+  with a box ticked when its section exists.
 - **Expenses.** A table of every expense, sorted by date then in the order
   they were added, and numbered in that order:
 
-  | # | Date | Description | Foreign amount | Claimed (CAD) | Supporting documents |
-  |---|---|---|---|---|---|
-  | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | R1, S1 |
-  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | M1, cash |
+  | # | Date | Description | Foreign amount | Claimed (CAD) | Supporting documents | Entered |
+  |---|---|---|---|---|---|---|
+  | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | Air Canada booking<br>Visa, October | ☐ |
+  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | Taxi, CDG–hotel<br>cash | ☐ |
 
   The foreign amount is the currency code then the amount, empty for an
   expense paid in Canadian dollars; it is for information, nothing is
-  converted. The supporting documents are labels, in the order of the report
-  document, and *cash* for an expense paid in cash. The table continues on
-  the next page when it does not fit, its header repeated; a last row gives
-  the total of the claimed amounts.
+  converted. The supporting documents are the names of the expense's
+  documents, one per line, in the order of the report document, and *cash*
+  for an expense paid in cash; a missing receipt authorization is named by
+  the expense's description. *Entered* is an empty box, a form field that
+  McSCert's administrative staff tick on screen, or by hand on a printed
+  copy, once they have entered the expense. The table continues on the next
+  page when it does not fit, its header repeated; a last row gives the total
+  of the claimed amounts, without a box.
 
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.
@@ -73,13 +77,14 @@ deal with exchange rates.
 
 The title of the section, then a table of its documents:
 
-| Label | File | Pages | Expenses |
+| Label | Name | Pages | Expenses |
 |---|---|---|---|
-| S1 | statement-october.pdf | 9–11 | 1, 3, 4 |
+| S1 | Visa, October | 9–11 | 1, 3, 4 |
 
 Pages are the pages of the report document. Missing receipt authorizations
-have no file: the column shows the expense's description. The Expenses column
-is left out of the section of additional documents.
+have no name: the column shows the expense's description. The Expenses column
+is left out of the sections of travel justifications and of additional
+documents.
 
 The table continues on the next page when it does not fit, its header
 repeated, as the cover's does. Those pages are all section pages: each is
@@ -139,8 +144,8 @@ it reads upright on screen, whatever the page's size and rotation:
   `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
   programme comm… · 14 / 30`. A description longer than 30 characters is cut
   to its first 30, followed by an ellipsis;
-- on a page of an additional document: its label, then the page number out
-  of the total, as in `A1 · 28 / 30`;
+- on a page of a travel justification or an additional document: its
+  label, then the page number out of the total, as in `A1 · 28 / 30`;
 - on the cover and on section pages: the page number out of the total.
 
 Every page of a document carries the expenses, not only its first. When the
@@ -158,7 +163,7 @@ what they name.
 
 | Where | Link | Goes to |
 |---|---|---|
-| Cover, expenses | A label among the supporting documents | The first page of its document |
+| Cover, expenses | A name among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
 | Section page | An expense number | The expense's row on the cover |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
@@ -175,7 +180,7 @@ document. It covers every language written in the Latin alphabet, Greek and
 Cyrillic. Texts are compared in their composed form, so that an accent typed as
 a separate mark, as file names on macOS are, counts as the accented letter. A
 text holding a character the font does not have (Chinese, Japanese, emoji),
-file names included, is a finding at the Review step
+names included, is a finding at the Review step
 (`prepare-an-expense-report.md`); it is never replaced silently.
 
 ## Look

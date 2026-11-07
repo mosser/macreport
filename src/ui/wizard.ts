@@ -1,5 +1,7 @@
 import { Report } from '../domain/report.ts'
-import { expensesStep, type ReadFile } from './expenses-step.ts'
+import { additionalDocumentsStep } from './additional-documents-step.ts'
+import type { ReadFile } from './document-field.ts'
+import { expensesStep } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
 import { reviewStep, type SaveReport } from './review-step.ts'
@@ -33,6 +35,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   const steps: readonly Step[] = [
     reportStep,
     expensesStep(options.readFile),
+    additionalDocumentsStep(options.readFile),
     reviewStep(options.saveReport, () => isDraftKept),
   ]
   let report = options.draft

@@ -3,7 +3,13 @@ import { Amount } from './amount.ts'
 import { CalendarDate } from './calendar-date.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
-import { findingsOf, findingsOfExpensesStep, findingsOfReportStep } from './findings.ts'
+import {
+  findingsOf,
+  findingsOfAdditionalDocumentsStep,
+  findingsOfExpensesStep,
+  findingsOfReportStep,
+  isRequired,
+} from './findings.ts'
 import { Kind } from './kind.ts'
 import { Report } from './report.ts'
 
@@ -96,5 +102,28 @@ describe('findings of the Expenses step', () => {
       ...Array(5).fill('Report'),
       'Expenses',
     ])
+    expect(findingsOf(complete).map((finding) => finding.step)).toEqual([
+      'Expenses',
+      'Additional documents',
+    ])
+  })
+})
+
+describe('findings of the Additional documents step', () => {
+  it('asks a business travel for a travel justification, and another report for none', () => {
+    expect(findingsOfAdditionalDocumentsStep(complete)).toEqual([
+      { step: 'Additional documents', wording: 'Travel justification is required.' },
+    ])
+    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const justified = complete.afterChanging({ travelJustifications: [invitation] })
+    expect(findingsOfAdditionalDocumentsStep(justified)).toEqual([])
+    const elsewhere = complete.afterChanging({ isBusinessTravel: false })
+    expect(findingsOfAdditionalDocumentsStep(elsewhere)).toEqual([])
+  })
+
+  it('requires a travel justification, but neither an additional document nor a name', () => {
+    expect(isRequired('travelJustifications')).toBe(true)
+    expect(isRequired('additionalDocuments')).toBe(false)
+    expect(isRequired('documentName')).toBe(false)
   })
 })

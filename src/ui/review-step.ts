@@ -14,30 +14,34 @@ function coverOf(layout: Layout): Markup {
   const rows = layout.expenses.map(
     (row) => html`<tr>
       <td>${row.number}</td><td>${row.date}</td><td>${row.description}</td>
-      <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td><td>${row.supportingDocuments.join(', ')}</td>
+      <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
+      <td>${row.supportingDocuments.map((document) => html`<div>${document.name}</div>`)}</td>
+      <td><input type="checkbox" disabled aria-label="Entered, expense ${row.number}" /></td>
     </tr>`,
   )
   return html`<table class="cover-fields">${fields}</table>
     <table class="expenses">
       <thead><tr>
         <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th>
-        <th>Claimed (CAD)</th><th>Supporting documents</th>
+        <th>Claimed (CAD)</th><th>Supporting documents</th><th>Entered</th>
       </tr></thead>
-      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total}</td><td></td></tr></tbody>
+      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total}</td><td></td><td></td></tr></tbody>
     </table>`
 }
 
 function sectionsOf(layout: Layout): Markup[] {
-  return layout.sections.map(
-    (section) => html`<h3>${section.title}</h3>
+  return layout.sections.map((section) => {
+    const expenses = (cell: Markup) => (section.listsExpenses ? cell : '')
+    const rows = section.documents.map(
+      (entry) =>
+        html`<tr><td>${entry.label}</td><td>${entry.document.name}</td>${expenses(html`<td>${entry.expenseNumbers.join(', ')}</td>`)}</tr>`,
+    )
+    return html`<h3>${section.title}</h3>
       <table class="section">
-        <thead><tr><th>Label</th><th>File</th><th>Expenses</th></tr></thead>
-        <tbody>${section.documents.map(
-          (entry) =>
-            html`<tr><td>${entry.label}</td><td>${entry.document.fileName}</td><td>${entry.expenseNumbers.join(', ')}</td></tr>`,
-        )}</tbody>
-      </table>`,
-  )
+        <thead><tr><th>Label</th><th>Name</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`
+  })
 }
 
 /** What became of the last save: the report it was for, and its file name or that it failed. */
@@ -59,7 +63,7 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
   return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${draft}`
 }
 
-/** Step 3: the report as it will be written, then its findings, and Save the report. */
+/** Step 4: the report as it will be written, then its findings, and Save the report. */
 export function reviewStep(saveReport: SaveReport, isDraftKept: () => boolean): Step {
   let outcome: Outcome | undefined
   return {

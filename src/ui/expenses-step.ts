@@ -6,14 +6,15 @@ import { findingsOfExpensesStep } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { textOrAbsent } from '../domain/text.ts'
+import {
+  type DocumentField,
+  documentFieldOf,
+  listenToDocumentFields,
+  type ReadFile,
+} from './document-field.ts'
 import { fieldName, fieldRule } from './field.ts'
-import { html, type Markup } from './html.ts'
+import { html } from './html.ts'
 import type { Context, Step } from './step.ts'
-
-/** Reads a file the Claimant adds into a document of a kind. */
-export type ReadFile = (file: File, kind: Kind) => Promise<Document>
-
-const accepted = 'application/pdf,image/jpeg,image/png'
 
 /** The expense of the report, or a new one when none is claimed yet. */
 function expenseOf(report: Report): Expense {
@@ -41,20 +42,24 @@ function typed(field: string, value: string): { changes: ExpenseFields; isBroken
   return { changes: { description: textOrAbsent(value) }, isBroken: false }
 }
 
-/** A zone a file is dropped on, or clicked to choose one; it shows the file added. */
-function fileField(field: 'receipts' | 'bankStatements', documents: readonly Document[]): Markup {
-  const added = documents.map((document) => html`<span class="added">${document.fileName}</span>`)
-  const empty = html`<span>Drop a file here, or choose one</span>`
-  const content = added.length > 0 ? added : empty
-  return html`<div class="field">
-    ${fieldName(field)}
-    <label class="drop-zone" data-drop="${field}">
-      <input name="${field}" type="file" accept="${accepted}"
-        aria-labelledby="name-of-${field} content-of-${field}" />
-      <span id="content-of-${field}">${content}</span>
-    </label>
-    ${fieldRule(field)}
-  </div>`
+/** The receipt of the expense: the one added last. */
+const receipts: DocumentField = {
+  field: 'receipts',
+  kind: Kind.receipt,
+  isRemovable: false,
+  documentsIn: (report: Report) => expenseOf(report).receipts,
+  afterAdding: (report: Report, document: Document) =>
+    afterChanging(report, { receipts: [document] }),
+}
+
+/** The bank statement of the expense: the one added last. */
+const bankStatements: DocumentField = {
+  field: 'bankStatements',
+  kind: Kind.bankStatement,
+  isRemovable: false,
+  documentsIn: (report: Report) => expenseOf(report).bankStatements,
+  afterAdding: (report: Report, document: Document) =>
+    afterChanging(report, { bankStatements: [document] }),
 }
 
 /** Step 2: the expense, with its receipt and its bank statement. */
@@ -81,11 +86,11 @@ export function expensesStep(readFile: ReadFile): Step {
             value="${expense.claimedAmount ? (expense.claimedAmount.cents / 100).toFixed(2) : ''}" />
           ${fieldRule('claimedAmount')}
         </label>
-        ${fileField('receipts', expense.receipts)}
-        ${fileField('bankStatements', expense.bankStatements)}`.text
+        ${documentFieldOf(receipts, context.report)}
+        ${documentFieldOf(bankStatements, context.report)}`.text
 
       for (const element of panel.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-        'input:not([type="file"]), textarea',
+        'input:not([type="file"]):not([name="documentName"]), textarea',
       )) {
         element.addEventListener('input', () => {
           const { changes, isBroken } = typed(element.name, element.value)
@@ -96,36 +101,7 @@ export function expensesStep(readFile: ReadFile): Step {
           context.refreshActions()
         })
       }
-      /** Chosen or dropped, a file goes through the same handler. */
-      const add = async (field: string, file: File | undefined) => {
-        if (file === undefined) return
-        const session = context.session
-        const kind = field === 'receipts' ? Kind.receipt : Kind.bankStatement
-        const document = await readFile(file, kind)
-        if (context.session !== session) return
-        const changes =
-          field === 'receipts' ? { receipts: [document] } : { bankStatements: [document] }
-        context.change(afterChanging(context.report, changes))
-        context.refresh()
-      }
-      for (const element of panel.querySelectorAll<HTMLInputElement>('input[type="file"]')) {
-        element.addEventListener('change', () => {
-          void add(element.name, element.files?.[0])
-        })
-      }
-      for (const zone of panel.querySelectorAll<HTMLElement>('[data-drop]')) {
-        const isOver = (over: boolean) => (event: Event) => {
-          event.preventDefault()
-          zone.classList.toggle('is-dragged-over', over)
-        }
-        zone.addEventListener('dragenter', isOver(true))
-        zone.addEventListener('dragover', isOver(true))
-        zone.addEventListener('dragleave', isOver(false))
-        zone.addEventListener('drop', (event) => {
-          isOver(false)(event)
-          void add(zone.dataset.drop ?? '', (event as DragEvent).dataTransfer?.files[0])
-        })
-      }
+      listenToDocumentFields(panel, context, readFile, [receipts, bankStatements])
     },
 
     canContinue(report: Report): boolean {

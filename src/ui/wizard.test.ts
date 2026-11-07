@@ -234,13 +234,25 @@ describe('the wizard', () => {
     expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('1012.35')
     expect(continueButton()?.disabled).toBe(false)
     continueButton()?.click()
+    expect(root.querySelector('h2')?.textContent).toBe('Additional documents')
+    expect(continueButton()?.disabled).toBe(false)
+    continueButton()?.click()
 
     expect(root.querySelector('h2')?.textContent).toBe('Review')
     expect(continueButton()?.hidden).toBe(true)
     const text = root.textContent ?? ''
-    for (const expected of ['Zoë Lefèvre', '$1,012.35', 'R1, S1', 'Receipts', 'Bank statements']) {
+    for (const expected of [
+      'Zoë Lefèvre',
+      '$1,012.35',
+      'air-canada.pdf',
+      'statement.pdf',
+      'Entered',
+      'Receipts',
+      'Bank statements',
+    ]) {
       expect(text).toContain(expected)
     }
+    expect(text).not.toContain('Travel justifications')
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status')).not.toBeNull())
     expect(saved).toHaveLength(1)
@@ -253,7 +265,7 @@ describe('the wizard', () => {
     expect(button('[data-action="save"]')).not.toBeNull()
     button('[data-step="1"]')?.click()
     type('description', 'Air Canada, YYZ–CDG and back')
-    button('[data-step="2"]')?.click()
+    button('[data-step="3"]')?.click()
     expect(root.querySelector('.status')).toBeNull()
   })
 
@@ -261,6 +273,7 @@ describe('the wizard', () => {
     fillReport()
     continueButton()?.click()
     await fillExpense()
+    continueButton()?.click()
     continueButton()?.click()
     isSaved = false
     button('[data-action="save"]')?.click()
@@ -305,7 +318,9 @@ describe('the wizard', () => {
       })
       root.querySelector(`[data-drop="${field}"]`)?.dispatchEvent(drop)
       await vi.waitFor(() =>
-        expect(root.querySelector(`[data-drop="${field}"]`)?.textContent).toContain(fileName),
+        expect(
+          root.querySelector(`[data-drop="${field}"]`)?.closest('.field')?.textContent,
+        ).toContain(fileName),
       )
     }
     const elsewhere = new Event('drop', { bubbles: true, cancelable: true })
@@ -328,9 +343,10 @@ describe('the wizard', () => {
     continueButton()?.click()
     await fillExpense()
     continueButton()?.click()
+    continueButton()?.click()
     button('[data-step="0"]')?.click()
     type('account', '')
-    button('[data-step="2"]')?.click()
+    button('[data-step="3"]')?.click()
     expect(root.querySelectorAll('.findings li')).toHaveLength(1)
     expect(root.querySelector('.findings')?.textContent).toContain('Account is required.')
     expect(button('[data-action="save"]')).toBeNull()
@@ -382,5 +398,80 @@ describe('the wizard', () => {
     await new Promise((resolve) => setTimeout(resolve, 10))
     expect(kept.at(-1)?.expenses ?? []).toEqual([])
     expect(root.textContent).not.toContain('late.pdf')
+  })
+
+  it('names a receipt or a bank statement after its file, until the Claimant names it otherwise', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    const names = () => [...root.querySelectorAll<HTMLInputElement>('input[name="documentName"]')]
+    expect(names().map((input) => input.value)).toEqual(['air-canada.pdf', 'statement.pdf'])
+    const statementName = names()[1]
+    if (statementName === undefined) throw new TypeError('No name')
+    statementName.value = 'Visa, October'
+    statementName.dispatchEvent(new Event('input'))
+    expect(names()[1]).toBe(statementName)
+    expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.name).toBe('Visa, October')
+    expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.fileName).toBe('statement.pdf')
+    statementName.value = ''
+    statementName.dispatchEvent(new Event('input'))
+    expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.name).toBe('statement.pdf')
+    statementName.value = 'Visa, October'
+    statementName.dispatchEvent(new Event('input'))
+    expect(root.querySelector('[data-remove]')).toBeNull()
+    continueButton()?.click()
+    continueButton()?.click()
+    expect(root.querySelector('table.expenses')?.textContent).toContain('Visa, October')
+    expect(root.querySelector('table.section')?.textContent).toContain('air-canada.pdf')
+  })
+
+  it('adds, names and removes additional documents, which are optional', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    expect(root.querySelector('[data-drop="travelJustifications"]')).toBeNull()
+    expect(continueButton()?.disabled).toBe(false)
+    await add('additionalDocuments', 'itinerary.pdf')
+    await add('additionalDocuments', 'poster.png')
+    expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
+      'itinerary.pdf',
+      'poster.png',
+    ])
+    type('documentName', 'Itinerary')
+    expect(kept.at(-1)?.additionalDocuments[0]?.name).toBe('Itinerary')
+    button('[data-remove="additionalDocuments"][data-index="1"]')?.click()
+    expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual(['Itinerary'])
+    expect(root.textContent).not.toContain('poster.png')
+    continueButton()?.click()
+    const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
+    expect(sections).toEqual(['Receipts', 'Bank statements', 'Additional documents'])
+    const additional = root.querySelectorAll('table.section')[2]
+    expect(additional?.textContent).toContain('Itinerary')
+    expect(additional?.textContent).not.toContain('Expenses')
+  })
+
+  it('asks a business travel for a travel justification before it continues', async () => {
+    fillReport()
+    tick('businessTravel', true)
+    type('firstDay', '2026-10-03')
+    type('lastDay', '2026-10-07')
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    const name = root
+      .querySelector('[data-drop="travelJustifications"]')
+      ?.closest('.field')
+      ?.querySelector('.field-name')
+    expect(name?.textContent?.trim()).toBe('Travel justification *')
+    expect(continueButton()?.disabled).toBe(true)
+    expect(button('[data-step="3"]')?.disabled).toBe(true)
+    await add('travelJustifications', 'invitation.pdf')
+    expect(continueButton()?.disabled).toBe(false)
+    continueButton()?.click()
+    expect(root.querySelector('h3')?.textContent).toBe('Travel justifications')
+    button('[data-step="0"]')?.click()
+    tick('businessTravel', false)
+    expect(kept.at(-1)?.travelJustifications).toEqual([])
   })
 })

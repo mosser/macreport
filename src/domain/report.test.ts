@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CalendarDate } from './calendar-date.ts'
+import { Document } from './document.ts'
 import { Expense } from './expense.ts'
+import { Kind } from './kind.ts'
 import { positions, Report } from './report.ts'
 
 describe('Report', () => {
@@ -74,5 +76,47 @@ describe('Report', () => {
     expect(report.expenses).toEqual([expense])
     const replacement = expense.afterChanging({ description: 'Train' })
     expect(report.afterReplacing(expense, replacement).expenses).toEqual([replacement])
+  })
+
+  it('holds travel justifications and additional documents of their own kinds only', () => {
+    const receipt = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array())
+    expect(() => new Report({ travelJustifications: [receipt] })).toThrow(TypeError)
+    expect(() => new Report({ additionalDocuments: [receipt] })).toThrow(TypeError)
+    expect(new Report().travelJustifications).toEqual([])
+    expect(new Report().additionalDocuments).toEqual([])
+  })
+
+  it('justifies only a business travel, and takes the travel justifications out when it is unticked', () => {
+    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const travel = new Report({ isBusinessTravel: true }).afterChanging({
+      travelJustifications: [invitation],
+    })
+    expect(travel.travelJustifications).toEqual([invitation])
+    expect(travel.afterChanging({ isBusinessTravel: false }).travelJustifications).toEqual([])
+    expect(
+      new Report().afterChanging({ travelJustifications: [invitation] }).travelJustifications,
+    ).toEqual([])
+  })
+
+  it('names a document otherwise wherever it is, and removes it from wherever it is', () => {
+    const statement = new Document(Kind.bankStatement, 'scan.pdf', new Uint8Array())
+    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array())
+    const report = new Report({
+      isBusinessTravel: true,
+      travelJustifications: [invitation],
+      additionalDocuments: [poster],
+    }).afterAdding(new Expense({ bankStatements: [statement] }))
+    const named = report.afterRenaming(statement, 'Visa, October')
+    expect(named.expenses[0]?.bankStatements.map((document) => document.name)).toEqual([
+      'Visa, October',
+    ])
+    expect(named.travelJustifications).toEqual([invitation])
+    const programme = named.afterRenaming(invitation, 'Programme').travelJustifications[0]
+    expect(programme?.name).toBe('Programme')
+    const removed = report.afterRemoving(poster).afterRemoving(statement)
+    expect(removed.additionalDocuments).toEqual([])
+    expect(removed.expenses[0]?.bankStatements).toEqual([])
+    expect(removed.travelJustifications).toEqual([invitation])
   })
 })

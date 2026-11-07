@@ -18,6 +18,12 @@ export interface AttachedInformation {
   readonly isAttached: boolean
 }
 
+/** A document supporting an expense on the cover: named, and a link to it by its label. */
+export interface SupportingDocument {
+  readonly label: string
+  readonly name: string
+}
+
 /** A row of the cover's table of expenses. */
 export interface ExpenseRow {
   readonly number: number
@@ -25,8 +31,8 @@ export interface ExpenseRow {
   readonly description: string
   readonly foreignAmount: string
   readonly claimedAmount: string
-  /** The labels of the documents supporting the expense, in the order of the report document. */
-  readonly supportingDocuments: readonly string[]
+  /** The documents supporting the expense, one per line, in the order of the report document. */
+  readonly supportingDocuments: readonly SupportingDocument[]
 }
 
 /** An expense as the stamp of a document names it: its number, and the start of its description. */
@@ -53,6 +59,8 @@ export interface LabelledDocument {
 export interface Section {
   readonly kind: Kind
   readonly title: string
+  /** Whether its section page lists the expenses each document supports. */
+  readonly listsExpenses: boolean
   readonly documents: readonly LabelledDocument[]
 }
 
@@ -84,9 +92,12 @@ interface Complete {
 export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
   const expenses = [...report.expenses].sort(byDate)
-  const sections = [Kind.receipt, Kind.bankStatement]
-    .map((kind) => sectionOf(kind, expenses))
-    .filter((section) => section.documents.length > 0)
+  const sections = [
+    sectionOfReport(Kind.travelJustification, report.travelJustifications),
+    sectionOf(Kind.receipt, expenses),
+    sectionOf(Kind.bankStatement, expenses),
+    sectionOfReport(Kind.additionalDocument, report.additionalDocuments),
+  ].filter((section) => section.documents.length > 0)
   const labels = new Map(
     sections.flatMap((section) =>
       section.documents.map((entry) => [entry.document, entry.label] as const),
@@ -200,7 +211,22 @@ function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
     expenseNumbers: stamped.map((expense) => expense.number),
     expenses: stamped,
   }))
-  return { kind, title: kind.plural, documents }
+  return { kind, title: kind.plural, listsExpenses: true, documents }
+}
+
+/** The section of a kind of document of the report as a whole: in the order they were added. */
+function sectionOfReport(kind: Kind, documents: readonly Document[]): Section {
+  return {
+    kind,
+    title: kind.plural,
+    listsExpenses: false,
+    documents: documents.map((document, rank) => ({
+      label: `${kind.letter}${rank + 1}`,
+      document,
+      expenseNumbers: [],
+      expenses: [],
+    })),
+  }
 }
 
 /** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */
@@ -219,9 +245,10 @@ function attachedInformationOf(kind: Kind, sections: readonly Section[]): Attach
 }
 
 function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
-  const supporting = [...expense.receipts, ...expense.bankStatements].map(
-    (document) => labels.get(document) ?? '',
-  )
+  const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
+    label: labels.get(document) ?? '',
+    name: document.name,
+  }))
   return {
     number,
     date: expense.date?.toString() ?? '',

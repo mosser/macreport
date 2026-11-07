@@ -1,5 +1,7 @@
 import type { CalendarDate } from './calendar-date.ts'
+import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
+import { Kind } from './kind.ts'
 import { isEmailAddress } from './text.ts'
 
 /** What the claimant is at McSCert. */
@@ -29,12 +31,16 @@ export interface ReportFields {
   readonly lastDay?: CalendarDate | undefined
   readonly account?: string | undefined
   readonly expenses?: readonly Expense[] | undefined
+  readonly travelJustifications?: readonly Document[] | undefined
+  readonly additionalDocuments?: readonly Document[] | undefined
 }
 
 /**
  * What the Claimant prepares: the claimant's name, position and email, the supervisor of a
  * student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the
- * account and the expenses. An email, when given, is an email address.
+ * account, the expenses, the travel justifications and the additional documents. An email, when
+ * given, is an email address; a travel justification is a document of the travel justification
+ * kind, an additional document of the additional document kind.
  */
 export class Report {
   readonly claimantName: string | undefined
@@ -51,13 +57,28 @@ export class Report {
   readonly lastDay: CalendarDate | undefined
   readonly account: string | undefined
   readonly expenses: readonly Expense[]
+  /** The documents justifying a business travel, in the order they were added. */
+  readonly travelJustifications: readonly Document[]
+  /** The other documents of the report as a whole, in the order they were added. */
+  readonly additionalDocuments: readonly Document[]
 
-  /** Throws a TypeError when an email given is not an email address. */
+  /**
+   * Throws a TypeError when an email given is not an email address, or when a travel
+   * justification or an additional document is a document of another kind.
+   */
   constructor(fields: ReportFields = {}) {
     for (const email of [fields.email, fields.supervisorEmail, fields.hostEmail]) {
       if (email !== undefined && !isEmailAddress(email)) {
         throw new TypeError(`${email} is not an email address`)
       }
+    }
+    const travelJustifications = fields.travelJustifications ?? []
+    const additionalDocuments = fields.additionalDocuments ?? []
+    if (travelJustifications.some((document) => document.kind !== Kind.travelJustification)) {
+      throw new TypeError('A travel justification is a document of the travel justification kind')
+    }
+    if (additionalDocuments.some((document) => document.kind !== Kind.additionalDocument)) {
+      throw new TypeError('An additional document is a document of the additional document kind')
     }
     this.claimantName = fields.claimantName
     this.position = fields.position
@@ -72,6 +93,8 @@ export class Report {
     this.lastDay = fields.lastDay
     this.account = fields.account
     this.expenses = fields.expenses ?? []
+    this.travelJustifications = travelJustifications
+    this.additionalDocuments = additionalDocuments
   }
 
   /** Whether the report asks for a supervisor: it does of a student or a postdoctoral fellow. */
@@ -86,7 +109,8 @@ export class Report {
 
   /**
    * The same report, with the fields given changed. Choosing another position takes the
-   * supervisor or the host out of the report; unticking business travel takes the dates out.
+   * supervisor or the host out of the report; unticking business travel takes the dates and the
+   * travel justifications out.
    */
   afterChanging(changes: ReportFields): Report {
     const changed = new Report({ ...this.fields(), ...changes })
@@ -98,6 +122,7 @@ export class Report {
       hostEmail: changed.asksForHost ? changed.hostEmail : undefined,
       firstDay: changed.isBusinessTravel ? changed.firstDay : undefined,
       lastDay: changed.isBusinessTravel ? changed.lastDay : undefined,
+      travelJustifications: changed.isBusinessTravel ? changed.travelJustifications : [],
     })
   }
 
@@ -110,6 +135,32 @@ export class Report {
   afterReplacing(expense: Expense, replacement: Expense): Report {
     const expenses = this.expenses.map((claimed) => (claimed === expense ? replacement : claimed))
     return new Report({ ...this.fields(), expenses })
+  }
+
+  /** The same report, with a document named otherwise wherever it is. */
+  afterRenaming(document: Document, name: string): Report {
+    return this.afterReplacingDocument(document, [document.afterNaming(name)])
+  }
+
+  /** The same report, without a document: no expense refers to it, nor is it of the report. */
+  afterRemoving(document: Document): Report {
+    return this.afterReplacingDocument(document, [])
+  }
+
+  private afterReplacingDocument(document: Document, replacement: readonly Document[]): Report {
+    const among = (documents: readonly Document[]) =>
+      documents.flatMap((each) => (each === document ? replacement : [each]))
+    return new Report({
+      ...this.fields(),
+      expenses: this.expenses.map((expense) =>
+        expense.afterChanging({
+          receipts: among(expense.receipts),
+          bankStatements: among(expense.bankStatements),
+        }),
+      ),
+      travelJustifications: among(this.travelJustifications),
+      additionalDocuments: among(this.additionalDocuments),
+    })
   }
 
   private fields(): ReportFields {
@@ -127,6 +178,8 @@ export class Report {
       lastDay: this.lastDay,
       account: this.account,
       expenses: this.expenses,
+      travelJustifications: this.travelJustifications,
+      additionalDocuments: this.additionalDocuments,
     }
   }
 }

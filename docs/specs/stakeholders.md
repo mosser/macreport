@@ -14,7 +14,7 @@ no administrator role and no reviewer interface.
 | Stakeholder | Kind | Interest in the system |
 |---|---|---|
 | Claimant | Direct | Prepares the report. Wants to go from a pile of receipts and bank statements to one complete document without retyping a form or assembling PDFs by hand. |
-| McSCert administrative staff | Indirect | Receive the report and process the reimbursement. Never use the system. Want every expense to be traceable to its receipt and its bank statement, and the report to carry what the McSCert Expense Report Template asks for. |
+| McSCert administrative staff | Indirect | Receive the report and process the reimbursement. Never use the system. Want every expense to be traceable to its receipt and its bank statement, a business travel to be justified, the report to carry what the McSCert Expense Report Template asks for, and to tick each expense on the cover once they have entered it. |
 | Supervisor, host | Indirect | The faculty member who supervises a student or postdoctoral fellow Claimant, or the McSCert member who hosts a visiting one. Named, with their email, in the report, so that McSCert's administration can reach them. |
 | Account holder | Indirect | The holder of the account the expenses are charged to, usually the principal investigator of a grant. Wants the account suggested and the expenses justified. |
 | McMaster University financial services | Indirect | Set the reimbursement rules: original receipts, bank statements, and the Missing Receipt Authorization Form when a receipt is missing. |

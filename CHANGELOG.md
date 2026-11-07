@@ -6,6 +6,43 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The Additional documents step, between Expenses and Review. A business
+  travel needs at least one travel justification (an invitation letter, a
+  conference programme); other additional documents (an itinerary, a poster,
+  boarding passes) are optional. Each is dropped on its zone or chosen from
+  the computer, and can be removed.
+- In the report document, the travel justifications come first, in a section
+  of their own labelled J1, J2…, before the receipts; the additional
+  documents come last, labelled A1, A2…. Neither section lists expenses.
+- A name for every document, receipts and bank statements included: its file
+  name, unless the Claimant types another next to it. The Review step and the
+  report document call each document by its name.
+- An **Entered** box for each expense on the cover: a form field McSCert's
+  administrative staff tick on screen, or by hand on a printed copy, once
+  they have entered the expense.
+
+### Changed
+
+- On the cover, an expense's supporting documents are listed by name, one per
+  line, each a link to its document, rather than by label (R1, S1). Section
+  pages have a Name column in place of File.
+- A business travel cannot be saved until it has a travel justification: a
+  draft of a business travel kept by 0.1.0 asks for one at the Review step.
+  Unticking Business travel takes the travel justifications out of the report.
+
+### Known limitations
+
+- One expense per report; no missing receipt, payment in cash or foreign
+  amount.
+- The Additional documents step does not show how many pages each document
+  has.
+- Files are not checked when added: a damaged or password-protected PDF is
+  found only when the report is saved, and the Review step then says so.
+- On section pages, labels and expense numbers are not links yet, nor is the
+  label in a stamp.
+
 ## [0.1.0] - 2026-11-07
 
 The first version, `0.1.0`: a minimal report, from one expense to one PDF.
