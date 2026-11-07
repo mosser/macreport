@@ -283,17 +283,16 @@ tr.supporting td {
   font-size: 0.9rem;
 }
 
-/* Every table of documents spaced alike: its labels, then its names, then its expenses. */
+/*
+ * Every table of documents spaced alike: its labels in a narrow column, then its names and the
+ * descriptions of their expenses sharing the rest evenly.
+ */
 table.documents {
   table-layout: fixed;
 }
 
 table.documents col.label {
   width: 5rem;
-}
-
-table.documents col.numbers {
-  width: 8rem;
 }
 
 .findings li {
