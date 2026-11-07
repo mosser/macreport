@@ -148,7 +148,13 @@ describe('layoutOf', () => {
         label: 'R1',
         document: receipt,
         expenseNumbers: [1],
-        expenses: [{ number: 1, name: 'Expense 1: Air Canada, YYZ–CDG return' }],
+        expenses: [
+          {
+            number: 1,
+            description: 'Air Canada, YYZ–CDG return',
+            name: 'Expense 1: Air Canada, YYZ–CDG return',
+          },
+        ],
       },
     ])
     expect(sections[2]?.documents).toEqual([
@@ -156,7 +162,13 @@ describe('layoutOf', () => {
         label: 'S1',
         document: statement,
         expenseNumbers: [1],
-        expenses: [{ number: 1, name: 'Expense 1: Air Canada, YYZ–CDG return' }],
+        expenses: [
+          {
+            number: 1,
+            description: 'Air Canada, YYZ–CDG return',
+            name: 'Expense 1: Air Canada, YYZ–CDG return',
+          },
+        ],
       },
     ])
   })
@@ -167,7 +179,11 @@ describe('layoutOf', () => {
       flight.afterChanging({ description: 'Dinner with the programme committee of ICSE' }),
     )
     expect(layoutOf(dinner).sections[1]?.documents[0]?.expenses).toEqual([
-      { number: 1, name: 'Expense 1: Dinner with the programme comm…' },
+      {
+        number: 1,
+        description: 'Dinner with the programme comm…',
+        name: 'Expense 1: Dinner with the programme comm…',
+      },
     ])
     const exactly = report.afterReplacing(
       flight,
@@ -205,8 +221,12 @@ describe('layoutOf', () => {
         document: statement,
         expenseNumbers: [1, 2],
         expenses: [
-          { number: 1, name: 'Expense 1: Taxi' },
-          { number: 2, name: 'Expense 2: Air Canada, YYZ–CDG return' },
+          { number: 1, description: 'Taxi', name: 'Expense 1: Taxi' },
+          {
+            number: 2,
+            description: 'Air Canada, YYZ–CDG return',
+            name: 'Expense 2: Air Canada, YYZ–CDG return',
+          },
         ],
       },
     ])

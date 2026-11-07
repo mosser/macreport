@@ -36,10 +36,15 @@ export interface ExpenseRow {
   readonly supportingDocuments: readonly SupportingDocument[]
 }
 
-/** An expense as the stamp of a document names it: its number, and the start of its description. */
+/**
+ * An expense as a document names it, on its section page and in its stamp: its number, and the
+ * start of its description.
+ */
 export interface StampedExpense {
   readonly number: number
-  /** Expense 1: Air Canada, YYZ–CDG return; a description over 30 characters cut, with an ellipsis. */
+  /** Air Canada, YYZ–CDG return; a description over 30 characters cut, with an ellipsis. */
+  readonly description: string
+  /** Expense 1: and its description, as a stamp names it. */
   readonly name: string
 }
 
@@ -262,7 +267,7 @@ function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
     characters.length > stampedDescriptionLength
       ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
       : characters.join('')
-  return { number, name: `Expense ${number}: ${description}` }
+  return { number, description, name: `Expense ${number}: ${description}` }
 }
 
 function attachedInformationOf(kind: Kind, sections: readonly Section[]): AttachedInformation {

@@ -34,7 +34,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - On the cover, each expense takes two lines: its fields, then its supporting
   documents by name, each a link to its document, rather than a column of
-  labels (R1, S1). Section pages have a Name column in place of File.
+  labels (R1, S1). Section pages have a Name column in place of File, and
+  name the expenses a document supports by their description, each a link to
+  its row on the cover, rather than by their number.
 - The Review step shows the expenses the same way, without the Entered
   boxes, which belong to the report document. Its tables of documents are
   spaced alike, and a document's name opens it in a new tab of the browser;
@@ -72,8 +74,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   has.
 - Files are not checked when added: a damaged or password-protected PDF is
   found only when the report is saved, and the Review step then says so.
-- On section pages, labels and expense numbers are not links yet, nor is the
-  label in a stamp.
+- On section pages, labels are not links yet, nor is the label in a stamp.
 - Photos are embedded as they are added: a report of many phone photos is
   large, and a HEIC photo is not accepted.
 

@@ -90,9 +90,12 @@ The title of the section, then a table of its documents:
 
 | Label | Name | Pages | Expenses |
 |---|---|---|---|
-| S1 | Visa, October | 9–11 | 1, 3, 4 |
+| S1 | Visa, October | 9–11 | Air Canada, YYZ–CDG return<br>Taxi, CDG–hotel<br>Dinner with the programme comm… |
 
-Pages are the pages of the report document. Missing receipt authorizations
+Pages are the pages of the report document. The expenses a document
+supports are named by their description, one per line, a description longer
+than 30 characters cut to its first 30 followed by an ellipsis, as in the
+stamp. Missing receipt authorizations
 have no name: the column shows the expense's description. The Expenses column
 is left out of the section of additional documents. Of a business travel,
 that section page splits its table in two subsections, each under its
@@ -179,7 +182,7 @@ what they name.
 |---|---|---|
 | Cover, expenses | A name among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
-| Section page | An expense number | The expense's row on the cover |
+| Section page | An expense's description | The expense's row on the cover |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
 | Stamp | The label | The document's row on its section page |
 

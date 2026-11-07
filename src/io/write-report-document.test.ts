@@ -250,9 +250,7 @@ describe('writeReportDocument', () => {
     expect(cover?.[0]?.left).toBeLessThan(cover?.[1]?.left ?? 0)
     expect(cover?.[0]?.bottom).toBe(cover?.[1]?.bottom)
     expect(cover?.[0]?.left).toBeCloseTo(54 + 22 + 62 + 4)
-    expect(receipts).toEqual([])
-    expect(statements).toEqual([])
-    for (const links of [boarding, pass, statement]) {
+    for (const links of [receipts, statements, boarding, pass, statement]) {
       expect(links?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
     }
     const row = boarding?.[0]?.top ?? 0
@@ -319,14 +317,22 @@ describe('writeReportDocument', () => {
         'R1',
         'air-canada',
         '3–4',
-        '1',
+        'Air Canada, YYZ–CDG return',
         '2 / 6',
       ]),
     )
+    expect(receipts).not.toContain('1')
     expect(boarding).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
     expect(pass).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
     expect(statements).toEqual(
-      expect.arrayContaining(['Bank statements', 'S1', 'statement-octobre', '6', '5 / 6']),
+      expect.arrayContaining([
+        'Bank statements',
+        'S1',
+        'statement-octobre',
+        '6',
+        'Air Canada, YYZ–CDG return',
+        '5 / 6',
+      ]),
     )
     expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
   })
@@ -419,6 +425,30 @@ describe('writeReportDocument', () => {
     expect(receipt?.y).toBeLessThan(description?.y ?? 0)
     expect([separator?.y, statement?.y]).toEqual([receipt?.y, receipt?.y])
     expect(statement?.x).toBeGreaterThan(separator?.x ?? 0)
+  })
+
+  it('names the expenses a document supports on its section page by their description, each a link to its row', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const expense = report.expenses[0]
+    if (expense === undefined) throw new TypeError('No expense')
+    const dinner = expense.afterChanging({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Dinner with the programme committee of ICSE',
+    })
+    const pdf = await written(report.afterAdding(dinner))
+    const statements = pdf.getPage(4)
+    const places = placesOf(pdf, statements)
+    const [flight, meal] = ['Air Canada, YYZ–CDG return', 'Dinner with the programme comm…'].map(
+      (text) => places.find((place) => place.text === text),
+    )
+    expect(flight?.x).toBe(meal?.x)
+    expect(meal?.y).toBeLessThan(flight?.y ?? 0)
+    const links = linksOf(pdf, statements)
+    expect(links.map(({ to, how }) => [to, how])).toEqual([
+      [1, '/XYZ'],
+      [1, '/XYZ'],
+    ])
+    expect(links[0]?.top).toBeGreaterThan(links[1]?.top ?? 0)
   })
 
   it('heads the cover in its top right corner, level with the logo', async () => {

@@ -103,9 +103,11 @@ The report document is written as `docs/specs/report-document.md` says:
   the page number out of the total, so that a printed copy can be followed
   from a row to its pages and back, and every page says which expenses it is
   for.
-- **Labels, documents' names and expense numbers are links**, so that on
-  screen a click goes from a row of the cover to its document, and from a page of a document back
-  to the rows of the expenses it supports.
+- **Labels, documents' names and expenses are links**, so that on screen a
+  click goes from a row of the cover to its document, and from a page of a
+  document, or its row on a section page, back to the rows of the expenses
+  it supports. A section page names an expense by its description, which a
+  reader recognizes, rather than by its number.
 - **A document is in the report document once**, however many expenses it
   supports.
 - **Text the embedded font cannot write is a finding**, never replaced: the

@@ -70,6 +70,21 @@ interface Column {
   readonly width: number
 }
 
+/** A text of a table that is a link: to a document, or to an expense's row on the cover. */
+interface LinkedText {
+  readonly text: string
+  readonly target: Target
+}
+
+/** A cell of a table: a text, or texts each on a line of its own and each a link. */
+type Cell = string | readonly LinkedText[]
+
+/** A line of a cell, and what it is a link to when it is one. */
+interface CellLine {
+  readonly text: string
+  readonly target?: Target
+}
+
 /** A name on the line of documents under an expense, and the label of the document it links to. */
 interface NamePiece {
   readonly text: string
@@ -531,11 +546,11 @@ class Writer {
   ): void {
     this.paragraph(flow, section.title, this.bold, 16, this.palette.maroon)
     flow.down(6)
-    const expenses: Column = { title: 'Expenses', width: 130 }
+    const expenses: Column = { title: 'Expenses', width: 184 }
     const columns: Column[] = [
       { title: 'Label', width: 50 },
-      { title: 'Name', width: section.listsExpenses ? 254 : 254 + expenses.width },
-      { title: 'Pages', width: 70 },
+      { title: 'Name', width: section.listsExpenses ? 210 : 210 + expenses.width },
+      { title: 'Pages', width: 60 },
       ...(section.listsExpenses ? [expenses] : []),
     ]
     let page = firstPage
@@ -554,11 +569,14 @@ class Writer {
     groups.forEach(({ title, documents }, index) => {
       if (index > 0) flow.down(12)
       if (title !== undefined) this.sectionHeading(flow, title)
-      const rows = documents.map((entry) => [
+      const rows = documents.map((entry): Cell[] => [
         entry.label,
         entry.document.name,
         pagesOf.get(entry) ?? '',
-        entry.expenseNumbers.join(', '),
+        entry.expenses.map(({ number, description }) => ({
+          text: description,
+          target: { expenseNumber: number },
+        })),
       ])
       this.table(flow, columns, rows)
       flow.stopContinuing()
@@ -661,7 +679,7 @@ class Writer {
   }
 
   /** A table: its header, repeated at the top of every page it continues on, then its rows. */
-  private table(flow: Flow, columns: readonly Column[], rows: readonly string[][]): void {
+  private table(flow: Flow, columns: readonly Column[], rows: readonly Cell[][]): void {
     const header = () => {
       this.tableRow(
         flow,
@@ -680,12 +698,13 @@ class Writer {
 
   /**
    * A row whose cells wrap; a row taller than what is left of the page continues on the next.
-   * A rule closes it unless something under it still belongs to it. Gives where the row starts.
+   * A text that is a link starts a line of its own, each of its lines a link. A rule closes the
+   * row unless something under it still belongs to it. Gives where the row starts.
    */
   private tableRow(
     flow: Flow,
     columns: readonly Column[],
-    cells: readonly string[],
+    cells: readonly Cell[],
     font: PDFFont,
     isHeader = false,
     isClosed = true,
@@ -693,7 +712,7 @@ class Writer {
     const padding = 4
     const lineHeight = tableSize * leading
     const wrapped = columns.map((column, index) =>
-      wrap(cells[index] ?? '', font, tableSize, column.width - padding * 2),
+      linesOf(cells[index] ?? '', font, column.width - padding * 2),
     )
     const lineCount = Math.max(...wrapped.map((lines) => lines.length))
     const colour = isHeader ? this.palette.maroon : this.palette.black
@@ -705,9 +724,20 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const text = wrapped[index]?.[line]
-        if (text !== undefined && text !== '') {
-          flow.text(text, x + padding, font, tableSize, colour)
+        const cellLine = wrapped[index]?.[line]
+        if (cellLine !== undefined && cellLine.text !== '') {
+          flow.text(cellLine.text, x + padding, font, tableSize, colour)
+          const page = flow.page
+          if (page !== undefined && cellLine.target !== undefined) {
+            this.links.push({
+              page,
+              x: x + padding,
+              y: flow.cursor - tableSize - 2,
+              width: font.widthOfTextAtSize(cellLine.text, tableSize),
+              height: tableSize + 3,
+              target: cellLine.target,
+            })
+          }
         }
         x += column.width
       }
@@ -779,6 +809,17 @@ class Writer {
     flow.down(padding)
     flow.rule(this.palette.rule, 0.5)
   }
+}
+
+/** The lines a cell wraps into within a width: a text that is a link starts a line of its own. */
+function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
+  if (typeof cell === 'string') {
+    return wrap(cell, font, tableSize, width).map((text) => ({ text }))
+  }
+  const lines = cell.flatMap(({ text, target }) =>
+    wrap(text, font, tableSize, width).map((part) => ({ text: part, target })),
+  )
+  return lines.length > 0 ? lines : [{ text: '' }]
 }
 
 /**

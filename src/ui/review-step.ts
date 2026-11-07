@@ -53,7 +53,10 @@ function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
     const expenses = (cell: Markup) => (section.listsExpenses ? cell : '')
     const table = (documents: Section['documents']) => {
       const rows = documents.map((entry) => {
-        const numbers = html`<td>${entry.expenseNumbers.join(', ')}</td>`
+        const descriptions = entry.expenses.map(
+          ({ description }) => html`<div>${description}</div>`,
+        )
+        const numbers = html`<td>${descriptions}</td>`
         return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}</td>${expenses(numbers)}</tr>`
       })
       return html`<table class="documents">
