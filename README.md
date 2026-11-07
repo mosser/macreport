@@ -14,8 +14,9 @@ Open the latest version at <https://mosser.github.io/macreport/>, or save
 
 ## Status
 
-Version 0.1.0 is a minimal viable product: one report, one expense with its
-receipt and its bank statement, saved as one PDF. See
+One report at a time: its expenses, each with its receipt and its bank
+statement, its travel justifications and additional documents, saved as one
+PDF. See
 [`CHANGELOG.md`](CHANGELOG.md) for what it does and does not do yet.
 
 - Specification: [`docs/specs/`](docs/specs/), starting with the

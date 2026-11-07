@@ -117,8 +117,8 @@ export function missingFieldsOf(expense: Expense): readonly Field[] {
     .map(([field]) => field)
 }
 
-/** An expense, by its date and description. */
-function expenseWording(expense: Expense): string {
+/** An expense, by its date and description, as findings and confirmations name it. */
+export function expenseWording(expense: Expense): string {
   const date = expense.date?.toString() ?? 'without date'
   const description = expense.description ?? 'without description'
   return `Expense ${date}, ${description}`

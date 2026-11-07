@@ -120,7 +120,7 @@ interface Complete {
  */
 export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
-  const expenses = [...report.expenses].sort(byDate)
+  const expenses = report.expensesByDate
   const sections = [
     sectionOfAdditionalDocuments(report),
     sectionOf(Kind.receipt, expenses),
@@ -159,14 +159,6 @@ function completeReport(report: Report): Complete {
     throw new TypeError('Only a report without findings has a report document')
   }
   return { claimantName, position, email, purpose, account }
-}
-
-/** Expenses are sorted by date, then kept in the order they were added. */
-function byDate(one: Expense, other: Expense): number {
-  if (one.date === undefined || other.date === undefined) {
-    return 0
-  }
-  return one.date.compareTo(other.date)
 }
 
 /**

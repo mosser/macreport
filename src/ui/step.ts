@@ -25,4 +25,6 @@ export interface Step {
   render(panel: HTMLElement, context: Context): void
   /** Whether Continue is offered. */
   canContinue(report: Report): boolean
+  /** Forgets what the step showed, as the wizard goes to another step. */
+  leave?(): void
 }

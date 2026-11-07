@@ -6,6 +6,46 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Several expenses per report. The Expenses step lists them, sorted by date,
+  each with its amounts, its documents and, in red, what it still lacks.
+  **Add an expense** opens empty fields, **Change** opens an expense's fields
+  filled in, and **Done** goes back to the list; every change is kept as it
+  is typed.
+- **Remove** takes an expense out of the report once confirmed. A receipt or
+  a bank statement no other expense uses leaves the report with it, and the
+  confirmation names each.
+- A receipt or a bank statement already in the report can be chosen for
+  another expense, under **Or choose one already added**: one bank statement
+  for every expense of a trip. A file added again, with the same content, is
+  not added twice: the document already there is chosen, and the step says
+  so (*Already in the report, as Visa, October: chosen.*).
+- **Paid in another currency**: an expense's foreign amount and its currency,
+  a three-letter ISO 4217 code, suggested as it is typed. Its claimed amount
+  in Canadian dollars may then be left empty, for McSCert to work out. On the
+  cover, the total gives the sum of the claimed amounts, then, one per line,
+  the sum of each currency's foreign amounts left without a claimed amount
+  (`EUR 55.00`).
+
+### Changed
+
+- New report asks for confirmation in a dialog over the step, rather than in
+  the browser's own.
+- The trash can next to a receipt or a bank statement takes it out of this
+  expense only; the document leaves the report once no expense uses it.
+
+### Known limitations
+
+- No per diem, missing receipt or payment in cash.
+- The Additional documents step does not show how many pages each document
+  has.
+- Files are not checked when added: a damaged or password-protected PDF is
+  found only when the report is saved, and the Review step then says so.
+- On section pages, labels are not links yet, nor is the label in a stamp.
+- Photos are embedded as they are added: a report of many phone photos is
+  large, and a HEIC photo is not accepted.
+
 ## [0.2.0] - 2026-11-07
 
 ### Added

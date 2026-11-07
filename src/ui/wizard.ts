@@ -1,5 +1,6 @@
 import type { Report } from '../domain/report.ts'
 import { additionalDocumentsStep } from './additional-documents-step.ts'
+import { confirmed } from './confirmation.ts'
 import type { ReadFile } from './document-field.ts'
 import { expensesStep } from './expenses-step.ts'
 import { html } from './html.ts'
@@ -13,8 +14,6 @@ export interface WizardOptions {
   readonly version: string
   /** The reversed McSCert logo, for the maroon header bar. */
   readonly logo: string
-  /** Asks the Claimant to confirm, as New report does. */
-  readonly confirm: (question: string) => boolean
   readonly readFile: ReadFile
   readonly saveReport: SaveReport
   /** Links that open a document in a new tab, from the bytes the Claimant added. */
@@ -87,6 +86,9 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   }
 
   function go(index: number): void {
+    if (index !== current) {
+      stepAt(current).leave?.()
+    }
     current = index
     reached = Math.max(reached, index)
     refresh()
@@ -141,9 +143,14 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     if (panel !== null) {
       stepAt(current).render(panel, context)
     }
-    root.querySelector('[data-action="new-report"]')?.addEventListener('click', () => {
-      if (options.confirm('Discard this report, its expense and its documents?')) {
-        void startNewReport()
+    root.querySelector('[data-action="new-report"]')?.addEventListener('click', async () => {
+      const isConfirmed = await confirmed(root.ownerDocument, {
+        question: 'Discard this report, its expenses and its documents?',
+        details: [],
+        action: 'Discard',
+      })
+      if (isConfirmed) {
+        await startNewReport()
       }
     })
     root.querySelector('[data-action="back"]')?.addEventListener('click', () => go(current - 1))

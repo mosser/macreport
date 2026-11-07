@@ -135,6 +135,19 @@ export class Report {
     return candidate
   }
 
+  /**
+   * The expenses sorted by date, then in the order they were added; an expense without a date
+   * comes after those with one.
+   */
+  get expensesByDate(): readonly Expense[] {
+    return [...this.expenses].sort((one, other) => {
+      if (one.date === undefined || other.date === undefined) {
+        return Number(one.date === undefined) - Number(other.date === undefined)
+      }
+      return one.date.compareTo(other.date)
+    })
+  }
+
   /** Whether the report asks for a supervisor: it does of a student or a postdoctoral fellow. */
   get asksForSupervisor(): boolean {
     return this.position === 'Student' || this.position === 'Postdoctoral fellow'

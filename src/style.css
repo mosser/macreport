@@ -382,3 +382,48 @@ footer p {
   color: var(--color-error);
   font-weight: 600;
 }
+
+/* What an expense still lacks, under its documents in the list of expenses. */
+.lacks {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+/* Change and Remove, side by side, beside the two lines of their expense. */
+td.expense-actions {
+  white-space: nowrap;
+  text-align: right;
+  vertical-align: middle;
+}
+
+td.expense-actions button + button {
+  margin-left: 0.5rem;
+}
+
+/* The documents already in the report, offered under the zone of a field. */
+.choice {
+  margin: 0.5rem 0 0;
+}
+
+/* A confirmation, over the step, holding everything else until it is answered. */
+dialog.confirmation {
+  max-width: 32rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+dialog.confirmation::backdrop {
+  background: color-mix(in srgb, var(--mac-black) 50%, transparent);
+}
+
+dialog.confirmation .actions {
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}

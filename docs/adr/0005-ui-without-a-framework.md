@@ -32,7 +32,9 @@ The interface uses **the DOM directly**, with two small in-house pieces.
   description or any text the Claimant typed is never inserted without
   escaping.
 - **Steps.** Each step implements the `Step` interface of `src/ui/step.ts`:
-  `render(panel, ctx)`, `canContinue(draft)` and an optional `onEnter(draft)`.
+  `render(panel, ctx)`, `canContinue(draft)` and an optional `leave()`, which
+  forgets what the step showed, such as the expense whose fields are open,
+  as the wizard goes to another step.
   The wizard (`src/ui/wizard.ts`) owns the step index, the stepper, the
   Back/Continue actions, New report, and the notice shown when the draft
   cannot be kept.
@@ -40,6 +42,11 @@ The interface uses **the DOM directly**, with two small in-house pieces.
   `ctx.refresh()`, which re-renders. While the Claimant types, the step does not
   re-render, which would lose focus: it updates the affected DOM in place and
   calls `ctx.refreshActions()` to re-evaluate Continue.
+- **Confirmations** are a modal `<dialog>` over the step
+  (`src/ui/confirmation.ts`), answered with Cancel, Escape, or the button
+  naming the action. The browser's own `confirm()` is not used: it cannot
+  take the palette, nor name the documents an action takes away, and a test
+  cannot answer it.
 - **Files** are added through an `<input type="file">` and by dropping them on
   the step; both go through the same handler.
 - **Styling** is `src/style.css`, which holds the palette (ADR 0002) and every
@@ -73,4 +80,5 @@ A change is compliant with this ADR when:
 - markup is produced by the `html` template only, and `raw()` wraps only markup
   built by the system, never text the Claimant typed or a file name;
 - each screen of the wizard is a `Step`, and typed edits do not re-render;
+- a confirmation is asked through `src/ui/confirmation.ts`, never `confirm()`;
 - every colour in `src/ui/` is a `var(--…)`.

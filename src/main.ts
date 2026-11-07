@@ -47,7 +47,6 @@ mountWizard(root, {
   discard: () => drafts.discard(),
   version: __VERSION__,
   logo,
-  confirm: (question) => window.confirm(question),
   readFile: documentOf,
   saveReport,
   links: documentLinks(),

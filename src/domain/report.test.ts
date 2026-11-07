@@ -78,6 +78,24 @@ describe('Report', () => {
     expect(report.afterReplacing(expense, replacement).expenses).toEqual([replacement])
   })
 
+  it('sorts its expenses by date, then in the order they were added, those without a date last', () => {
+    const on = (day: number | undefined, description: string) =>
+      new Expense({
+        date: day === undefined ? undefined : new CalendarDate(2026, 10, day),
+        description,
+      })
+    const report = [on(5, 'taxi'), on(undefined, 'undated'), on(3, 'flight'), on(5, 'dinner')]
+      .reduce((built, expense) => built.afterAdding(expense), new Report())
+      .afterAdding(on(undefined, 'later'))
+    expect(report.expensesByDate.map((expense) => expense.description)).toEqual([
+      'flight',
+      'taxi',
+      'dinner',
+      'undated',
+      'later',
+    ])
+  })
+
   it('removes an expense, and with it the documents no other expense refers to', () => {
     const visa = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1]))
     const taxi = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([2]))

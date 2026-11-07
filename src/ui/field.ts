@@ -2,8 +2,8 @@ import { type Field, fieldNames, fieldRules, isRequired } from '../domain/findin
 import { html, type Markup } from './html.ts'
 
 /** The name of a field, with an asterisk when it is required. */
-export function fieldName(field: Field): Markup {
-  const asterisk = isRequired(field) ? html` <abbr class="required" title="required">*</abbr>` : ''
+export function fieldName(field: Field, isFieldRequired = isRequired(field)): Markup {
+  const asterisk = isFieldRequired ? html` <abbr class="required" title="required">*</abbr>` : ''
   return html`<span class="field-name" id="name-of-${field}">${fieldNames[field]}${asterisk}</span>`
 }
 
