@@ -70,3 +70,38 @@ export function portraitRotationOf(box: Box, degrees: number): Rotation {
   const view = viewOf(box, degrees)
   return view.width > view.height ? rotationOf(view.rotation + 270) : view.rotation
 }
+
+/** A sheet of paper, portrait: its width and height. */
+export interface Sheet {
+  readonly width: number
+  readonly height: number
+}
+
+/** How a page fits a sheet: the factor its content is scaled by, and its box once scaled. */
+export interface Fit {
+  readonly scale: number
+  /** The sheet, in the page's own coordinates once its content is scaled, centred on it. */
+  readonly box: Box
+}
+
+/**
+ * How a page with this crop box and rotation fits a sheet, portrait or landscape as the page
+ * shows, within margins: scaled down to fit them, never enlarged, and centred.
+ */
+export function fitOf(box: Box, degrees: number, sheet: Sheet, margin: number): Fit {
+  const view = viewOf(box, degrees)
+  const isLandscape = view.width > view.height
+  const isSideways = view.rotation === 90 || view.rotation === 270
+  const [width, height] =
+    isLandscape === isSideways ? [sheet.width, sheet.height] : [sheet.height, sheet.width]
+  const scale = Math.min(1, (width - 2 * margin) / box.width, (height - 2 * margin) / box.height)
+  return {
+    scale,
+    box: {
+      x: box.x * scale + (box.width * scale - width) / 2,
+      y: box.y * scale + (box.height * scale - height) / 2,
+      width,
+      height,
+    },
+  }
+}

@@ -5,6 +5,7 @@ import { CalendarDate } from './domain/calendar-date.ts'
 import { layoutOf } from './domain/layout.ts'
 import type { Report } from './domain/report.ts'
 import { documentOf } from './io/add-file.ts'
+import { documentLinks } from './io/document-links.ts'
 import { openDraftStore } from './io/draft-store.ts'
 import { paletteFrom } from './io/palette.ts'
 import { save } from './io/save.ts'
@@ -49,4 +50,5 @@ mountWizard(root, {
   confirm: (question) => window.confirm(question),
   readFile: documentOf,
   saveReport,
+  links: documentLinks(),
 })

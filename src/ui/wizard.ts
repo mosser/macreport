@@ -1,8 +1,10 @@
-import { Report } from '../domain/report.ts'
-import { expensesStep, type ReadFile } from './expenses-step.ts'
+import type { Report } from '../domain/report.ts'
+import { additionalDocumentsStep } from './additional-documents-step.ts'
+import type { ReadFile } from './document-field.ts'
+import { expensesStep } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
-import { reviewStep, type SaveReport } from './review-step.ts'
+import { type DocumentLinks, reviewStep, type SaveReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
 
 /** What the wizard needs from the page it runs in. */
@@ -15,6 +17,8 @@ export interface WizardOptions {
   readonly confirm: (question: string) => boolean
   readonly readFile: ReadFile
   readonly saveReport: SaveReport
+  /** Links that open a document in a new tab, from the bytes the Claimant added. */
+  readonly links: DocumentLinks
   /** The draft the browser kept, or an empty report. */
   readonly draft: Report
   /** Whether the browser keeps the draft. */
@@ -33,7 +37,8 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   const steps: readonly Step[] = [
     reportStep,
     expensesStep(options.readFile),
-    reviewStep(options.saveReport, () => isDraftKept),
+    additionalDocumentsStep(options.readFile),
+    reviewStep(options.saveReport, () => isDraftKept, options.links),
   ]
   let report = options.draft
   let isDraftKept = options.isDraftKept
@@ -41,6 +46,8 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   let session = 0
   let current = 0
   let reached = 0
+  /** The files being added to the report, which hold Continue and the steps ahead. */
+  let additions = new Set<Promise<unknown>>()
 
   const context: Context = {
     get report() {
@@ -58,6 +65,17 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     },
     refresh,
     refreshActions,
+    adding(addition: Promise<unknown>) {
+      const pending = additions
+      pending.add(addition)
+      refreshActions()
+      void addition
+        .catch(() => undefined)
+        .finally(() => {
+          pending.delete(addition)
+          refreshActions()
+        })
+    },
   }
 
   function stepAt(index: number): Step {
@@ -74,13 +92,19 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     refresh()
   }
 
-  /** Starts a new report once the browser has deleted the draft; says so when it did not. */
+  /**
+   * Starts a new report for the same claimant once the browser has deleted the draft, and keeps
+   * the claimant as the new draft; says so when the browser did not delete it.
+   */
   async function startNewReport(): Promise<void> {
     isDiscardRefused = !(await options.discard())
     if (!isDiscardRefused) {
-      report = new Report()
+      context.change(report.afterNewReport())
       session += 1
       reached = 0
+      // What is still being added belongs to the report discarded, and holds nothing up.
+      additions = new Set()
+      options.links.forgetAll()
     }
     go(isDiscardRefused ? current : 0)
   }
@@ -131,13 +155,15 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   }
 
   function refreshActions(): void {
-    const canContinue = stepAt(current).canContinue(report)
+    const isAdding = additions.size > 0
+    const canContinue = stepAt(current).canContinue(report) && !isAdding
     const continueButton = root.querySelector<HTMLButtonElement>('[data-action="continue"]')
     if (continueButton !== null) {
       continueButton.disabled = !canContinue
     }
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-step]')) {
-      button.disabled = Number(button.dataset.step) > reached
+      const step = Number(button.dataset.step)
+      button.disabled = step > reached || (isAdding && step > current)
     }
   }
 

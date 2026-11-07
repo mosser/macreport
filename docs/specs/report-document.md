@@ -8,8 +8,8 @@ once the report is done: it stands alone, read with any PDF reader.
 
 1. The **cover**, on one page or more.
 2. One **section** per kind of document the report holds, in the order of the
-   kinds: receipts, missing receipt authorizations, bank statements,
-   additional documents. A kind without documents has no section.
+   kinds: additional documents, receipts, missing receipt authorizations,
+   bank statements. A kind without documents has no section.
 
 Each section is its section page, on one page or more, then its documents,
 one after the other.
@@ -18,53 +18,68 @@ one after the other.
 |---|---|
 | Receipts, bank statements | By the number of the first expense they support, then in the order they were added. |
 | Missing receipt authorizations | By the number of their expense. |
-| Additional documents | In the order they were added. |
+| Additional documents | The travel justifications, then the others, each in the order they were added. |
 
 A document's label is the letter of its kind and its rank in its section:
 R1, R2, and so on.
 
 ## Pages
 
-- Generated pages (cover, section pages, missing receipt authorizations) are
-  US Letter, portrait, with three-quarter-inch margins. A text wraps within
-  its column or its line, never clipped; what does not fit a page continues
-  on the next one, as each part below says.
-- Every page of the report document is portrait. A page that would show
-  wider than tall is turned a quarter, the top of its content to the left, as
-  a landscape page is printed.
-- A PDF document keeps every page's size and content, turned when it is
-  landscape.
-- An image document is placed on a Letter page of its own, scaled down to
-  fit the margins and never enlarged; an image wider than tall is placed
-  across the page, turned as a landscape page is.
+- Every page of the report document is US Letter, and shows portrait. A page
+  that would show wider than tall is turned a quarter, the top of its content
+  to the left, as a landscape page is printed.
+- Generated pages (cover, section pages, missing receipt authorizations)
+  have three-quarter-inch margins. A text wraps within its column or its
+  line, never clipped; what does not fit a page continues on the next one, as
+  each part below says.
+- Each page of a PDF document is placed on a Letter page, across the page
+  when it shows wider than tall, as close to its own size as it can be:
+  scaled down to fit the page when it is larger, never enlarged, and centred.
+  A Letter page stays as it is; an A4 page is shown at 94 %. It keeps its
+  text, its links and its form fields; what its crop box hid stays hidden.
+- An image document is placed on a Letter page of its own, across the page
+  when it is wider than tall: scaled down to fit the three-quarter-inch
+  margins when it is larger, never enlarged, and centred.
+- A JPEG image is first mirrored and turned as its Exif orientation says, so
+  that a photo taken with a phone shows upright.
 
 ## Cover
 
 The cover takes the place of the McSCert Expense Report Template: it carries
 the template's fields and its table, so that nothing else needs filling in.
 
-- **Heading.** The McSCert logo, then *McSCert Expense Report*, and the date
-  the document was written.
+- **Heading.** The McSCert logo on the left; in the top right corner, level
+  with it, *McSCert Expense Report*, and under it the date the document was
+  written.
 - **Report fields.** Name of claimant, position, email, then the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
   email for a visitor; purpose, the dates of a business travel, account.
-- **Attached information.** The four kinds of document, in their order, each
-  with a box ticked when its section exists. The labels are in the table of
-  expenses, not here.
+- **Attached information.** The four kinds of document, in alphabetical
+  order, each with a box ticked when its section exists.
 - **Expenses.** A table of every expense, sorted by date then in the order
-  they were added, and numbered in that order:
+  they were added, and numbered in that order, each on two lines: its
+  fields, then, under its description, its supporting documents.
 
-  | # | Date | Description | Foreign amount | Claimed (CAD) | Supporting documents |
+  | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
   |---|---|---|---|---|---|
-  | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | R1, S1 |
-  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | M1, cash |
+  | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
+  | | | *Air Canada booking · Visa, October* | | | |
+  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | ☐ |
+  | | | *Taxi, CDG–hotel · cash* | | | |
 
-  The foreign amount is the currency code then the amount, empty for an
-  expense paid in Canadian dollars; it is for information, nothing is
-  converted. The supporting documents are labels, in the order of the report
-  document, and *cash* for an expense paid in cash. The table continues on
-  the next page when it does not fit, its header repeated; a last row gives
-  the total of the claimed amounts.
+  A description keeps its line breaks. The foreign amount is the currency
+  code then the amount, empty for an expense paid in Canadian dollars; it is
+  for information, nothing is converted. The supporting documents are the names of the expense's
+  documents, in grey, separated by a middle dot, in the order of the report
+  document, and *cash* for an expense paid in cash; a missing receipt
+  authorization is named by the expense's description. They run from under
+  the description to the claimed amount, and on to the next line when they
+  do not fit. *Entered* is an empty box, a form field that McSCert's
+  administrative staff tick on screen, or by hand on a printed copy, once
+  they have entered the expense. The table continues on the next page when
+  it does not fit, its header repeated, an expense starting on the page its
+  documents start on; a last row gives the total of the claimed amounts,
+  without a box.
 
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.
@@ -73,13 +88,20 @@ deal with exchange rates.
 
 The title of the section, then a table of its documents:
 
-| Label | File | Pages | Expenses |
+| Label | Name | Pages | Expenses |
 |---|---|---|---|
-| S1 | statement-october.pdf | 9–11 | 1, 3, 4 |
+| S1 | Visa, October | 9–11 | Air Canada, YYZ–CDG return<br>Taxi, CDG–hotel<br>Dinner with the programme comm… |
 
-Pages are the pages of the report document. Missing receipt authorizations
-have no file: the column shows the expense's description. The Expenses column
-is left out of the section of additional documents.
+Pages are the pages of the report document. The expenses a document
+supports are named by their description, one per line, a description longer
+than 30 characters cut to its first 30 followed by an ellipsis, as in the
+stamp. Missing receipt authorizations
+have no name: the column shows the expense's description. The Expenses column
+is left out of the section of additional documents. Of a business travel,
+that section page splits its table in two subsections, each under its
+subheading and with its own header: *Travel justifications*, then
+*Other documents*; a subsection without documents is left out. The
+labels run on from one to the other.
 
 The table continues on the next page when it does not fit, its header
 repeated, as the cover's does. Those pages are all section pages: each is
@@ -137,10 +159,12 @@ it reads upright on screen, whatever the page's size and rotation:
   number and the start of its description, then the page number out of the
   total, as in `R3 · Expense 2: Taxi, CDG–hotel · 12 / 30` or
   `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
-  programme comm… · 14 / 30`. A description longer than 30 characters is cut
-  to its first 30, followed by an ellipsis;
-- on a page of an additional document: its label, then the page number out
-  of the total, as in `A1 · 28 / 30`;
+  programme comm… · 14 / 30`. A description is written on one line, its line
+  breaks as spaces, and one longer than 30 characters is cut to its first 30,
+  followed by an ellipsis;
+- on a page of an additional document: its label, its name, then the page
+  number out of the total, as in `A1 · Invitation from ICSE · 3 / 30`; a
+  name longer than 30 characters is cut as a description is;
 - on the cover and on section pages: the page number out of the total.
 
 Every page of a document carries the expenses, not only its first. When the
@@ -158,9 +182,9 @@ what they name.
 
 | Where | Link | Goes to |
 |---|---|---|
-| Cover, expenses | A label among the supporting documents | The first page of its document |
+| Cover, expenses | A name among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
-| Section page | An expense number | The expense's row on the cover |
+| Section page | An expense's description | The expense's row on the cover |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
 | Stamp | The label | The document's row on its section page |
 
@@ -175,7 +199,7 @@ document. It covers every language written in the Latin alphabet, Greek and
 Cyrillic. Texts are compared in their composed form, so that an accent typed as
 a separate mark, as file names on macOS are, counts as the accented letter. A
 text holding a character the font does not have (Chinese, Japanese, emoji),
-file names included, is a finding at the Review step
+names included, is a finding at the Review step
 (`prepare-an-expense-report.md`); it is never replaced silently.
 
 ## Look

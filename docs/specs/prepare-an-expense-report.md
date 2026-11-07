@@ -18,7 +18,8 @@ browser, on this computer. Nothing is collected, sent or shared.*
 
 **New report** is offered on every step. It asks for confirmation, then
 discards the draft, its expenses and its documents, and opens the Report step
-on an empty report. When the browser does not delete the draft, the report
+on a report holding only the name of claimant, position and email, kept as
+the new draft. When the browser does not delete the draft, the report
 stays as it is and the system says so, so that the Claimant can try again.
 
 ## The steps
@@ -53,7 +54,8 @@ email), **Supervisor** or **Host** when the position asks for one,
 | Account | Required, free text. |
 
 Choosing another position takes the supervisor or the host out of the
-report; unticking business travel takes the dates out. Continue is offered once every required field is valid.
+report; unticking business travel takes the dates and the travel
+justifications out. Continue is offered once every required field is valid.
 
 ### 2. Expenses
 
@@ -65,7 +67,7 @@ was paid in cash. The Claimant adds, changes and removes expenses.
 | Field | Rule |
 |---|---|
 | Date | Required, a calendar date. It may fall outside the dates of the report. |
-| Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. |
+| Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. It may run over several lines: its line breaks are kept on the Review step and in the report document. |
 | Claimed amount | Required, in Canadian dollars, more than zero, at most two decimals. |
 | Paid in another currency | Optional. When set: the amount, more than zero, at most two decimals, and its currency, a three-letter ISO 4217 code other than CAD. |
 | Receipts | At least one, unless the receipt is missing. |
@@ -85,15 +87,22 @@ follows the rules above.
 
 ### 3. Additional documents
 
-The additional documents, each with its file name and number of pages: an
-invitation letter, a conference confirmation, an itinerary, a poster,
-boarding passes, notes. The Claimant adds and removes them. Continue is always
-offered.
+The travel justifications of a business travel, then the additional
+documents, each with its name, its file name and its number of pages. The
+Claimant adds and removes them, dropped on the zone of their kind or chosen
+from the computer.
+
+| Field | Rule |
+|---|---|
+| Travel justification(s) | Asked of a business travel, and then at least one: an invitation letter, a conference programme, an acceptance notification. |
+| Additional document(s) | Optional, as many as needed: an itinerary, a poster, boarding passes, notes. |
+
+Continue is offered once a business travel has a travel justification.
 
 ### Adding a file
 
-On either step, a file is added when it is a PDF, a JPEG image or a PNG image,
-whatever its name says. It is refused, with the reason, when it is:
+On the Expenses and Additional documents steps, a file is added when it is a
+PDF, a JPEG image or a PNG image, whatever its name says. It is refused, with the reason, when it is:
 
 - of another format;
 - damaged, or a PDF without pages;
@@ -102,23 +111,50 @@ whatever its name says. It is refused, with the reason, when it is:
 A file already in the report, with the same content, is not added twice. Added
 from an expense as a receipt or a bank statement when it is already a
 document of that same kind, the document already there is chosen. Otherwise,
-already a document of another kind or added again as an additional document,
-it is refused, naming the document it already is, by its kind and its file
-name: a document has one kind. Adding several files at once handles each on
-its own.
+already a document of another kind or added again as a travel justification
+or an additional document, it is refused, naming the document it already is,
+by its kind and its name: a document has one kind. Adding several files at
+once, dropped or chosen together, handles each on its own, in the order
+given; where a field takes one document, the first is added, and a document
+there already is replaced only once it is removed.
+
+Files are read in the browser, which may take a while for a large one. While
+a file is being added, Continue and the steps ahead are not offered: the
+report is not reviewed, nor saved, without it.
+
+### Naming a document
+
+A document added takes its file name, without its extension (`.pdf`,
+`.jpeg`, `.png`), as its name. Next to it, its **Name** is a field the
+Claimant may change at any time, on the step it was added from: an invoice,
+a statement or a programme named as the Claimant calls it. A name left empty
+is the file name without its extension again. The name is what the Review
+step and the report document call the document.
+
+No two documents of the report have the same name, whatever its case. A
+document added whose name another document already has is named after it,
+followed by (2), (3) and so on. Nothing is shown under a name, unless a
+document before it, in the order of the steps, already has it: the error
+*Another document already has this name.* is then shown under it, and
+Continue is not offered.
 
 ### 4. Review
 
 The report as it will be written: the cover, with the table of the expenses
-and its total, then each section with its documents, their labels and their
-pages. Then the findings, if any.
+and its total, each expense on two lines as in the report document, then
+each section with its documents, their labels and their names, every table
+of documents spaced alike. A document's name opens the document in a new
+tab of the browser, from the file the Claimant added. The Entered boxes are
+the report document's alone. Then the findings, if any.
 
 | Finding | Wording |
 |---|---|
 | A required field of the Report step is missing or invalid | The field, and what it needs. |
 | No expense | No expense is claimed. |
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
-| A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a file name: the document, and that it is renamed and added again. |
+| A business travel has no travel justification | At least one travel justification is required. |
+| A document has the name of a document before it | The document, by its file name, and its name. |
+| A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a name: the document, by its kind and file name. |
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as

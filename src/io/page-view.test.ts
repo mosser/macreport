@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { portraitRotationOf, rotationOf, viewOf } from './page-view.ts'
+import { fitOf, portraitRotationOf, rotationOf, viewOf } from './page-view.ts'
 
 const letter = { x: 0, y: 0, width: 612, height: 792 }
 const landscape = { x: 10, y: 20, width: 792, height: 612 }
@@ -55,5 +55,43 @@ describe('portraitRotationOf', () => {
     expect(portraitRotationOf(landscape, 0)).toBe(270)
     expect(portraitRotationOf(letter, 90)).toBe(0)
     expect(portraitRotationOf(landscape, 90)).toBe(90)
+  })
+})
+
+describe('fitOf', () => {
+  const sheet = { width: 612, height: 792 }
+
+  it('scales an A4 page down to fit the margins of a Letter page, centred', () => {
+    const fit = fitOf({ x: 0, y: 0, width: 595, height: 842 }, 0, sheet, 54)
+    expect(fit.scale).toBeCloseTo(684 / 842)
+    expect(fit.box.width).toBe(612)
+    expect(fit.box.height).toBe(792)
+    expect(fit.box.x).toBeCloseTo((595 * fit.scale - 612) / 2)
+    expect(fit.box.y).toBeCloseTo(-54)
+  })
+
+  it('keeps a page of the size of the sheet as it is, without margins', () => {
+    const fit = fitOf({ x: 0, y: 0, width: 612, height: 792 }, 0, sheet, 0)
+    expect(fit).toEqual({ scale: 1, box: { x: 0, y: 0, width: 612, height: 792 } })
+    expect(fitOf({ x: 0, y: 0, width: 595, height: 842 }, 0, sheet, 0).scale).toBeCloseTo(792 / 842)
+  })
+
+  it('never enlarges a small page, and centres its crop box', () => {
+    const fit = fitOf({ x: 20, y: 30, width: 180, height: 500 }, 0, sheet, 54)
+    expect(fit).toEqual({ scale: 1, box: { x: 20 - 216, y: 30 - 146, width: 612, height: 792 } })
+  })
+
+  it('fits a page landscape as it shows on a landscape sheet, in its own coordinates', () => {
+    expect(fitOf({ x: 0, y: 0, width: 842, height: 595 }, 0, sheet, 54).box).toMatchObject({
+      width: 792,
+      height: 612,
+    })
+    expect(fitOf({ x: 0, y: 0, width: 842, height: 595 }, 90, sheet, 54).box).toMatchObject({
+      width: 792,
+      height: 612,
+    })
+    expect(fitOf({ x: 0, y: 0, width: 612, height: 792 }, 90, sheet, 54)).toMatchObject({
+      box: { width: 612, height: 792 },
+    })
   })
 })

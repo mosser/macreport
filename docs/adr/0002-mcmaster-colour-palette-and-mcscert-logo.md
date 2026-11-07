@@ -73,7 +73,10 @@ no colour literal of its own.
    | White | Green / Blue accents | 8.1 / 7.4 |
    | Black | Pink / Lime / Sky / Purple accents | ≥ 9.0 |
    | Maroon | 12% maroon tint on white | 8.7 |
-   | Amber (50% gold, 50% black) | White | 5.8 |
+   | Red (50% pink, 50% maroon), for errors | White | 4.85 |
+   | Pink, for errors (dark theme) | Black | 10.1 |
+   | Light maroon (70% maroon, 30% white), for links | White | 5.43 |
+   | Pale maroon (40% maroon, 60% white), for links (dark theme) | Black | 8.7 |
 
    **Forbidden for text:** gold on white (1.6:1) and white on gold.
 5. **Dark theme** for the interface: same palette, white and black swap roles,

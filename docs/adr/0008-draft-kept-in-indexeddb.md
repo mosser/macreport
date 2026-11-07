@@ -41,7 +41,10 @@ Options considered:
   refused or fails, the system works without it and the wizard shows a notice
   on every step that closing the page will lose the report. The system asks
   the browser for persistent storage, and goes on whatever the answer.
-- **New report** deletes the draft and its documents.
+- **New report** deletes the draft and its documents, then keeps the
+  claimant's name, position and email as the new draft: a claimant prepares
+  report after report, and retyping who they are each time is what the system
+  saves them. Everything else goes, bank statements first.
 - `src/io/draft-store.ts` is the only module that touches IndexedDB; it maps
   the domain model to what IndexedDB keeps and back (ADR 0007). Nothing else
   is stored in the browser, and nothing in `localStorage`.
@@ -79,4 +82,5 @@ A change is compliant with this ADR when:
 - only `src/io/draft-store.ts` uses IndexedDB, and no file uses `localStorage`,
   `sessionStorage`, cookies or the Cache API;
 - every IndexedDB access is guarded, and the system works when it is missing;
-- New report deletes the draft and every document's content.
+- New report deletes the draft and every document's content, and keeps
+  nothing but the claimant's name, position and email.

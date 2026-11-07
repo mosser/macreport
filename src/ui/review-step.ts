@@ -1,5 +1,6 @@
+import type { Document } from '../domain/document.ts'
 import { findingsOf } from '../domain/findings.ts'
-import { type Layout, layoutOf } from '../domain/layout.ts'
+import { type Layout, layoutOf, type Section } from '../domain/layout.ts'
 import type { Report } from '../domain/report.ts'
 import { html, type Markup } from './html.ts'
 import type { Context, Step } from './step.ts'
@@ -7,37 +8,71 @@ import type { Context, Step } from './step.ts'
 /** Writes the report document of a report without findings and hands it to the browser; gives its file name. */
 export type SaveReport = (report: Report) => Promise<string>
 
-function coverOf(layout: Layout): Markup {
+/** Links to the content of documents, which the browser opens in a new tab. */
+export interface DocumentLinks {
+  urlOf(document: Document): string
+  /** Lets the browser forget the links given so far. */
+  forgetAll(): void
+}
+
+/** The name of a document, a link that opens it in a new tab. */
+type LinkOf = (document: Document) => Markup
+
+/** The names of documents, one after the other, each a link to its document. */
+function namesOf(documents: readonly Document[], linkOf: LinkOf): Markup[] {
+  return documents.flatMap((document, index) => {
+    const link = linkOf(document)
+    return index === 0 ? [link] : [html` · `, link]
+  })
+}
+
+/** The cover: its fields, then each expense on two lines, the second its documents, and the total. */
+function coverOf(layout: Layout, linkOf: LinkOf): Markup {
   const fields = layout.coverFields.map(
     (field) => html`<tr><th scope="row">${field.name}</th><td>${field.value}</td></tr>`,
   )
-  const rows = layout.expenses.map(
-    (row) => html`<tr>
-      <td>${row.number}</td><td>${row.date}</td><td>${row.description}</td>
-      <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td><td>${row.supportingDocuments.join(', ')}</td>
-    </tr>`,
-  )
+  const rows = layout.expenses.map((row) => {
+    const documents = row.supportingDocuments.map((supporting) => supporting.document)
+    return html`<tr class="expense">
+        <td>${row.number}</td><td>${row.date}</td><td class="description">${row.description}</td>
+        <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
+      </tr>
+      <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`
+  })
   return html`<table class="cover-fields">${fields}</table>
     <table class="expenses">
       <thead><tr>
-        <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th>
-        <th>Claimed (CAD)</th><th>Supporting documents</th>
+        <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th>
       </tr></thead>
-      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total}</td><td></td></tr></tbody>
+      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total}</td></tr></tbody>
     </table>`
 }
 
-function sectionsOf(layout: Layout): Markup[] {
-  return layout.sections.map(
-    (section) => html`<h3>${section.title}</h3>
-      <table class="section">
-        <thead><tr><th>Label</th><th>File</th><th>Expenses</th></tr></thead>
-        <tbody>${section.documents.map(
-          (entry) =>
-            html`<tr><td>${entry.label}</td><td>${entry.document.fileName}</td><td>${entry.expenseNumbers.join(', ')}</td></tr>`,
-        )}</tbody>
-      </table>`,
-  )
+function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
+  return layout.sections.map((section) => {
+    const expenses = (cell: Markup) => (section.listsExpenses ? cell : '')
+    const table = (documents: Section['documents']) => {
+      const rows = documents.map((entry) => {
+        const descriptions = entry.expenses.map(
+          ({ description }) => html`<div>${description}</div>`,
+        )
+        const numbers = html`<td>${descriptions}</td>`
+        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}</td>${expenses(numbers)}</tr>`
+      })
+      return html`<table class="documents">
+        <colgroup><col class="label" /><col />${expenses(html`<col />`)}</colgroup>
+        <thead><tr><th>Label</th><th>Name</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`
+    }
+    const content =
+      section.subsections.length > 0
+        ? section.subsections.map(
+            (subsection) => html`<h4>${subsection.title}</h4>${table(subsection.documents)}`,
+          )
+        : table(section.documents)
+    return html`<h3>${section.title}</h3>${content}`
+  })
 }
 
 /** What became of the last save: the report it was for, and its file name or that it failed. */
@@ -59,8 +94,12 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
   return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${draft}`
 }
 
-/** Step 3: the report as it will be written, then its findings, and Save the report. */
-export function reviewStep(saveReport: SaveReport, isDraftKept: () => boolean): Step {
+/** Step 4: the report as it will be written, each document's name opening it in a new tab, then its findings, and Save the report. */
+export function reviewStep(
+  saveReport: SaveReport,
+  isDraftKept: () => boolean,
+  links: DocumentLinks,
+): Step {
   let outcome: Outcome | undefined
   return {
     title: 'Review',
@@ -74,10 +113,13 @@ export function reviewStep(saveReport: SaveReport, isDraftKept: () => boolean): 
         return
       }
       const layout = layoutOf(report)
+      links.forgetAll()
+      const linkOf: LinkOf = (document) =>
+        html`<a href="${links.urlOf(document)}" target="_blank" rel="noopener">${document.name}</a>`
       panel.innerHTML = html`<h2>Review</h2>
-        ${coverOf(layout)}
-        ${sectionsOf(layout)}
-        <button class="primary" data-action="save">Save the report</button>
+        ${coverOf(layout, linkOf)}
+        ${sectionsOf(layout, linkOf)}
+        <button class="primary save" data-action="save">Save the report</button>
         ${statusOf(outcome, report, isDraftKept())}`.text
       panel.querySelector('[data-action="save"]')?.addEventListener('click', () => {
         saveReport(report)

@@ -1,21 +1,41 @@
 import fontkit from '@cantoo/fontkit'
 import {
+  clip,
+  concatTransformationMatrix,
   degrees,
-  type PDFArray,
+  endPath,
+  PDFArray,
+  PDFContentStream,
+  PDFDict,
   PDFDocument,
   type PDFFont,
   type PDFImage,
+  PDFName,
+  PDFNumber,
   type PDFPage,
+  popGraphicsState,
+  pushGraphicsState,
+  rectangle,
   rgb,
+  scale,
 } from '@cantoo/pdf-lib'
 import boldFont from '../assets/fonts/NotoSans-Bold.ttf?inline'
 import regularFont from '../assets/fonts/NotoSans-Regular.ttf?inline'
 import logoImage from '../assets/mcscert-left-col.png?inline'
 import type { CalendarDate } from '../domain/calendar-date.ts'
 import type { Document } from '../domain/document.ts'
-import type { LabelledDocument, Layout, Section, StampedExpense } from '../domain/layout.ts'
+import type {
+  ExpenseRow,
+  LabelledDocument,
+  Layout,
+  Section,
+  StampedExpense,
+  SupportingDocument,
+} from '../domain/layout.ts'
+import { formatOf } from './format.ts'
 import { bytesOf } from './inlined.ts'
-import { type PageView, portraitRotationOf, viewOf } from './page-view.ts'
+import { type Orientation, orientationOf } from './orientation.ts'
+import { type Box, fitOf, type PageView, portraitRotationOf, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
 
 /** What the report document is written from. */
@@ -29,7 +49,7 @@ export interface Writing {
 }
 
 const letterPortrait: [number, number] = [612, 792]
-const letterLandscape: [number, number] = [792, 612]
+const letter = { width: letterPortrait[0], height: letterPortrait[1] }
 /** Three-quarter-inch margins. */
 const margin = 54
 const stampBaseline = 24
@@ -37,13 +57,44 @@ const logoWidth = 170
 const bodySize = 10
 const tableSize = 9
 const stampSize = 8
+const titleSize = 18
+/** The height of a capital of Noto Sans, as a share of its size. */
+const capHeight = 0.714
 const leading = 1.35
+/** The space between a cell's text and its edges. */
+const cellPadding = 4
+/** The side of an expense's Entered box. */
+const enteredSize = 10
 
 /** A column of a table: its title and its width in points. */
 interface Column {
   readonly title: string
   readonly width: number
 }
+
+/** A text of a table that is a link: to a document, or to an expense's row on the cover. */
+interface LinkedText {
+  readonly text: string
+  readonly target: Target
+}
+
+/** A cell of a table: a text, or texts each on a line of its own and each a link. */
+type Cell = string | readonly LinkedText[]
+
+/** A line of a cell, and what it is a link to when it is one. */
+interface CellLine {
+  readonly text: string
+  readonly target?: Target
+}
+
+/** A name on the line of documents under an expense, and the label of the document it links to. */
+interface NamePiece {
+  readonly text: string
+  readonly label: string
+}
+
+/** What separates two names on the line of documents under an expense. */
+const nameSeparator = ' · '
 
 /** A page of the report document, and the document it belongs to when it belongs to one. */
 interface StampedPage {
@@ -81,7 +132,7 @@ interface Place {
 /** A document ready for its pages: a PDF's pages copied, or an image to place on a page of its own. */
 type Source =
   | { readonly pages: readonly PDFPage[]; readonly pageCount: number }
-  | { readonly image: PDFImage; readonly pageCount: 1 }
+  | { readonly image: PDFImage; readonly orientation: Orientation; readonly pageCount: 1 }
 
 /**
  * Writes the report document of a layout: the cover, then each section, its section pages and
@@ -115,32 +166,30 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
   pdf.setAuthor(writing.layout.author)
   pdf.setCreator(`McSCert Expense Report v${writing.version}`)
   pdf.setProducer(`McSCert Expense Report v${writing.version}`)
-  return pdf.save()
-}
-
-/** Whether the bytes are a PDF, a JPEG image or a PNG image, from their first bytes. */
-function formatOf(content: Uint8Array): 'pdf' | 'jpeg' | 'png' {
-  const starts = (...bytes: number[]) => bytes.every((byte, index) => content[index] === byte)
-  if (starts(0x89, 0x50, 0x4e, 0x47)) return 'png'
-  if (starts(0xff, 0xd8, 0xff)) return 'jpeg'
-  return 'pdf'
+  // The Entered boxes are drawn when added; updating them on saving would embed a font of its own.
+  return pdf.save({ updateFieldAppearances: false })
 }
 
 /** A document ready to go into the report document: its pages copied, or its image embedded. */
 async function sourceOf(pdf: PDFDocument, document: Document): Promise<Source> {
   const format = formatOf(document.content)
   if (format === 'png') {
-    return { image: await pdf.embedPng(document.content), pageCount: 1 }
+    const orientation = { isMirrored: false, turn: 0 } as const
+    return { image: await pdf.embedPng(document.content), orientation, pageCount: 1 }
   }
   if (format === 'jpeg') {
-    return { image: await pdf.embedJpg(document.content), pageCount: 1 }
+    const orientation = orientationOf(document.content)
+    return { image: await pdf.embedJpg(document.content), orientation, pageCount: 1 }
   }
   const source = await PDFDocument.load(document.content)
   const pages = await pdf.copyPages(source, source.getPageIndices())
   return { pages, pageCount: pages.length }
 }
 
-/** The lines a text wraps into within a width, breaking a word longer than the width. */
+/**
+ * The lines a text wraps into within a width, breaking a word longer than the width; each of its
+ * own line breaks starts a line.
+ */
 export function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const fits = (candidate: string) => font.widthOfTextAtSize(candidate, size) <= width
   return text.split('\n').flatMap((paragraph) => wrapParagraph(paragraph, fits))
@@ -322,14 +371,14 @@ class Writer {
 
   writeCover(layout: Layout, writtenOn: CalendarDate): void {
     const flow = new Flow(this, false)
-    this.paragraph(flow, 'McSCert Expense Report', this.bold, 18, this.palette.maroon)
-    this.paragraph(flow, writtenOn.toString(), this.regular, bodySize, this.palette.grey)
-    flow.down(12)
+    if (flow.page !== undefined) {
+      this.heading(flow.page, writtenOn)
+    }
     for (const field of layout.coverFields) {
       this.fieldLine(flow, field.name, field.value)
     }
     flow.down(12)
-    this.heading(flow, 'Attached information')
+    this.sectionHeading(flow, 'Attached information')
     for (const information of layout.attachedInformation) {
       const height = bodySize * leading
       flow.ensure(height)
@@ -338,14 +387,14 @@ class Writer {
       flow.down(height)
     }
     flow.down(12)
-    this.heading(flow, 'Expenses')
+    this.sectionHeading(flow, 'Expenses')
     const columns: Column[] = [
       { title: '#', width: 22 },
       { title: 'Date', width: 62 },
-      { title: 'Description', width: 170 },
-      { title: 'Foreign amount', width: 72 },
+      { title: 'Description', width: 220 },
+      { title: 'Foreign amount', width: 76 },
       { title: 'Claimed (CAD)', width: 76 },
-      { title: 'Supporting documents', width: 102 },
+      { title: 'Entered', width: 48 },
     ]
     this.table(flow, columns, [])
     for (const row of layout.expenses) {
@@ -355,16 +404,41 @@ class Writer {
         row.description,
         row.foreignAmount,
         row.claimedAmount,
-        row.supportingDocuments.join(', '),
+        '',
       ]
-      const linked = { column: 5, targets: row.supportingDocuments.map((label) => ({ label })) }
-      const place = this.tableRow(flow, columns, cells, this.regular, false, linked)
+      // An expense and the first line of its documents start on the same page, unless the
+      // expense alone is taller than a page.
+      const height = this.rowHeight(columns, cells, this.regular) + tableSize * leading + 4
+      flow.ensure(Math.min(height, flow.top - 2 * margin))
+      const place = this.tableRow(flow, columns, cells, this.regular, false, false)
       if (place !== undefined) {
         this.expenseRows.set(row.number, place)
+        this.enteredBox(row, place, columns)
       }
+      this.documentsLine(flow, row.supportingDocuments, columns)
     }
     this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, ''], this.bold)
     flow.stopContinuing()
+  }
+
+  /**
+   * The Entered box of an expense, in the last column of its row: an empty form field a reader
+   * ticks on screen, or by hand on a printed copy.
+   */
+  private enteredBox(row: ExpenseRow, place: Place, columns: readonly Column[]): void {
+    const last = columns.at(-1)
+    const left = margin + columns.slice(0, -1).reduce((sum, column) => sum + column.width, 0)
+    const box = this.pdf.getForm().createCheckBox(`Entered, expense ${row.number}`)
+    box.addToPage(place.page, {
+      x: left + ((last?.width ?? 0) - enteredSize) / 2,
+      y: place.top - 4 - enteredSize,
+      width: enteredSize,
+      height: enteredSize,
+      textColor: colourOf(this.palette.maroon),
+      backgroundColor: colourOf(this.palette.white),
+      borderColor: colourOf(this.palette.black),
+      borderWidth: 0.75,
+    })
   }
 
   writeSection(section: Section, sources: readonly Source[]): void {
@@ -381,9 +455,9 @@ class Writer {
   }
 
   /**
-   * Stamps every page: the label of its document and each expense it supports, by its number and
-   * the start of its description, a link to the expense's row on the cover; then the page number
-   * out of the total. When the stamp is wider than the page less its margins, the expenses go on
+   * Stamps every page: the label of its document, the name of an additional document, and each
+   * expense a document supports, by its number and the start of its description, a link to the
+   * expense's row on the cover; then the page number out of the total. When the stamp is wider than the page less its margins, the expenses go on
    * lines of their own above it.
    */
   stampEveryPage(): void {
@@ -392,9 +466,11 @@ class Writer {
       const view = viewOf(page.getCropBox(), page.getRotation().angle)
       const room = view.width - 2 * margin
       const label: StampPiece[] = entry === undefined ? [] : [{ text: entry.label }]
+      const name: StampPiece[] =
+        entry?.stampedName === undefined ? [] : [{ text: entry.stampedName }]
       const expenses = (entry?.expenses ?? []).map((expense) => ({ text: expense.name, expense }))
       const pageNumber = { text: `${index + 1} / ${total}` }
-      const oneLine = [...label, ...expenses, pageNumber]
+      const oneLine = [...label, ...name, ...expenses, pageNumber]
       const lines =
         this.widthOf(oneLine) <= room
           ? [oneLine]
@@ -402,7 +478,7 @@ class Writer {
               ...expenses.flatMap(({ text, expense }) =>
                 wrap(text, this.regular, stampSize, room).map((part) => [{ text: part, expense }]),
               ),
-              [...label, pageNumber],
+              [...label, ...name, pageNumber],
             ]
       lines.toReversed().forEach((line, height) => {
         this.stampLine(page, view, line, stampBaseline + height * stampSize * leading)
@@ -479,41 +555,70 @@ class Writer {
   ): void {
     this.paragraph(flow, section.title, this.bold, 16, this.palette.maroon)
     flow.down(6)
+    const expenses: Column = { title: 'Expenses', width: 184 }
     const columns: Column[] = [
       { title: 'Label', width: 50 },
-      { title: 'File', width: 254 },
-      { title: 'Pages', width: 70 },
-      { title: 'Expenses', width: 130 },
+      { title: 'Name', width: section.listsExpenses ? 210 : 210 + expenses.width },
+      { title: 'Pages', width: 60 },
+      ...(section.listsExpenses ? [expenses] : []),
     ]
     let page = firstPage
-    const rows = section.documents.map((entry, index) => {
-      const count = sources[index]?.pageCount ?? 1
-      const pages = count === 1 ? String(page) : `${page}–${page + count - 1}`
-      page += count
-      return [entry.label, entry.document.fileName, pages, entry.expenseNumbers.join(', ')]
+    const pagesOf = new Map(
+      section.documents.map((entry, index) => {
+        const count = sources[index]?.pageCount ?? 1
+        const pages = count === 1 ? String(page) : `${page}–${page + count - 1}`
+        page += count
+        return [entry, pages] as const
+      }),
+    )
+    const groups =
+      section.subsections.length > 0
+        ? section.subsections
+        : [{ title: undefined, documents: section.documents }]
+    groups.forEach(({ title, documents }, index) => {
+      if (index > 0) flow.down(12)
+      if (title !== undefined) this.sectionHeading(flow, title)
+      const rows = documents.map((entry): Cell[] => [
+        entry.label,
+        entry.document.name,
+        pagesOf.get(entry) ?? '',
+        entry.expenses.map(({ number, description }) => ({
+          text: description,
+          target: { expenseNumber: number },
+        })),
+      ])
+      this.table(flow, columns, rows)
+      flow.stopContinuing()
     })
-    this.table(flow, columns, rows)
-    flow.stopContinuing()
   }
 
   private copy(entry: LabelledDocument, source: Source): void {
     if ('pages' in source) {
       for (const page of source.pages) {
-        this.pages.push({ page: turnedPortrait(this.pdf.addPage(page)), entry })
+        this.pages.push({ page: turnedPortrait(fittedToLetter(this.pdf.addPage(page))), entry })
       }
       this.markFirstPage(entry, this.pages.length - source.pages.length)
       return
     }
-    const image = source.image
-    const size = image.width > image.height ? letterLandscape : letterPortrait
-    const scale = Math.min(
-      1,
-      (size[0] - 2 * margin) / image.width,
-      (size[1] - 2 * margin) / image.height,
-    )
-    const [width, height] = [image.width * scale, image.height * scale]
-    const page = this.pdf.addPage(size)
-    page.drawImage(image, { x: (size[0] - width) / 2, y: (size[1] - height) / 2, width, height })
+    // The image is placed as it is stored, on a page turned as its orientation says, within the
+    // margins of a Letter page, so that the stamp never covers it.
+    const { image, orientation } = source
+    const box = { x: 0, y: 0, width: image.width, height: image.height }
+    const fit = fitOf(box, orientation.turn, letter, margin)
+    const page = this.pdf.addPage([fit.box.width, fit.box.height])
+    const [x, width] = [-fit.box.x, image.width * fit.scale]
+    if (orientation.isMirrored) {
+      // Mirrored left to right, about the middle of the image.
+      page.pushOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(-1, 0, 0, 1, 2 * x + width, 0),
+      )
+    }
+    page.drawImage(image, { x, y: -fit.box.y, width, height: image.height * fit.scale })
+    if (orientation.isMirrored) {
+      page.pushOperators(popGraphicsState())
+    }
+    page.setRotation(degrees(orientation.turn))
     this.pages.push({ page: turnedPortrait(page), entry })
     this.markFirstPage(entry, this.pages.length - 1)
   }
@@ -533,7 +638,36 @@ class Writer {
     }
   }
 
-  private heading(flow: Flow, text: string): void {
+  /**
+   * The cover's heading, in the top right corner, beside the logo: the title, its capitals level
+   * with the logo's top, and the date it is written, on the logo's bottom.
+   */
+  private heading(page: PDFPage, writtenOn: CalendarDate): void {
+    const right = letterPortrait[0] - margin
+    const top = letterPortrait[1] - margin
+    const logoHeight = (logoWidth * this.logo.height) / this.logo.width
+    const lines = [
+      {
+        text: 'McSCert Expense Report',
+        font: this.bold,
+        size: titleSize,
+        colour: this.palette.maroon,
+      },
+      { text: writtenOn.toString(), font: this.regular, size: bodySize, colour: this.palette.grey },
+    ]
+    const baselines = [top - titleSize * capHeight, top - logoHeight]
+    lines.forEach(({ text, font, size, colour }, index) => {
+      page.drawText(text, {
+        x: right - font.widthOfTextAtSize(text, size),
+        y: baselines[index] ?? top,
+        size,
+        font,
+        color: colourOf(colour),
+      })
+    })
+  }
+
+  private sectionHeading(flow: Flow, text: string): void {
     flow.ensure(12 * leading + 3 * tableSize * leading)
     this.paragraph(flow, text, this.bold, 12, this.palette.maroon)
     flow.down(4)
@@ -554,7 +688,7 @@ class Writer {
   }
 
   /** A table: its header, repeated at the top of every page it continues on, then its rows. */
-  private table(flow: Flow, columns: readonly Column[], rows: readonly string[][]): void {
+  private table(flow: Flow, columns: readonly Column[], rows: readonly Cell[][]): void {
     const header = () => {
       this.tableRow(
         flow,
@@ -573,21 +707,20 @@ class Writer {
 
   /**
    * A row whose cells wrap; a row taller than what is left of the page continues on the next.
-   * The labels of a linked cell become links to their documents. Gives where the row starts.
+   * A text that is a link starts a line of its own, each of its lines a link. A rule closes the
+   * row unless something under it still belongs to it. Gives where the row starts.
    */
   private tableRow(
     flow: Flow,
     columns: readonly Column[],
-    cells: readonly string[],
+    cells: readonly Cell[],
     font: PDFFont,
     isHeader = false,
-    linked?: { readonly column: number; readonly targets: readonly { label: string }[] },
+    isClosed = true,
   ): Place | undefined {
-    const padding = 4
+    const padding = cellPadding
     const lineHeight = tableSize * leading
-    const wrapped = columns.map((column, index) =>
-      wrap(cells[index] ?? '', font, tableSize, column.width - padding * 2),
-    )
+    const wrapped = this.cellsOf(columns, cells, font)
     const lineCount = Math.max(...wrapped.map((lines) => lines.length))
     const colour = isHeader ? this.palette.maroon : this.palette.black
     flow.ensure(Math.min(lineCount * lineHeight + padding * 2, flow.top - 2 * margin))
@@ -598,46 +731,178 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const text = wrapped[index]?.[line]
-        if (text !== undefined && text !== '') {
-          flow.text(text, x + padding, font, tableSize, colour)
-          if (linked?.column === index) {
-            this.linkLabels(flow, text, x + padding, font, linked.targets)
-          }
-        }
+        this.cellLine(flow, wrapped[index]?.[line], x + padding, { font, colour })
         x += column.width
       }
       flow.down(lineHeight)
     }
     flow.down(padding)
-    flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
+    if (isClosed) {
+      flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
+    }
     return place
   }
 
-  /** Links each label found in a line of text drawn at x to the first page of its document. */
-  private linkLabels(
+  /** The lines each cell of a row wraps into, within its column. */
+  private cellsOf(columns: readonly Column[], cells: readonly Cell[], font: PDFFont): CellLine[][] {
+    return columns.map((column, index) =>
+      linesOf(cells[index] ?? '', font, column.width - cellPadding * 2),
+    )
+  }
+
+  /** The height of a row: its tallest cell, and the padding above and under it. */
+  private rowHeight(columns: readonly Column[], cells: readonly Cell[], font: PDFFont): number {
+    const lineCount = Math.max(...this.cellsOf(columns, cells, font).map((lines) => lines.length))
+    return lineCount * tableSize * leading + 2 * cellPadding
+  }
+
+  /** A line of a cell, drawn at x, and a link when it is one; an empty line draws nothing. */
+  private cellLine(
     flow: Flow,
-    text: string,
+    line: CellLine | undefined,
     x: number,
-    font: PDFFont,
-    targets: readonly { label: string }[],
+    { font, colour }: { readonly font: PDFFont; readonly colour: Colour },
   ): void {
+    if (line === undefined || line.text === '') return
+    flow.text(line.text, x, font, tableSize, colour)
     const page = flow.page
-    if (page === undefined) return
-    let from = 0
-    for (const target of targets) {
-      const at = text.indexOf(target.label, from)
-      if (at < 0) continue
-      from = at + target.label.length
-      this.links.push({
-        page,
-        x: x + font.widthOfTextAtSize(text.slice(0, at), tableSize),
-        y: flow.cursor - tableSize - 2,
-        width: font.widthOfTextAtSize(target.label, tableSize),
-        height: tableSize + 3,
-        target,
-      })
+    if (page === undefined || line.target === undefined) return
+    const width = font.widthOfTextAtSize(line.text, tableSize)
+    const y = flow.cursor - tableSize - 2
+    this.links.push({ page, x, y, width, height: tableSize + 3, target: line.target })
+  }
+
+  /**
+   * The line under an expense's row: its documents by name, one after the other, from under its
+   * description to its claimed amount, each a link to its document; a name that does not fit
+   * goes on to the next line. A rule closes the expense.
+   */
+  private documentsLine(
+    flow: Flow,
+    documents: readonly SupportingDocument[],
+    columns: readonly Column[],
+  ): void {
+    const padding = 4
+    const lineHeight = tableSize * leading
+    const widths = columns.map((column) => column.width)
+    const left = margin + (widths[0] ?? 0) + (widths[1] ?? 0) + padding
+    const room = (widths[2] ?? 0) + (widths[3] ?? 0) + (widths[4] ?? 0) - 2 * padding
+    const widthOf = (text: string) => this.regular.widthOfTextAtSize(text, tableSize)
+    const lines: NamePiece[][] = []
+    let used = 0
+    for (const { label, name } of documents) {
+      for (const text of wrap(name, this.regular, tableSize, room)) {
+        const line = lines.at(-1)
+        const needed = widthOf(nameSeparator) + widthOf(text)
+        if (line === undefined || used + needed > room) {
+          lines.push([{ text, label }])
+          used = widthOf(text)
+        } else {
+          line.push({ text, label })
+          used += needed
+        }
+      }
     }
+    for (const line of lines) {
+      flow.ensure(lineHeight + padding)
+      let x = left
+      line.forEach(({ text, label }, index) => {
+        if (index > 0) {
+          flow.text(nameSeparator, x, this.regular, tableSize, this.palette.grey)
+          x += widthOf(nameSeparator)
+        }
+        flow.text(text, x, this.regular, tableSize, this.palette.grey)
+        const page = flow.page
+        if (page !== undefined) {
+          const y = flow.cursor - tableSize - 2
+          this.links.push({
+            page,
+            x,
+            y,
+            width: widthOf(text),
+            height: tableSize + 3,
+            target: { label },
+          })
+        }
+        x += widthOf(text)
+      })
+      flow.down(lineHeight)
+    }
+    flow.down(padding)
+    flow.rule(this.palette.rule, 0.5)
+  }
+}
+
+/** The lines a cell wraps into within a width: a text that is a link starts a line of its own. */
+function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
+  if (typeof cell === 'string') {
+    return wrap(cell, font, tableSize, width).map((text) => ({ text }))
+  }
+  const lines = cell.flatMap(({ text, target }) =>
+    wrap(text, font, tableSize, width).map((part) => ({ text: part, target })),
+  )
+  return lines.length > 0 ? lines : [{ text: '' }]
+}
+
+/**
+ * A page of a PDF document on a Letter page, portrait or landscape as it shows, as close to its
+ * size as it can be: its content and annotations scaled down to fit the page when it is larger,
+ * never enlarged, and centred; a Letter page stays as it is. What its crop box hid stays hidden.
+ */
+function fittedToLetter(page: PDFPage): PDFPage {
+  const crop = page.getCropBox()
+  const fit = fitOf(crop, page.getRotation().angle, letter, 0)
+  const context = page.doc.context
+  const stream = (...operators: Parameters<typeof PDFContentStream.of>[1]) =>
+    context.register(PDFContentStream.of(context.obj({}), operators))
+  page.node.normalize()
+  page.node.wrapContentStreams(
+    stream(
+      pushGraphicsState(),
+      rectangle(
+        crop.x * fit.scale,
+        crop.y * fit.scale,
+        crop.width * fit.scale,
+        crop.height * fit.scale,
+      ),
+      clip(),
+      endPath(),
+      scale(fit.scale, fit.scale),
+    ),
+    stream(popGraphicsState()),
+  )
+  withoutHiddenAnnotations(page, crop)
+  page.scaleAnnotations(fit.scale, fit.scale)
+  const { x, y, width, height } = fit.box
+  for (const setBox of [
+    page.setMediaBox,
+    page.setCropBox,
+    page.setBleedBox,
+    page.setTrimBox,
+    page.setArtBox,
+  ]) {
+    setBox.call(page, x, y, width, height)
+  }
+  return page
+}
+
+/**
+ * Takes out of a page the annotations wholly outside its crop box, which it hid and a Letter page
+ * would show: a comment, a link or a form field cropped away.
+ */
+function withoutHiddenAnnotations(page: PDFPage, crop: Box): void {
+  const annotations = page.node.Annots()
+  for (let index = (annotations?.size() ?? 0) - 1; index >= 0; index -= 1) {
+    const rect = annotations?.lookupMaybe(index, PDFDict)?.lookupMaybe(PDFName.of('Rect'), PDFArray)
+    const [left, bottom, right, top] = [0, 1, 2, 3].map(
+      (corner) => rect?.lookupMaybe(corner, PDFNumber)?.asNumber() ?? Number.NaN,
+    ) as [number, number, number, number]
+    const isHidden =
+      Math.max(left, right) <= crop.x ||
+      Math.min(left, right) >= crop.x + crop.width ||
+      Math.max(bottom, top) <= crop.y ||
+      Math.min(bottom, top) >= crop.y + crop.height
+    if (isHidden) annotations?.remove(index)
   }
 }
 

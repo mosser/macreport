@@ -1,0 +1,186 @@
+import type { Document } from '../domain/document.ts'
+import { type Field, fieldNames, nameTakenWording } from '../domain/findings.ts'
+import type { Kind } from '../domain/kind.ts'
+import type { Report } from '../domain/report.ts'
+import { fieldName, fieldRule } from './field.ts'
+import { html, type Markup, raw } from './html.ts'
+import type { Context } from './step.ts'
+
+/** Reads a file the Claimant adds into a document of a kind. */
+export type ReadFile = (file: File, kind: Kind) => Promise<Document>
+
+/** A field of documents of one kind: where they are in the report, and how one is added. */
+export interface DocumentField {
+  readonly field: Field
+  readonly kind: Kind
+  /** Whether the field holds one document at most: once it has one, no other can be added. */
+  readonly holdsOneDocument: boolean
+  /** The documents of the field, in the order they were added. */
+  documentsIn(report: Report): readonly Document[]
+  /** The report, with a document added to the field. */
+  afterAdding(report: Report, document: Document): Report
+}
+
+const accepted = 'application/pdf,image/jpeg,image/png'
+
+/** A trash can, drawn in the colour of the text of the button that holds it. */
+const trashCan = raw(
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+)
+
+/**
+ * A document added: its name, which the Claimant may change, its file name, and Remove; under its
+ * name, an error when a document before it already has it.
+ */
+function documentItem(
+  field: DocumentField,
+  report: Report,
+  document: Document,
+  index: number,
+): Markup {
+  const id = `file-of-${field.field}-${index}`
+  const isTaken = report.isNameTaken(document) ? '' : html`hidden`
+  return html`<li class="document">
+    <label class="document-name">
+      <span class="field-name">${fieldNames.documentName}</span>
+      <input name="documentName" type="text" data-of="${field.field}" data-index="${index}"
+        value="${document.name}" placeholder="${document.afterNaming('').name}" aria-describedby="${id}" />
+    </label>
+    <span class="file-name" id="${id}">${document.fileName}</span>
+    <button type="button" class="remove" data-remove="${field.field}" data-index="${index}"
+      aria-label="Remove" title="Remove">${trashCan}</button>
+    <span class="error" role="alert" data-name-taken="${field.field}-${index}" ${isTaken}>${nameTakenWording}</span>
+  </li>`
+}
+
+/**
+ * The documents added to a field, each named, then a zone a file is dropped on, or clicked to
+ * choose one; a field that holds one document at most shows no zone once it has it.
+ */
+export function documentFieldOf(field: DocumentField, report: Report): Markup {
+  const name = field.field
+  const documents = field.documentsIn(report)
+  const list =
+    documents.length > 0
+      ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, report, document, index))}</ul>`
+      : ''
+  const isFull = field.holdsOneDocument && documents.length > 0
+  const several = field.holdsOneDocument ? '' : html`multiple`
+  const zone = isFull
+    ? ''
+    : html`<label class="drop-zone" data-drop="${name}">
+        <input name="${name}" type="file" accept="${accepted}" ${several}
+          aria-labelledby="name-of-${name} content-of-${name}" />
+        <span id="content-of-${name}">Drop a file here, or choose one</span>
+      </label>
+      ${fieldRule(name)}`
+  return html`<div class="field" data-field="${name}">
+    ${fieldName(name)}
+    ${list}
+    ${zone}
+  </div>`
+}
+
+/**
+ * The last file added to the report of each wizard, and the report it is for: the next file for
+ * the same report is added once it is, so that files are added in the order the Claimant gave
+ * them, however long each takes to read. A new report waits for none of the files of the last.
+ */
+const lastAdded = new WeakMap<
+  Context,
+  { readonly session: number; readonly addition: Promise<unknown> }
+>()
+
+/**
+ * Listens to the document fields of a panel: a file chosen or dropped is added, a name typed
+ * names its document, and Remove takes a document out of the report.
+ */
+export function listenToDocumentFields(
+  panel: HTMLElement,
+  context: Context,
+  readFile: ReadFile,
+  fields: readonly DocumentField[],
+): void {
+  const fieldNamed = (name: string | undefined) => fields.find((field) => field.field === name)
+  const documentOf = (element: HTMLElement) =>
+    fieldNamed(element.dataset.of ?? element.dataset.remove)?.documentsIn(context.report)[
+      Number(element.dataset.index)
+    ]
+
+  /** Shows the error under each name a document before it already has, and only there. */
+  const showTakenNames = () => {
+    for (const element of panel.querySelectorAll<HTMLInputElement>('input[name="documentName"]')) {
+      const document = documentOf(element)
+      const isTaken = document !== undefined && context.report.isNameTaken(document)
+      panel
+        .querySelector(`[data-name-taken="${element.dataset.of}-${element.dataset.index}"]`)
+        ?.toggleAttribute('hidden', !isTaken)
+    }
+  }
+
+  /**
+   * A file is read at once, and added once the file given before it is: to a report that has not
+   * changed for another, and to a field of one document that does not have it yet.
+   */
+  const addOne = (field: DocumentField, file: File) => {
+    const session = context.session
+    const reading = readFile(file, field.kind)
+    const last = lastAdded.get(context)
+    const before = last?.session === session ? last.addition : Promise.resolve()
+    const addition = before.then(async () => {
+      const document = await reading
+      if (context.session !== session) return
+      if (field.holdsOneDocument && field.documentsIn(context.report).length > 0) return
+      const named = document.afterNaming(context.report.freeNameLike(document.name))
+      context.change(field.afterAdding(context.report, named))
+      context.refresh()
+    })
+    lastAdded.set(context, { session, addition: addition.catch(() => undefined) })
+    context.adding(addition)
+  }
+
+  /** Chosen or dropped, files go through the same handler: each, or the first for one document. */
+  const add = (name: string | undefined, files: FileList | null | undefined) => {
+    const field = fieldNamed(name)
+    if (field === undefined) return
+    const given = Array.from(files ?? [])
+    for (const file of field.holdsOneDocument ? given.slice(0, 1) : given) {
+      addOne(field, file)
+    }
+  }
+  for (const element of panel.querySelectorAll<HTMLInputElement>('input[type="file"]')) {
+    element.addEventListener('change', () => {
+      add(element.name, element.files)
+    })
+  }
+  for (const zone of panel.querySelectorAll<HTMLElement>('[data-drop]')) {
+    const isOver = (over: boolean) => (event: Event) => {
+      event.preventDefault()
+      zone.classList.toggle('is-dragged-over', over)
+    }
+    zone.addEventListener('dragenter', isOver(true))
+    zone.addEventListener('dragover', isOver(true))
+    zone.addEventListener('dragleave', isOver(false))
+    zone.addEventListener('drop', (event) => {
+      isOver(false)(event)
+      add(zone.dataset.drop, (event as DragEvent).dataTransfer?.files)
+    })
+  }
+  for (const element of panel.querySelectorAll<HTMLInputElement>('input[name="documentName"]')) {
+    element.addEventListener('input', () => {
+      const document = documentOf(element)
+      if (document === undefined) return
+      context.change(context.report.afterRenaming(document, element.value))
+      showTakenNames()
+      context.refreshActions()
+    })
+  }
+  for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-remove]')) {
+    button.addEventListener('click', () => {
+      const document = documentOf(button)
+      if (document === undefined) return
+      context.change(context.report.afterRemoving(document))
+      context.refresh()
+    })
+  }
+}

@@ -1,8 +1,9 @@
+import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
 import type { Report } from './report.ts'
 
 /** The step of the wizard a finding is about. */
-export type FindingStep = 'Report' | 'Expenses'
+export type FindingStep = 'Report' | 'Expenses' | 'Additional documents'
 
 /** Something that stands between the draft and its report document, worded for the Claimant. */
 export interface Finding {
@@ -10,7 +11,10 @@ export interface Finding {
   readonly wording: string
 }
 
-/** The name of each field of the report and of an expense, as the interface and findings say it. */
+/**
+ * The name of each field of the report, of an expense and of a document, as the interface and
+ * findings say it.
+ */
 export const fieldNames = {
   claimantName: 'Name of claimant',
   position: 'Position',
@@ -29,9 +33,12 @@ export const fieldNames = {
   claimedAmount: 'Claimed amount (CAD)',
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
+  travelJustifications: 'Travel justification(s)',
+  additionalDocuments: 'Additional document(s)',
+  documentName: 'Name',
 } as const
 
-/** A field of the report or of an expense. */
+/** A field of the report, of an expense or of a document. */
 export type Field = keyof typeof fieldNames
 
 /** What a field needs besides being filled in, shown next to it; absent when nothing more. */
@@ -44,10 +51,20 @@ export const fieldRules: Partial<Record<Field, string>> = {
   claimedAmount: 'In Canadian dollars, more than zero, at most two decimals.',
   receipts: 'A PDF, a JPEG image or a PNG image.',
   bankStatements: 'A PDF, a JPEG image or a PNG image.',
+  travelJustifications:
+    'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
+  additionalDocuments: 'A PDF, a JPEG image or a PNG image.',
 }
 
+/** What is said under the name of a document that a document before it already has. */
+export const nameTakenWording = 'Another document already has this name.'
+
 /** The fields that are optional; every other field, when asked, is required. */
-const optionalFields: ReadonlySet<Field> = new Set<Field>(['businessTravel'])
+const optionalFields: ReadonlySet<Field> = new Set<Field>([
+  'businessTravel',
+  'additionalDocuments',
+  'documentName',
+])
 
 /** Whether a field must be filled in, marked with an asterisk next to its name. */
 export function isRequired(field: Field): boolean {
@@ -105,7 +122,7 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
   if (report.expenses.length === 0) {
     return [{ step: 'Expenses', wording: 'No expense is claimed.' }]
   }
-  return report.expenses.flatMap((expense) => {
+  const rules = report.expenses.flatMap((expense) => {
     const absent: Field[] = []
     if (expense.date === undefined) absent.push('date')
     if (expense.description === undefined) absent.push('description')
@@ -114,9 +131,46 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
     if (!expense.hasBankStatement) absent.push('bankStatements')
     return absent.map((field) => missing('Expenses', field, expense))
   })
+  const documents = report.expenses.flatMap((expense) => [
+    ...expense.receipts,
+    ...expense.bankStatements,
+  ])
+  return [...rules, ...namesTaken('Expenses', report, documents)]
+}
+
+/**
+ * A document named as a document before it, in the order of the steps, by its file name: no two
+ * documents have the same name, whatever its case.
+ */
+function namesTaken(step: FindingStep, report: Report, documents: readonly Document[]): Finding[] {
+  return [...new Set(documents)]
+    .filter((document) => report.isNameTaken(document))
+    .map((document) => ({
+      step,
+      wording: `${document.fileName}: ${fieldNames.documentName} ${document.name} is already another document's.`,
+    }))
+}
+
+/** A business travel without a travel justification: it has at least one. */
+export function findingsOfAdditionalDocumentsStep(report: Report): readonly Finding[] {
+  const justification: Finding[] =
+    report.isBusinessTravel && report.travelJustifications.length === 0
+      ? [
+          {
+            step: 'Additional documents',
+            wording: 'At least one travel justification is required.',
+          },
+        ]
+      : []
+  const documents = [...report.travelJustifications, ...report.additionalDocuments]
+  return [...justification, ...namesTaken('Additional documents', report, documents)]
 }
 
 /** Every finding of the report: a report with none can be saved as a report document. */
 export function findingsOf(report: Report): readonly Finding[] {
-  return [...findingsOfReportStep(report), ...findingsOfExpensesStep(report)]
+  return [
+    ...findingsOfReportStep(report),
+    ...findingsOfExpensesStep(report),
+    ...findingsOfAdditionalDocumentsStep(report),
+  ]
 }

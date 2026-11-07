@@ -24,8 +24,11 @@
   --color-secondary-text: var(--mac-grey);
   --color-rule: var(--mac-accent-light-grey);
   --color-tint: color-mix(in srgb, var(--mac-maroon) 12%, var(--mac-white));
-  --color-warning: color-mix(in srgb, var(--mac-gold) 50%, var(--mac-black));
+  /* Errors: half pink, half maroon, 4.85:1 on white (ADR 0002). */
+  --color-error: color-mix(in srgb, var(--mac-accent-pink) 50%, var(--mac-maroon));
   --color-ok: var(--mac-accent-green);
+  /* Links: a lighter maroon, 70% maroon and 30% white, 5.43:1 on white (ADR 0002). */
+  --color-link: color-mix(in srgb, var(--mac-maroon) 70%, var(--mac-white));
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -37,8 +40,9 @@
     --color-text: var(--mac-white);
     --color-secondary-text: var(--mac-accent-light-grey);
     --color-tint: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-black));
-    --color-warning: var(--mac-gold);
+    --color-error: var(--mac-accent-pink);
     --color-ok: var(--mac-accent-lime);
+    --color-link: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-white));
   }
 }
 
@@ -136,13 +140,58 @@ textarea {
 }
 
 .rule.is-broken {
-  color: var(--color-warning);
+  color: var(--color-error);
   font-weight: 600;
 }
 
-.added {
+/* The documents added to a field: each named, its file name beside, and Remove. */
+.documents {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.document {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.document-name {
+  flex: 1 1 16rem;
+  margin-bottom: 0;
+}
+
+.remove {
+  display: inline-flex;
+  padding: 0.35rem;
+  margin-bottom: 0.1rem;
+}
+
+.remove:hover,
+.remove:focus-visible {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.error {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+/* On a line of its own in its document's row; no display of its own, so that hidden hides it. */
+.document .error {
+  flex-basis: 100%;
+}
+
+.file-name {
   font-size: 0.9rem;
   color: var(--color-ok);
+  overflow-wrap: anywhere;
+  padding-bottom: 0.45rem;
 }
 
 button {
@@ -209,8 +258,50 @@ tr.total td {
   font-weight: 600;
 }
 
+a {
+  color: var(--color-link);
+}
+
+a:hover,
+a:focus-visible {
+  color: var(--color-accent);
+}
+
+/* Save the report stands apart from the last table above it. */
+button.save {
+  margin-top: 1rem;
+}
+
+/* An expense on two lines: its fields, then its documents, under one rule. */
+tr.expense td {
+  border-bottom: none;
+}
+
+/* A description keeps the line breaks the Claimant typed. */
+td.description {
+  white-space: pre-line;
+}
+
+tr.supporting td {
+  padding-top: 0;
+  color: var(--color-secondary-text);
+  font-size: 0.9rem;
+}
+
+/*
+ * Every table of documents spaced alike: its labels in a narrow column, then its names and the
+ * descriptions of their expenses sharing the rest evenly.
+ */
+table.documents {
+  table-layout: fixed;
+}
+
+table.documents col.label {
+  width: 5rem;
+}
+
 .findings li {
-  color: var(--color-warning);
+  color: var(--color-error);
 }
 
 footer {
@@ -288,6 +379,6 @@ footer p {
 }
 
 .status.is-failure {
-  color: var(--color-warning);
+  color: var(--color-error);
   font-weight: 600;
 }

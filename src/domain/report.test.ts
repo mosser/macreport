@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { CalendarDate } from './calendar-date.ts'
+import { Document } from './document.ts'
 import { Expense } from './expense.ts'
+import { Kind } from './kind.ts'
 import { positions, Report } from './report.ts'
 
 describe('Report', () => {
@@ -74,5 +76,88 @@ describe('Report', () => {
     expect(report.expenses).toEqual([expense])
     const replacement = expense.afterChanging({ description: 'Train' })
     expect(report.afterReplacing(expense, replacement).expenses).toEqual([replacement])
+  })
+
+  it('keeps only the claimant for a new report', () => {
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
+    const report = new Report({
+      claimantName: 'Zoë Lefèvre',
+      position: 'Student',
+      email: 'zoe@mcmaster.ca',
+      supervisorName: 'Ada Lovelace',
+      supervisorEmail: 'ada@mcmaster.ca',
+      purpose: 'ICSE 2026',
+      isBusinessTravel: true,
+      firstDay: new CalendarDate(2026, 10, 3),
+      account: '20-123-456',
+      travelJustifications: [invitation],
+    }).afterAdding(new Expense({ description: 'Taxi' }))
+    expect(report.afterNewReport()).toEqual(
+      new Report({ claimantName: 'Zoë Lefèvre', position: 'Student', email: 'zoe@mcmaster.ca' }),
+    )
+  })
+
+  it('holds travel justifications and additional documents of their own kinds only', () => {
+    const receipt = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array())
+    expect(() => new Report({ travelJustifications: [receipt] })).toThrow(TypeError)
+    expect(() => new Report({ additionalDocuments: [receipt] })).toThrow(TypeError)
+    expect(new Report().travelJustifications).toEqual([])
+    expect(new Report().additionalDocuments).toEqual([])
+  })
+
+  it('justifies only a business travel, and takes the travel justifications out when it is unticked', () => {
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
+    const travel = new Report({ isBusinessTravel: true }).afterChanging({
+      travelJustifications: [invitation],
+    })
+    expect(travel.travelJustifications).toEqual([invitation])
+    expect(travel.afterChanging({ isBusinessTravel: false }).travelJustifications).toEqual([])
+    expect(
+      new Report().afterChanging({ travelJustifications: [invitation] }).travelJustifications,
+    ).toEqual([])
+  })
+
+  it('names a document otherwise wherever it is, and removes it from wherever it is', () => {
+    const statement = new Document(Kind.bankStatement, 'scan.pdf', new Uint8Array())
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array())
+    const report = new Report({
+      isBusinessTravel: true,
+      travelJustifications: [invitation],
+      additionalDocuments: [poster],
+    }).afterAdding(new Expense({ bankStatements: [statement] }))
+    const named = report.afterRenaming(statement, 'Visa, October')
+    expect(named.expenses[0]?.bankStatements.map((document) => document.name)).toEqual([
+      'Visa, October',
+    ])
+    expect(named.travelJustifications).toEqual([invitation])
+    const programme = named.afterRenaming(invitation, 'Programme').travelJustifications[0]
+    expect(programme?.name).toBe('Programme')
+    const removed = report.afterRemoving(poster).afterRemoving(statement)
+    expect(removed.additionalDocuments).toEqual([])
+    expect(removed.expenses[0]?.bankStatements).toEqual([])
+    expect(removed.travelJustifications).toEqual([invitation])
+  })
+
+  it('lists its documents in the order of the steps, and finds a name a document before has, whatever its case', () => {
+    const receipt = new Document(Kind.receipt, 'scan.pdf', new Uint8Array([1]), 'Hotel')
+    const statement = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([2]))
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([3]), 'hotel')
+    const report = new Report({ additionalDocuments: [poster] }).afterAdding(
+      new Expense({ receipts: [receipt], bankStatements: [statement] }),
+    )
+    expect(report.documents).toEqual([receipt, statement, poster])
+    expect(report.isNameTaken(receipt)).toBe(false)
+    expect(report.isNameTaken(statement)).toBe(false)
+    expect(report.isNameTaken(poster)).toBe(true)
+    expect(report.isNameTaken(poster.afterNaming('Poster'))).toBe(false)
+  })
+
+  it('gives a name no document has, numbering it when it is taken', () => {
+    const scan = (name: string) =>
+      new Document(Kind.additionalDocument, 'scan.pdf', new Uint8Array(), name)
+    const report = new Report({ additionalDocuments: [scan('Receipt'), scan('receipt (2)')] })
+    expect(report.freeNameLike('Hotel')).toBe('Hotel')
+    expect(report.freeNameLike('Receipt')).toBe('Receipt (3)')
   })
 })

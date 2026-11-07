@@ -18,6 +18,13 @@ export interface AttachedInformation {
   readonly isAttached: boolean
 }
 
+/** A document supporting an expense on the cover: named, and a link to it by its label. */
+export interface SupportingDocument {
+  readonly label: string
+  readonly name: string
+  readonly document: Document
+}
+
 /** A row of the cover's table of expenses. */
 export interface ExpenseRow {
   readonly number: number
@@ -25,14 +32,19 @@ export interface ExpenseRow {
   readonly description: string
   readonly foreignAmount: string
   readonly claimedAmount: string
-  /** The labels of the documents supporting the expense, in the order of the report document. */
-  readonly supportingDocuments: readonly string[]
+  /** The documents supporting the expense, one per line, in the order of the report document. */
+  readonly supportingDocuments: readonly SupportingDocument[]
 }
 
-/** An expense as the stamp of a document names it: its number, and the start of its description. */
+/**
+ * An expense as a document names it, on its section page and in its stamp: its number, and the
+ * start of its description.
+ */
 export interface StampedExpense {
   readonly number: number
-  /** Expense 1: Air Canada, YYZ–CDG return; a description over 30 characters cut, with an ellipsis. */
+  /** Air Canada, YYZ–CDG return; a description over 30 characters cut, with an ellipsis. */
+  readonly description: string
+  /** Expense 1: and its description, as a stamp names it. */
   readonly name: string
 }
 
@@ -47,14 +59,33 @@ export interface LabelledDocument {
   readonly expenseNumbers: readonly number[]
   /** The expenses it supports, as its stamp names them. */
   readonly expenses: readonly StampedExpense[]
+  /**
+   * The name of an additional document, as its stamp names it: over 30 characters cut, with an
+   * ellipsis. A document that supports expenses is stamped with them instead.
+   */
+  readonly stampedName?: string
+}
+
+/** A part of a section page, its documents under a subheading of their own. */
+export interface Subsection {
+  readonly title: string
+  readonly documents: readonly LabelledDocument[]
 }
 
 /** The part of the report document holding the documents of one kind. */
 export interface Section {
   readonly kind: Kind
   readonly title: string
+  /** Whether its section page lists the expenses each document supports. */
+  readonly listsExpenses: boolean
+  /** Its documents, in order. */
   readonly documents: readonly LabelledDocument[]
+  /** How its section page splits its documents under subheadings; none when it does not. */
+  readonly subsections: readonly Subsection[]
 }
+
+/** The subheadings of the section of additional documents of a business travel. */
+const subheadings = { travelJustifications: 'Travel justifications', others: 'Other documents' }
 
 /** What the report document holds, worked out from a report without findings. */
 export interface Layout {
@@ -62,6 +93,7 @@ export interface Layout {
   readonly author: string
   readonly fileName: string
   readonly coverFields: readonly CoverField[]
+  /** Every kind of document, in alphabetical order. */
   readonly attachedInformation: readonly AttachedInformation[]
   readonly expenses: readonly ExpenseRow[]
   readonly total: string
@@ -84,9 +116,11 @@ interface Complete {
 export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
   const expenses = [...report.expenses].sort(byDate)
-  const sections = [Kind.receipt, Kind.bankStatement]
-    .map((kind) => sectionOf(kind, expenses))
-    .filter((section) => section.documents.length > 0)
+  const sections = [
+    sectionOfAdditionalDocuments(report),
+    sectionOf(Kind.receipt, expenses),
+    sectionOf(Kind.bankStatement, expenses),
+  ].filter((section) => section.documents.length > 0)
   const labels = new Map(
     sections.flatMap((section) =>
       section.documents.map((entry) => [entry.document, entry.label] as const),
@@ -97,7 +131,9 @@ export function layoutOf(report: Report): Layout {
     author: complete.claimantName,
     fileName: fileNameOf(complete, report.isBusinessTravel ? report.firstDay : expenses[0]?.date),
     coverFields: coverFieldsOf(report, complete),
-    attachedInformation: Kind.all.map((kind) => attachedInformationOf(kind, sections)),
+    attachedInformation: [...Kind.all]
+      .sort((one, other) => one.plural.localeCompare(other.plural, 'en'))
+      .map((kind) => attachedInformationOf(kind, sections)),
     expenses: expenses.map((expense, index) => rowOf(expense, index + 1, labels)),
     total: totalOf(expenses),
     sections,
@@ -200,17 +236,55 @@ function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
     expenseNumbers: stamped.map((expense) => expense.number),
     expenses: stamped,
   }))
-  return { kind, title: kind.plural, documents }
+  return { kind, title: kind.plural, listsExpenses: true, documents, subsections: [] }
+}
+
+/**
+ * The section of the documents of the report as a whole: the travel justifications, then the
+ * other additional documents, each in the order they were added. Of a business travel, its
+ * section page lists them in two subsections, Travel justifications then Other documents,
+ * a subsection without documents left out.
+ */
+function sectionOfAdditionalDocuments(report: Report): Section {
+  const kind = Kind.additionalDocument
+  const documents = [...report.travelJustifications, ...report.additionalDocuments].map(
+    (document, rank) => ({
+      label: `${kind.letter}${rank + 1}`,
+      document,
+      expenseNumbers: [],
+      expenses: [],
+      stampedName: cut(document.name),
+    }),
+  )
+  const count = report.travelJustifications.length
+  const subsections = report.isBusinessTravel
+    ? [
+        { title: subheadings.travelJustifications, documents: documents.slice(0, count) },
+        { title: subheadings.others, documents: documents.slice(count) },
+      ].filter((subsection) => subsection.documents.length > 0)
+    : []
+  return { kind, title: kind.plural, listsExpenses: false, documents, subsections }
 }
 
 /** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */
 function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
-  const characters = [...(expense.description ?? '')]
-  const description =
-    characters.length > stampedDescriptionLength
-      ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
-      : characters.join('')
-  return { number, name: `Expense ${number}: ${description}` }
+  const description = cut(expense.description ?? '')
+  return { number, description, name: `Expense ${number}: ${description}` }
+}
+
+/**
+ * A text as a stamp keeps it, on one line: its line breaks as spaces, then its first 30
+ * characters, an ellipsis when it is longer.
+ */
+function cut(text: string): string {
+  const oneLine = text
+    .split('\n')
+    .map((line) => line.trim())
+    .join(' ')
+  const characters = [...oneLine]
+  return characters.length > stampedDescriptionLength
+    ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
+    : characters.join('')
 }
 
 function attachedInformationOf(kind: Kind, sections: readonly Section[]): AttachedInformation {
@@ -219,9 +293,11 @@ function attachedInformationOf(kind: Kind, sections: readonly Section[]): Attach
 }
 
 function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
-  const supporting = [...expense.receipts, ...expense.bankStatements].map(
-    (document) => labels.get(document) ?? '',
-  )
+  const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
+    label: labels.get(document) ?? '',
+    name: document.name,
+    document,
+  }))
   return {
     number,
     date: expense.date?.toString() ?? '',
