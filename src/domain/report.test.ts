@@ -78,6 +78,25 @@ describe('Report', () => {
     expect(report.afterReplacing(expense, replacement).expenses).toEqual([replacement])
   })
 
+  it('keeps only the claimant for a new report', () => {
+    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const report = new Report({
+      claimantName: 'Zoë Lefèvre',
+      position: 'Student',
+      email: 'zoe@mcmaster.ca',
+      supervisorName: 'Ada Lovelace',
+      supervisorEmail: 'ada@mcmaster.ca',
+      purpose: 'ICSE 2026',
+      isBusinessTravel: true,
+      firstDay: new CalendarDate(2026, 10, 3),
+      account: '20-123-456',
+      travelJustifications: [invitation],
+    }).afterAdding(new Expense({ description: 'Taxi' }))
+    expect(report.afterNewReport()).toEqual(
+      new Report({ claimantName: 'Zoë Lefèvre', position: 'Student', email: 'zoe@mcmaster.ca' }),
+    )
+  })
+
   it('holds travel justifications and additional documents of their own kinds only', () => {
     const receipt = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array())
     expect(() => new Report({ travelJustifications: [receipt] })).toThrow(TypeError)

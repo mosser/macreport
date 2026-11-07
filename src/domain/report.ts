@@ -137,6 +137,18 @@ export class Report {
     return new Report({ ...this.fields(), expenses })
   }
 
+  /**
+   * The report New report starts: the claimant's name, position and email, and nothing else; no
+   * supervisor, host, purpose, dates, account, expense or document.
+   */
+  afterNewReport(): Report {
+    return new Report({
+      claimantName: this.claimantName,
+      position: this.position,
+      email: this.email,
+    })
+  }
+
   /** The same report, with a document named otherwise wherever it is. */
   afterRenaming(document: Document, name: string): Report {
     return this.afterReplacingDocument(document, [document.afterNaming(name)])

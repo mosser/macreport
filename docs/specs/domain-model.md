@@ -40,7 +40,7 @@ document.
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
-| New report | Discarding the draft, its expenses and its documents, to start another report. |
+| New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position and email are kept. |
 | Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
 | Report document | The single PDF the system writes from a report without findings: the cover, then one section per kind of document. It is the only thing that counts once the report is done. |
 | Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |

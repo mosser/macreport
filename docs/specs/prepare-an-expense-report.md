@@ -18,7 +18,8 @@ browser, on this computer. Nothing is collected, sent or shared.*
 
 **New report** is offered on every step. It asks for confirmation, then
 discards the draft, its expenses and its documents, and opens the Report step
-on an empty report. When the browser does not delete the draft, the report
+on a report holding only the name of claimant, position and email, kept as
+the new draft. When the browser does not delete the draft, the report
 stays as it is and the system says so, so that the Claimant can try again.
 
 ## The steps

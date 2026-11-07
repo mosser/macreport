@@ -1,4 +1,4 @@
-import { Report } from '../domain/report.ts'
+import type { Report } from '../domain/report.ts'
 import { additionalDocumentsStep } from './additional-documents-step.ts'
 import type { ReadFile } from './document-field.ts'
 import { expensesStep } from './expenses-step.ts'
@@ -77,11 +77,14 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     refresh()
   }
 
-  /** Starts a new report once the browser has deleted the draft; says so when it did not. */
+  /**
+   * Starts a new report for the same claimant once the browser has deleted the draft, and keeps
+   * the claimant as the new draft; says so when the browser did not delete it.
+   */
   async function startNewReport(): Promise<void> {
     isDiscardRefused = !(await options.discard())
     if (!isDiscardRefused) {
-      report = new Report()
+      context.change(report.afterNewReport())
       session += 1
       reached = 0
     }

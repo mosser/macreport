@@ -352,19 +352,32 @@ describe('the wizard', () => {
     expect(button('[data-action="save"]')).toBeNull()
   })
 
-  it('discards the draft and empties the form once the Claimant confirms a new report', async () => {
+  it('discards the draft once the Claimant confirms a new report, keeping only the claimant', async () => {
     fillReport()
+    choose('position', 'Student')
+    type('supervisorName', 'Ada Lovelace')
+    type('supervisorEmail', 'ada@mcmaster.ca')
+    continueButton()?.click()
+    await fillExpense()
     confirmation = false
     button('[data-action="new-report"]')?.click()
     expect(discarded).toBe(0)
-    expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('ICSE 2026')
+    expect(root.querySelector('h2')?.textContent).toBe('Expense')
     confirmation = true
     button('[data-action="new-report"]')?.click()
-    await vi.waitFor(() =>
-      expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe(''),
-    )
+    await vi.waitFor(() => expect(root.querySelector('h2')?.textContent).toBe('Report'))
     expect(discarded).toBe(1)
-    expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('')
+    const value = (name: string) => root.querySelector<HTMLInputElement>(`[name="${name}"]`)?.value
+    expect([value('claimantName'), value('email'), value('position')]).toEqual([
+      'Zoë Lefèvre',
+      'zoe@mcmaster.ca',
+      'Student',
+    ])
+    expect([value('supervisorName'), value('purpose'), value('account')]).toEqual(['', '', ''])
+    expect(kept.at(-1)?.claimantName).toBe('Zoë Lefèvre')
+    expect(kept.at(-1)?.purpose).toBeUndefined()
+    expect(kept.at(-1)?.expenses).toEqual([])
+    expect(button('[data-step="1"]')?.disabled).toBe(true)
   })
 
   it('keeps the report and says so when the browser does not delete the draft', async () => {

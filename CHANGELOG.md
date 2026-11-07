@@ -31,6 +31,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - A business travel cannot be saved until it has a travel justification: a
   draft of a business travel kept by 0.1.0 asks for one at the Review step.
   Unticking Business travel takes the travel justifications out of the report.
+- **New report** keeps the claimant's name, position and email, and starts
+  the new report with them; the supervisor or host, the purpose, the dates,
+  the account, the expenses and every document are still deleted.
 
 ### Known limitations
 
