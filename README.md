@@ -8,6 +8,10 @@ Report Template, then every supporting document, sorted into sections.
 It is one HTML file that runs in the browser, from disk: there is no server,
 nothing to install, and nothing leaves the computer.
 
+Open the latest version at <https://mosser.github.io/macreport/>, or save
+`macreport-vX.Y.Z.html` from the
+[releases](https://github.com/mosser/macreport/releases) and open it from disk.
+
 ## Status
 
 Version 0.1.0 is a minimal viable product: one report, one expense with its
@@ -29,6 +33,20 @@ npm run dev         # Vite dev server
 npm run verify      # typecheck + lint + test + build + ADR checks
 npm run build       # dist/macreport-vX.Y.Z.html
 ```
+
+## Releasing
+
+From an up-to-date, clean `main`, with the changes listed under
+`[Unreleased]` in `CHANGELOG.md`:
+
+```sh
+scripts/release.sh vX.Y.Z
+```
+
+The script refuses a version that exists already, sets it in `package.json`,
+dates the CHANGELOG section, runs `npm run verify`, commits and tags, then
+pushes `main` and the tag once confirmed. The tag publishes the GitHub release,
+with that CHANGELOG section as its notes, and deploys the file to GitHub Pages.
 
 ## Author
 

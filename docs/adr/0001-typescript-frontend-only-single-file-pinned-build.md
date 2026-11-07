@@ -44,7 +44,9 @@ The system is a **front-end only web application**. It runs entirely in the
 browser, and the production build is **one self-contained HTML file**,
 `dist/macreport-vX.Y.Z.html` (the `version` of `package.json`): all JavaScript,
 CSS, fonts and images are inlined into it. That file works when opened
-directly from disk (`file://`), and equally from any static file host.
+directly from disk (`file://`), and equally from any static file host: the
+release workflow serves that same file, unchanged, as the `index.html` of the
+project's GitHub Pages site (ADR 0003).
 
 - There is **no backend**: no server-side code, no database, no server-held
   state, no proxy and no serverless function.
