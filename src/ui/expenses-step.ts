@@ -44,12 +44,14 @@ function typed(field: string, value: string): { changes: ExpenseFields; isBroken
 /** A zone a file is dropped on, or clicked to choose one; it shows the file added. */
 function fileField(field: 'receipts' | 'bankStatements', documents: readonly Document[]): Markup {
   const added = documents.map((document) => html`<span class="added">${document.fileName}</span>`)
-  const content = added.length > 0 ? added : html`<span>Drop a file here, or choose one</span>`
+  const empty = html`<span>Drop a file here, or choose one</span>`
+  const content = added.length > 0 ? added : empty
   return html`<div class="field">
     ${fieldName(field)}
     <label class="drop-zone" data-drop="${field}">
-      <input name="${field}" type="file" accept="${accepted}" />
-      ${content}
+      <input name="${field}" type="file" accept="${accepted}"
+        aria-labelledby="name-of-${field} content-of-${field}" />
+      <span id="content-of-${field}">${content}</span>
     </label>
     ${fieldRule(field)}
   </div>`
@@ -97,15 +99,19 @@ export function expensesStep(readFile: ReadFile): Step {
       /** Chosen or dropped, a file goes through the same handler. */
       const add = async (field: string, file: File | undefined) => {
         if (file === undefined) return
+        const session = context.session
         const kind = field === 'receipts' ? Kind.receipt : Kind.bankStatement
         const document = await readFile(file, kind)
+        if (context.session !== session) return
         const changes =
           field === 'receipts' ? { receipts: [document] } : { bankStatements: [document] }
         context.change(afterChanging(context.report, changes))
         context.refresh()
       }
       for (const element of panel.querySelectorAll<HTMLInputElement>('input[type="file"]')) {
-        element.addEventListener('change', () => add(element.name, element.files?.[0]))
+        element.addEventListener('change', () => {
+          void add(element.name, element.files?.[0])
+        })
       }
       for (const zone of panel.querySelectorAll<HTMLElement>('[data-drop]')) {
         const isOver = (over: boolean) => (event: Event) => {
@@ -117,7 +123,7 @@ export function expensesStep(readFile: ReadFile): Step {
         zone.addEventListener('dragleave', isOver(false))
         zone.addEventListener('drop', (event) => {
           isOver(false)(event)
-          add(zone.dataset.drop ?? '', (event as DragEvent).dataTransfer?.files[0])
+          void add(zone.dataset.drop ?? '', (event as DragEvent).dataTransfer?.files[0])
         })
       }
     },

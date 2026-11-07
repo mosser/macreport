@@ -3,7 +3,7 @@ import logo from './assets/mcscert-left-rev.png?inline'
 import favicon from './assets/mcscert-stack-col.png?inline'
 import { CalendarDate } from './domain/calendar-date.ts'
 import { layoutOf } from './domain/layout.ts'
-import { Report } from './domain/report.ts'
+import type { Report } from './domain/report.ts'
 import { documentOf } from './io/add-file.ts'
 import { openDraftStore } from './io/draft-store.ts'
 import { paletteFrom } from './io/palette.ts'
@@ -43,10 +43,7 @@ mountWizard(root, {
   draft: await drafts.restore(),
   isDraftKept: drafts.isKept,
   keep: (report) => drafts.keep(report),
-  discard: async () => {
-    await drafts.discard()
-    return new Report()
-  },
+  discard: () => drafts.discard(),
   version: __VERSION__,
   logo,
   confirm: (question) => window.confirm(question),

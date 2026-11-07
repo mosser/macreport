@@ -101,8 +101,29 @@ describe('the draft store', () => {
     const factory = new IDBFactory()
     const store = await openDraftStore(factory)
     await store.keep(report)
-    await store.discard()
+    expect(await store.discard()).toBe(true)
     expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
+  })
+
+  it('keeps all of a report or nothing, and writes again a document a failed write left out', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    const unwritable = new Document(Kind.bankStatement, 'broken.pdf', {
+      toString: () => 'not bytes',
+      method: () => undefined,
+    } as unknown as Uint8Array)
+    const expense = report.expenses[0] ?? new Expense()
+    const broken = report.afterReplacing(
+      expense,
+      expense.afterChanging({ bankStatements: [unwritable] }),
+    )
+    expect(await store.keep(broken)).toBe(false)
+    expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
+    expect(await store.keep(report)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual([
+      'reçu.pdf',
+    ])
   })
 
   it('keeps only what follows the rules of each field from a damaged draft', async () => {
@@ -152,7 +173,7 @@ describe('the draft store', () => {
       const store = await openDraftStore(factory)
       expect(store.isKept).toBe(false)
       expect(await store.keep(report)).toBe(false)
-      await store.discard()
+      expect(await store.discard()).toBe(true)
       expect(await store.restore()).toEqual(new Report())
     }
   })
@@ -168,7 +189,7 @@ describe('the draft store', () => {
     ;(store as unknown as { database: IDBDatabase }).database.close()
     expect(await store.keep(report)).toBe(false)
     expect(await store.restore()).toEqual(new Report())
-    await store.discard()
+    expect(await store.discard()).toBe(false)
   })
 
   it("uses the browser's own storage when given none", async () => {

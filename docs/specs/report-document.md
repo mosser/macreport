@@ -29,10 +29,14 @@ R1, R2, and so on.
   US Letter, portrait, with three-quarter-inch margins. A text wraps within
   its column or its line, never clipped; what does not fit a page continues
   on the next one, as each part below says.
-- A PDF document keeps every page as it is: size, orientation and content.
-- An image document is placed on a Letter page of its own, portrait or
-  landscape to match the image, scaled down to fit the margins and never
-  enlarged.
+- Every page of the report document is portrait. A page that would show
+  wider than tall is turned a quarter, the top of its content to the left, as
+  a landscape page is printed.
+- A PDF document keeps every page's size and content, turned when it is
+  landscape.
+- An image document is placed on a Letter page of its own, scaled down to
+  fit the margins and never enlarged; an image wider than tall is placed
+  across the page, turned as a landscape page is.
 
 ## Cover
 
@@ -141,7 +145,8 @@ it reads upright on screen, whatever the page's size and rotation:
 
 Every page of a document carries the expenses, not only its first. When the
 stamp is wider than the page less its margins, the expenses go on lines of
-their own above it, as many as they need.
+their own above it, as many as they need, an expense wrapping over several
+lines when it is wider still, each of them a link.
 
 The stamp is what lets a reader of a printed copy go from the cover to a
 receipt and back.

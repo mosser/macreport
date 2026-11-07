@@ -1,4 +1,4 @@
-import type { Report } from '../domain/report.ts'
+import { Report } from '../domain/report.ts'
 import { expensesStep, type ReadFile } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
@@ -21,8 +21,8 @@ export interface WizardOptions {
   readonly isDraftKept: boolean
   /** Keeps the report as the draft, at once; gives whether the browser kept it. */
   readonly keep: (report: Report) => Promise<boolean>
-  /** Deletes the draft and its documents, for New report; gives the empty report. */
-  readonly discard: () => Promise<Report>
+  /** Deletes the draft and its documents, for New report; gives whether the browser did. */
+  readonly discard: () => Promise<boolean>
 }
 
 /**
@@ -37,6 +37,8 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   ]
   let report = options.draft
   let isDraftKept = options.isDraftKept
+  let isDiscardRefused = false
+  let session = 0
   let current = 0
   let reached = 0
 
@@ -44,11 +46,14 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     get report() {
       return report
     },
+    get session() {
+      return session
+    },
     change(changed: Report) {
       report = changed
-      options.keep(changed).then((isKept) => {
+      void options.keep(changed).then((isKept) => {
         isDraftKept = isKept
-        root.querySelector<HTMLElement>('.notice')?.toggleAttribute('hidden', isKept)
+        root.querySelector<HTMLElement>('[data-notice="draft"]')?.toggleAttribute('hidden', isKept)
       })
     },
     refresh,
@@ -69,20 +74,33 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     refresh()
   }
 
+  /** Starts a new report once the browser has deleted the draft; says so when it did not. */
+  async function startNewReport(): Promise<void> {
+    isDiscardRefused = !(await options.discard())
+    if (!isDiscardRefused) {
+      report = new Report()
+      session += 1
+      reached = 0
+    }
+    go(isDiscardRefused ? current : 0)
+  }
+
   function refresh(): void {
+    const stepper = steps.map((step, index) => {
+      const isCurrent = index === current ? html`aria-current="step"` : ''
+      return html`<li><button data-step="${index}" ${isCurrent}>${index + 1}. ${step.title}</button></li>`
+    })
+    const draftNotice = isDraftKept ? html`hidden` : ''
+    const discardNotice = isDiscardRefused ? '' : html`hidden`
     root.innerHTML = html`<header class="masthead">
         <img src="${options.logo}" alt="McSCert" />
         <h1>McSCert Expense Report</h1>
         <button class="new-report" data-action="new-report">New report</button>
       </header>
       <main>
-        <p class="notice" ${isDraftKept ? html`hidden` : ''}>No draft is kept: closing the page will lose the report.</p>
-        <ol class="stepper">
-          ${steps.map(
-            (step, index) => html`<li><button data-step="${index}"
-              ${index === current ? html`aria-current="step"` : ''}>${index + 1}. ${step.title}</button></li>`,
-          )}
-        </ol>
+        <p class="notice" data-notice="draft" ${draftNotice}>No draft is kept: closing the page will lose the report.</p>
+        <p class="notice" data-notice="discard" role="alert" ${discardNotice}>The browser did not delete the draft: it is still kept, bank statements included.</p>
+        <ol class="stepper">${stepper}</ol>
         <section class="panel"></section>
         <div class="actions">
           <button data-action="back" ${current === 0 ? html`hidden` : ''}>Back</button>
@@ -101,11 +119,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     }
     root.querySelector('[data-action="new-report"]')?.addEventListener('click', () => {
       if (options.confirm('Discard this report, its expense and its documents?')) {
-        options.discard().then((empty) => {
-          report = empty
-          reached = 0
-          go(0)
-        })
+        void startNewReport()
       }
     })
     root.querySelector('[data-action="back"]')?.addEventListener('click', () => go(current - 1))

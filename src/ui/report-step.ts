@@ -43,10 +43,7 @@ function input(field: Field, value: string, type: string): Markup {
 }
 
 function positionSelect(position: Position | undefined): Markup {
-  const options = positions.map(
-    (choice) =>
-      html`<option value="${choice}" ${choice === position ? html`selected` : ''}>${choice}</option>`,
-  )
+  const options = positions.map((choice) => html`<option value="${choice}">${choice}</option>`)
   return html`<label class="field">
     ${fieldName('position')}
     <select name="position">

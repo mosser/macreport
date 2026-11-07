@@ -18,7 +18,8 @@ browser, on this computer. Nothing is collected, sent or shared.*
 
 **New report** is offered on every step. It asks for confirmation, then
 discards the draft, its expenses and its documents, and opens the Report step
-on an empty report.
+on an empty report. When the browser does not delete the draft, the report
+stays as it is and the system says so, so that the Claimant can try again.
 
 ## The steps
 
@@ -124,13 +125,17 @@ document (`report-document.md`) and hands it to the browser to be saved as
 `expense-report-<date>-<claimant>.pdf`: the date is the first day of a
 business travel, or the date of the earliest expense of another report; the
 name of the claimant in lower case, without accents, words joined by
-hyphens. The browser
-does not tell the system whether it wrote the file or the Claimant cancelled,
-so the step says the report document was handed to the browser, with its file
-name, and keeps Save the report on offer to hand it over again. It also says
-that each missing receipt authorization, when there is one, is to be signed,
-and that the draft, bank statements included, stays in this browser until
-New report.
+hyphens. The browser does not tell the system whether it wrote the file or
+the Claimant cancelled, so the step says the report document was handed to
+the browser, with its file name, and keeps Save the report on offer to hand
+it over again. It also says that each missing receipt authorization, when
+there is one, is to be signed, and that the draft, bank statements included,
+stays in this browser until New report. What it says holds for the report
+as saved: once the report changes, it is no longer said.
+
+When the report document cannot be written, the step says so, and that a
+receipt or a bank statement may be damaged or protected by a password. The
+report stays as it is, to be corrected and saved again.
 
 Saving does not discard the draft: the Claimant may change the report and
 save it again. The draft goes when the Claimant starts a new report.

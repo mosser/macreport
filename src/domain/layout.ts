@@ -150,12 +150,16 @@ function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
     { name: fieldNames.email, value: complete.email },
   ]
   if (report.asksForSupervisor) {
-    fields.push({ name: fieldNames.supervisorName, value: report.supervisorName ?? '' })
-    fields.push({ name: fieldNames.supervisorEmail, value: report.supervisorEmail ?? '' })
+    fields.push(
+      { name: fieldNames.supervisorName, value: report.supervisorName ?? '' },
+      { name: fieldNames.supervisorEmail, value: report.supervisorEmail ?? '' },
+    )
   }
   if (report.asksForHost) {
-    fields.push({ name: fieldNames.hostName, value: report.hostName ?? '' })
-    fields.push({ name: fieldNames.hostEmail, value: report.hostEmail ?? '' })
+    fields.push(
+      { name: fieldNames.hostName, value: report.hostName ?? '' },
+      { name: fieldNames.hostEmail, value: report.hostEmail ?? '' },
+    )
   }
   fields.push({ name: fieldNames.purpose, value: complete.purpose })
   const dates = report.isBusinessTravel ? datesOf(report.firstDay, report.lastDay) : undefined

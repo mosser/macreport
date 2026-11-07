@@ -1,5 +1,6 @@
 import fontkit from '@cantoo/fontkit'
 import {
+  degrees,
   type PDFArray,
   PDFDocument,
   type PDFFont,
@@ -14,6 +15,7 @@ import type { CalendarDate } from '../domain/calendar-date.ts'
 import type { Document } from '../domain/document.ts'
 import type { LabelledDocument, Layout, Section, StampedExpense } from '../domain/layout.ts'
 import { bytesOf } from './inlined.ts'
+import { type PageView, portraitRotationOf, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
 
 /** What the report document is written from. */
@@ -129,22 +131,27 @@ async function sourceOf(document: Document): Promise<Source> {
 /** The lines a text wraps into within a width, breaking a word longer than the width. */
 export function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const fits = (candidate: string) => font.widthOfTextAtSize(candidate, size) <= width
+  return text.split('\n').flatMap((paragraph) => wrapParagraph(paragraph, fits))
+}
+
+/** The lines a paragraph wraps into, filling each line with as many pieces of words as fit. */
+function wrapParagraph(paragraph: string, fits: (text: string) => boolean): string[] {
+  const pieces = paragraph
+    .split(/\s+/)
+    .filter((word) => word !== '')
+    .flatMap((word) => breakWord(word, fits))
   const lines: string[] = []
-  for (const paragraph of text.split('\n')) {
-    let line = ''
-    for (const word of paragraph.split(/\s+/).filter((piece) => piece !== '')) {
-      for (const piece of breakWord(word, fits)) {
-        const candidate = line === '' ? piece : `${line} ${piece}`
-        if (fits(candidate)) {
-          line = candidate
-        } else {
-          if (line !== '') lines.push(line)
-          line = piece
-        }
-      }
+  let line = ''
+  for (const piece of pieces) {
+    const candidate = line === '' ? piece : `${line} ${piece}`
+    if (fits(candidate) || line === '') {
+      line = candidate
+    } else {
+      lines.push(line)
+      line = piece
     }
-    lines.push(line)
   }
+  lines.push(line)
   return lines
 }
 
@@ -371,22 +378,23 @@ class Writer {
   stampEveryPage(): void {
     const total = this.pages.length
     this.pages.forEach(({ page, entry }, index) => {
+      const view = viewOf(page.getCropBox(), page.getRotation().angle)
+      const room = view.width - 2 * margin
       const label: StampPiece[] = entry === undefined ? [] : [{ text: entry.label }]
       const expenses = (entry?.expenses ?? []).map((expense) => ({ text: expense.name, expense }))
       const pageNumber = { text: `${index + 1} / ${total}` }
-      const box = page.getCropBox()
       const oneLine = [...label, ...expenses, pageNumber]
       const lines =
-        this.widthOf(oneLine) <= box.width - 2 * margin
+        this.widthOf(oneLine) <= room
           ? [oneLine]
-          : [[...label, pageNumber], ...expenses.toReversed().map((expense) => [expense])]
-      lines.forEach((line, height) => {
-        this.stampLine(
-          page,
-          line,
-          box.x + box.width - margin,
-          box.y + stampBaseline + height * stampSize * leading,
-        )
+          : [
+              ...expenses.flatMap(({ text, expense }) =>
+                wrap(text, this.regular, stampSize, room).map((part) => [{ text: part, expense }]),
+              ),
+              [...label, pageNumber],
+            ]
+      lines.toReversed().forEach((line, height) => {
+        this.stampLine(page, view, line, stampBaseline + height * stampSize * leading)
       })
     })
   }
@@ -396,26 +404,34 @@ class Writer {
     return this.regular.widthOfTextAtSize(text, stampSize)
   }
 
-  /** A line of a stamp ending at the right, each expense in it a link to its row on the cover. */
-  private stampLine(page: PDFPage, line: readonly StampPiece[], right: number, y: number): void {
-    const x = right - this.widthOf(line)
+  /**
+   * A line of a stamp, upright on screen whatever the page's rotation, ending at the right margin
+   * of the page as it shows; each expense in it a link to its row on the cover.
+   */
+  private stampLine(page: PDFPage, view: PageView, line: readonly StampPiece[], up: number): void {
+    const left = view.width - margin - this.widthOf(line)
     const text = line.map((piece) => piece.text).join(stampSeparator)
-    const color = colourOf(this.palette.grey)
-    page.drawText(text, { x, y, size: stampSize, font: this.regular, color })
+    const at = view.toPage(left, up)
+    page.drawText(text, {
+      ...at,
+      size: stampSize,
+      font: this.regular,
+      color: colourOf(this.palette.grey),
+      rotate: degrees(view.rotation),
+    })
     line.forEach((piece, index) => {
       if (piece.expense === undefined) return
       const before = line
         .slice(0, index)
         .map((each) => each.text + stampSeparator)
         .join('')
-      this.links.push({
-        page,
-        x: x + this.regular.widthOfTextAtSize(before, stampSize),
-        y: y - 2,
+      const box = view.boxOnPage({
+        x: left + this.regular.widthOfTextAtSize(before, stampSize),
+        y: up - 2,
         width: this.regular.widthOfTextAtSize(piece.text, stampSize),
         height: stampSize + 3,
-        target: { expenseNumber: piece.expense.number },
       })
+      this.links.push({ page, ...box, target: { expenseNumber: piece.expense.number } })
     })
   }
 
@@ -468,7 +484,7 @@ class Writer {
     if (source.format === 'pdf') {
       const copied = await this.pdf.copyPages(source.pdf, source.pdf.getPageIndices())
       for (const page of copied) {
-        this.pages.push({ page: this.pdf.addPage(page), entry })
+        this.pages.push({ page: turnedPortrait(this.pdf.addPage(page)), entry })
       }
       this.markFirstPage(entry, this.pages.length - copied.length)
       return
@@ -486,7 +502,7 @@ class Writer {
     const [width, height] = [image.width * scale, image.height * scale]
     const page = this.pdf.addPage(size)
     page.drawImage(image, { x: (size[0] - width) / 2, y: (size[1] - height) / 2, width, height })
-    this.pages.push({ page, entry })
+    this.pages.push({ page: turnedPortrait(page), entry })
     this.markFirstPage(entry, this.pages.length - 1)
   }
 
@@ -611,6 +627,12 @@ class Writer {
       })
     }
   }
+}
+
+/** The page, turned a quarter when it would show landscape: every page shows portrait. */
+function turnedPortrait(page: PDFPage): PDFPage {
+  page.setRotation(degrees(portraitRotationOf(page.getCropBox(), page.getRotation().angle)))
+  return page
 }
 
 function colourOf(colour: Colour) {

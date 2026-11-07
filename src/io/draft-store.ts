@@ -17,8 +17,8 @@ export interface DraftStore {
   restore(): Promise<Report>
   /** Keeps the report as the draft, at once; gives whether the browser kept it. */
   keep(report: Report): Promise<boolean>
-  /** Deletes the draft and every document's content, for New report. */
-  discard(): Promise<void>
+  /** Deletes the draft and every document's content, for New report; gives whether it did. */
+  discard(): Promise<boolean>
 }
 
 const databaseName = 'macreport'
@@ -48,14 +48,14 @@ function opened(factory: IDBFactory): Promise<IDBDatabase> {
     const request = factory.open(databaseName, databaseVersion)
     request.onupgradeneeded = () => {
       const database = request.result
-      for (const name of [...database.objectStoreNames]) {
+      for (const name of Array.from(database.objectStoreNames)) {
         database.deleteObjectStore(name)
       }
       database.createObjectStore(draftStore)
       database.createObjectStore(documentStore)
     }
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
+    request.onerror = () => reject(failure(request.error))
     // Another page holds an older draft open: rather than wait for it, keep nothing this time.
     request.onblocked = () => reject(new Error('The draft is held open by another page'))
   })
@@ -64,16 +64,30 @@ function opened(factory: IDBFactory): Promise<IDBDatabase> {
 function completed(transaction: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve()
-    transaction.onerror = () => reject(transaction.error)
-    transaction.onabort = () => reject(transaction.error)
+    transaction.onerror = () => reject(failure(transaction.error))
+    transaction.onabort = () => reject(failure(transaction.error))
   })
 }
 
 function result<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
+    request.onerror = () => reject(failure(request.error))
   })
+}
+
+/** Undoes what a transaction wrote, when it is still going. */
+function abort(transaction: IDBTransaction | undefined): void {
+  try {
+    transaction?.abort()
+  } catch {
+    // Already finished, or already aborted: there is nothing left to undo.
+  }
+}
+
+/** The error IndexedDB gives, or one saying it gave none. */
+function failure(error: DOMException | null): Error {
+  return error ?? new Error('The browser did not say why it failed')
 }
 
 /** The documents of a report: the receipts and bank statements of its expenses, each once. */
@@ -105,7 +119,7 @@ const nothingKept: DraftStore = {
   isKept: false,
   restore: async () => new Report(),
   keep: async () => false,
-  discard: async () => {},
+  discard: async () => true,
 }
 
 class IndexedDraftStore implements DraftStore {
@@ -124,27 +138,34 @@ class IndexedDraftStore implements DraftStore {
       const record = await result(transaction.objectStore(draftStore).get(draftKey))
       const documents = new Map<string, Document>()
       const store = transaction.objectStore(documentStore)
-      const keys = (await result(store.getAllKeys())).filter((key) => typeof key === 'string')
-      for (const key of keys) {
-        const document = this.documentOf(key, await result(store.get(key)))
-        if (document !== undefined) documents.set(key, document)
-      }
+      const [keys, records] = await Promise.all([
+        result(store.getAllKeys()),
+        result(store.getAll()),
+      ])
+      keys.forEach((key, index) => {
+        const document = typeof key === 'string' ? this.documentOf(key, records[index]) : undefined
+        if (document !== undefined) documents.set(key as string, document)
+      })
       return reportOf(record, documents)
     } catch {
       return new Report()
     }
   }
 
+  /** Keeps the report, all of it or nothing: a write that fails is undone. */
   async keep(report: Report): Promise<boolean> {
+    let transaction: IDBTransaction | undefined
     try {
-      const transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
+      transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       const store = transaction.objectStore(documentStore)
       const kept = new Set<string>()
+      /** Documents written by this transaction: their identifiers hold once it commits. */
+      const written = new Map<Document, string>()
       for (const document of documentsOf(report)) {
         let identifier = this.identifiers.get(document)
         if (identifier === undefined) {
           identifier = crypto.randomUUID()
-          this.identifiers.set(document, identifier)
+          written.set(document, identifier)
           const record: DocumentRecord = {
             letter: document.kind.letter,
             fileName: document.fileName,
@@ -157,22 +178,27 @@ class IndexedDraftStore implements DraftStore {
       for (const key of await result(store.getAllKeys())) {
         if (typeof key !== 'string' || !kept.has(key)) store.delete(key)
       }
-      transaction.objectStore(draftStore).put(this.recordOf(report), draftKey)
+      transaction.objectStore(draftStore).put(this.recordOf(report, written), draftKey)
       await completed(transaction)
+      for (const [document, identifier] of written) {
+        this.identifiers.set(document, identifier)
+      }
       return true
     } catch {
+      abort(transaction)
       return false
     }
   }
 
-  async discard(): Promise<void> {
+  async discard(): Promise<boolean> {
     try {
       const transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       transaction.objectStore(draftStore).clear()
       transaction.objectStore(documentStore).clear()
       await completed(transaction)
+      return true
     } catch {
-      // Best effort (ADR 0008): what the browser would not delete, it did not keep either.
+      return false
     }
   }
 
@@ -188,8 +214,12 @@ class IndexedDraftStore implements DraftStore {
     return document
   }
 
-  private recordOf(report: Report): Record<string, unknown> {
-    const identifier = (document: Document) => this.identifiers.get(document) ?? ''
+  private recordOf(
+    report: Report,
+    written: ReadonlyMap<Document, string>,
+  ): Record<string, unknown> {
+    const identifier = (document: Document) =>
+      this.identifiers.get(document) ?? written.get(document) ?? ''
     const expenses: ExpenseRecord[] = report.expenses.map((expense) => ({
       ...(expense.date === undefined ? {} : { date: expense.date.toString() }),
       ...(expense.description === undefined ? {} : { description: expense.description }),

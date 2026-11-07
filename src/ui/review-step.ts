@@ -40,34 +40,54 @@ function sectionsOf(layout: Layout): Markup[] {
   )
 }
 
+/** What became of the last save: the report it was for, and its file name or that it failed. */
+type Outcome =
+  | { readonly report: Report; readonly fileName: string }
+  | { readonly report: Report; readonly isFailed: true }
+
+/** What the step says of the last save, only while the report is the one saved. */
+function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boolean): Markup {
+  if (outcome === undefined || outcome.report !== report) {
+    return html``
+  }
+  if ('isFailed' in outcome) {
+    return html`<p class="status is-failure" role="alert">The report document could not be written: a receipt or a bank statement may be damaged, or protected by a password. Replace it, and save the report again.</p>`
+  }
+  const draft = isDraftKept
+    ? html`<p class="status">The draft, bank statements included, stays in this browser until New report.</p>`
+    : html``
+  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${draft}`
+}
+
 /** Step 3: the report as it will be written, then its findings, and Save the report. */
 export function reviewStep(saveReport: SaveReport, isDraftKept: () => boolean): Step {
-  let savedAs: string | undefined
+  let outcome: Outcome | undefined
   return {
     title: 'Review',
 
     render(panel: HTMLElement, context: Context): void {
-      const findings = findingsOf(context.report)
+      const report = context.report
+      const findings = findingsOf(report)
       if (findings.length > 0) {
-        savedAs = undefined
-        panel.innerHTML = html`<h2>Review</h2>
-          <ul class="findings">${findings.map((finding) => html`<li>${finding.wording}</li>`)}</ul>`.text
+        const items = findings.map((finding) => html`<li>${finding.wording}</li>`)
+        panel.innerHTML = html`<h2>Review</h2><ul class="findings">${items}</ul>`.text
         return
       }
-      const layout = layoutOf(context.report)
-      const status =
-        savedAs === undefined
-          ? ''
-          : html`<p class="status">The report document was handed to the browser: ${savedAs}.</p>
-              ${isDraftKept() ? html`<p class="status">The draft, bank statements included, stays in this browser until New report.</p>` : ''}`
+      const layout = layoutOf(report)
       panel.innerHTML = html`<h2>Review</h2>
         ${coverOf(layout)}
         ${sectionsOf(layout)}
         <button class="primary" data-action="save">Save the report</button>
-        ${status}`.text
-      panel.querySelector('[data-action="save"]')?.addEventListener('click', async () => {
-        savedAs = await saveReport(context.report)
-        context.refresh()
+        ${statusOf(outcome, report, isDraftKept())}`.text
+      panel.querySelector('[data-action="save"]')?.addEventListener('click', () => {
+        saveReport(report)
+          .then((fileName) => {
+            outcome = { report, fileName }
+          })
+          .catch(() => {
+            outcome = { report, isFailed: true }
+          })
+          .finally(() => context.refresh())
       })
     },
 

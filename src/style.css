@@ -1,5 +1,5 @@
-/* palette:start (ADR 0002: the only colour literals of the system) */
 :root {
+  /* palette:start (ADR 0002: the only colour literals of the system) */
   --mac-maroon: #7a003c;
   --mac-gold: #fdbf57;
   --mac-grey: #495965;
@@ -12,12 +12,12 @@
   --mac-accent-sky: #aad5e1;
   --mac-accent-purple: #cc99cc;
   --mac-accent-light-grey: #dbdbdd;
-}
-/* palette:end */
+  /* palette:end */
 
-:root {
   --color-primary: var(--mac-maroon);
   --color-on-primary: var(--mac-white);
+  /* Text and borders that stand out: maroon on white; white on black, maroon being too dark. */
+  --color-accent: var(--mac-maroon);
   --color-highlight: var(--mac-gold);
   --color-surface: var(--mac-white);
   --color-text: var(--mac-black);
@@ -33,6 +33,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --color-surface: var(--mac-black);
+    --color-accent: var(--mac-white);
     --color-text: var(--mac-white);
     --color-secondary-text: var(--mac-accent-light-grey);
     --color-tint: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-black));
@@ -97,7 +98,7 @@ main {
 }
 
 h2 {
-  color: var(--color-primary);
+  color: var(--color-accent);
   margin-top: 0;
 }
 
@@ -146,10 +147,10 @@ textarea {
 
 button {
   padding: 0.45rem 1rem;
-  border: 1px solid var(--color-primary);
+  border: 1px solid var(--color-accent);
   border-radius: 4px;
   background: var(--color-surface);
-  color: var(--color-primary);
+  color: var(--color-accent);
   font: inherit;
   cursor: pointer;
 }
@@ -171,7 +172,7 @@ button:disabled {
 }
 
 .stepper button[aria-current="step"] {
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -189,9 +190,9 @@ table {
 }
 
 th {
-  color: var(--color-primary);
+  color: var(--color-accent);
   text-align: left;
-  border-bottom: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-accent);
 }
 
 th,
@@ -229,12 +230,12 @@ footer {
 
 .section legend {
   padding: 0 0.4rem;
-  color: var(--color-primary);
+  color: var(--color-accent);
   font-weight: 600;
 }
 
 .required {
-  color: var(--color-primary);
+  color: var(--color-accent);
   text-decoration: none;
 }
 
@@ -267,7 +268,7 @@ footer {
 
 .drop-zone:focus-within,
 .drop-zone.is-dragged-over {
-  border-color: var(--color-primary);
+  border-color: var(--color-accent);
   background: var(--color-tint);
   color: var(--color-text);
 }
@@ -284,4 +285,9 @@ footer {
 
 footer p {
   margin: 0.25rem 0;
+}
+
+.status.is-failure {
+  color: var(--color-warning);
+  font-weight: 600;
 }

@@ -26,18 +26,19 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   the computer.
 - The Review step: the cover and the sections as they will be written, or the
   findings that stand in the way, and **Save the report**.
-- The report document, saved as `expense-report-<date>-<claimant>.pdf`,
-  dated by the first day of a business travel or else the earliest expense: a cover in
-  place of the McSCert Expense Report Template (fields, attached information,
-  table of expenses and total), then a section of receipts and a section of bank
-  statements, each opened by a section page listing its documents with their
-  pages. PDF pages are copied as they are, images placed on a Letter page of
-  their own, and every page is stamped with its label, its expense (number
-  and the first 30 characters of its description) and its page number. On
-  screen, a label in the table of expenses opens its document, and the
-  expense in a stamp goes back to its row on the cover.
-  Text is written in Noto Sans, so names in the Latin, Greek and Cyrillic
-  alphabets keep their accents.
+- The report document, saved as `expense-report-<date>-<claimant>.pdf`, dated
+  by the first day of a business travel or else the earliest expense: a cover
+  in place of the McSCert Expense Report Template (fields, attached
+  information, table of expenses and total), then a section of receipts and a
+  section of bank statements, each opened by a section page listing its
+  documents with their pages. Every page is portrait: PDF pages are copied
+  with their size and content, turned a quarter when landscape, and images
+  placed on a Letter page of their own, turned when wider than tall. Every
+  page is stamped, upright, with its label, its expense (number and the first
+  30 characters of its description) and its page number. On screen, a label in
+  the table of expenses opens its document, and the expense in a stamp goes
+  back to its row on the cover. Text is written in Noto Sans, so names in the
+  Latin, Greek and Cyrillic alphabets keep their accents.
 - A footer on every step with the version of the system, and the statement
   that everything entered and added stays in the browser, on the computer:
   nothing is collected, sent or shared.
@@ -48,7 +49,7 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
 
 - One expense per report; no missing receipt, payment in cash, foreign amount
   or additional document.
-- Files are not checked when added: a damaged or password-protected PDF fails
-  when the report is saved.
+- Files are not checked when added: a damaged or password-protected PDF is
+  found only when the report is saved, and the Review step then says so.
 - On section pages, labels and expense numbers are not links yet, nor is the
   label in a stamp.

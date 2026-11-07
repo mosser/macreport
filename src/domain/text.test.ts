@@ -12,5 +12,15 @@ describe('text', () => {
     expect(isEmailAddress('claimant@mcmaster.ca')).toBe(true)
     expect(isEmailAddress('claimant@mcmaster')).toBe(false)
     expect(isEmailAddress('claimant mcmaster.ca')).toBe(false)
+    for (const wrong of [
+      '@mcmaster.ca',
+      'a@b@mcmaster.ca',
+      'a@.ca',
+      'a@mcmaster.',
+      'a b@mcmaster.ca',
+    ]) {
+      expect(isEmailAddress(wrong)).toBe(false)
+    }
+    expect(isEmailAddress('a.b@cas.mcmaster.ca')).toBe(true)
   })
 })

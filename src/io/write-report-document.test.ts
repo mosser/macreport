@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import fontkit from '@cantoo/fontkit'
 import {
   decodePDFRawStream,
+  degrees,
   PDFArray,
   PDFDict,
   PDFDocument,
@@ -162,6 +163,13 @@ function linksOf(pdf: PDFDocument, page: PDFPage) {
   })
 }
 
+/** The size a page shows with on screen, its rotation taken into account. */
+function shown(page: PDFPage): number[] {
+  const isSideways = page.getRotation().angle % 180 !== 0
+  const [width, height] = [page.getWidth(), page.getHeight()]
+  return isSideways ? [height, width] : [width, height]
+}
+
 describe('writeReportDocument', () => {
   it("links each label of an expense's row to its document, and each page of a document back to the row", async () => {
     const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
@@ -196,12 +204,16 @@ describe('writeReportDocument', () => {
     )
     const till = pdf.getPage(2)
     expect(till.getWidth()).toBe(226)
-    expect(textsOf(pdf, till)).toEqual([
-      'Till',
-      'R1 · 3 / 5',
-      'Expense 1: Air Canada, YYZ–CDG return',
-    ])
-    expect(linksOf(pdf, till).map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
+    const [content, base, ...expenseLines] = textsOf(pdf, till)
+    expect([content, base]).toEqual(['Till', 'R1 · 3 / 5'])
+    expect(expenseLines.length).toBeGreaterThan(1)
+    expect(expenseLines.toReversed().join(' ')).toBe('Expense 1: Air Canada, YYZ–CDG return')
+    const links = linksOf(pdf, till)
+    expect(links.map(({ to, how }) => [to, how])).toEqual(expenseLines.map(() => [1, '/XYZ']))
+    for (const link of links) {
+      expect(link.left).toBeGreaterThanOrEqual(0)
+      expect(link.left + link.width).toBeLessThanOrEqual(226)
+    }
   })
 
   it('writes the cover, then each section, its section page and its documents', async () => {
@@ -240,7 +252,7 @@ describe('writeReportDocument', () => {
     expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
   })
 
-  it('keeps every page of a PDF document as it is, and places an image on a Letter page that matches it', async () => {
+  it('keeps the size of every page of a PDF document, and shows every page portrait', async () => {
     const pdf = await written(await reportOf('Taxi'))
     const sizes = pdf.getPages().map((page) => [page.getWidth(), page.getHeight()])
     expect(sizes).toEqual([
@@ -251,6 +263,49 @@ describe('writeReportDocument', () => {
       [612, 792],
       [792, 612],
     ])
+    expect(pdf.getPages().map(shown)).toEqual([
+      [612, 792],
+      [612, 792],
+      [595, 842],
+      [595, 842],
+      [612, 792],
+      [612, 792],
+    ])
+    expect(pdf.getPage(5).getRotation().angle).toBe(270)
+  })
+
+  it('turns a landscape page portrait, and stamps a page turned already upright on screen', async () => {
+    const source = await PDFDocument.create()
+    const font = await source.embedFont(StandardFonts.Helvetica)
+    source.addPage([842, 595]).drawText('Landscape', { x: 50, y: 50, size: 12, font })
+    const scanned = source.addPage([842, 595])
+    scanned.drawText('Scanned', { x: 50, y: 50, size: 12, font })
+    scanned.setRotation(degrees(90))
+    const sideways = source.addPage([612, 792])
+    sideways.drawText('Sideways', { x: 50, y: 50, size: 12, font })
+    sideways.setRotation(degrees(90))
+    const receipt = new Document(Kind.receipt, 'statement.pdf', await source.save())
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const expense = report.expenses[0]
+    if (expense === undefined) throw new TypeError('No expense')
+    const pdf = await written(
+      report.afterReplacing(expense, expense.afterChanging({ receipts: [receipt] })),
+    )
+    const [landscape, turned, upright] = [2, 3, 4].map((index) => pdf.getPage(index))
+    expect([landscape, turned, upright].map((page) => page?.getRotation().angle)).toEqual([
+      270, 90, 0,
+    ])
+    for (const page of [landscape, turned, upright]) {
+      if (page === undefined) throw new TypeError('No page')
+      const [width = 0, height = 0] = shown(page)
+      expect(width).toBeLessThan(height)
+      expect(textsOf(pdf, page).at(-1)).toMatch(
+        /^R1 · Expense 1: Air Canada, YYZ–CDG return · \d \/ 7$/,
+      )
+    }
+    const link = linksOf(pdf, turned as PDFPage)[0]
+    expect(link?.left).toBeGreaterThan(800)
+    expect(link?.width).toBeLessThan(15)
   })
 
   it("names the document after the purpose, the claimant and the system's version", async () => {

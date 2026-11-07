@@ -33,7 +33,10 @@ export class Amount {
   toString(): string {
     const dollars = Math.floor(this.cents / 100)
     const cents = String(this.cents % 100).padStart(2, '0')
-    const grouped = String(dollars).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    const digits = [...String(dollars)]
+    const grouped = digits
+      .map((digit, index) => ((digits.length - index) % 3 === 0 && index > 0 ? `,${digit}` : digit))
+      .join('')
     return `$${grouped}.${cents}`
   }
 }

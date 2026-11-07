@@ -11,6 +11,9 @@ let confirmation: boolean
 let kept: Report[]
 let isKept: boolean
 let discarded: number
+let isDiscarded: boolean
+let isSaved: boolean
+let reading: Promise<void>
 
 function options(draft = new Report(), isDraftKept = true): WizardOptions {
   return {
@@ -22,14 +25,17 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
     },
     discard: async () => {
       discarded += 1
-      return new Report()
+      return isDiscarded
     },
     version: '0.1.0',
     logo: 'logo.png',
     confirm: () => confirmation,
-    readFile: async (file: File, kind: Kind) =>
-      new Document(kind, file.name, new Uint8Array(await file.arrayBuffer())),
+    readFile: async (file: File, kind: Kind) => {
+      await reading
+      return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
+    },
     saveReport: async (report: Report) => {
+      if (!isSaved) throw new Error('Input document to `PDFDocument.load` is encrypted')
       saved.push(report)
       return 'expense-report-2026-10-03-zoe-lefevre.pdf'
     },
@@ -92,6 +98,9 @@ beforeEach(() => {
   kept = []
   isKept = true
   discarded = 0
+  isDiscarded = true
+  isSaved = true
+  reading = Promise.resolve()
   mountWizard(root, options())
 })
 
@@ -242,6 +251,37 @@ describe('the wizard', () => {
       'expense-report-2026-10-03-zoe-lefevre.pdf',
     )
     expect(button('[data-action="save"]')).not.toBeNull()
+    button('[data-step="1"]')?.click()
+    type('description', 'Air Canada, YYZ–CDG and back')
+    button('[data-step="2"]')?.click()
+    expect(root.querySelector('.status')).toBeNull()
+  })
+
+  it('says the report document could not be written, and keeps the report to save again', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    isSaved = false
+    button('[data-action="save"]')?.click()
+    await vi.waitFor(() => expect(root.querySelector('.status.is-failure')).not.toBeNull())
+    expect(root.querySelector('.status')?.textContent).toContain(
+      'The report document could not be written: a receipt or a bank statement may be damaged, or protected by a password.',
+    )
+    isSaved = true
+    button('[data-action="save"]')?.click()
+    await vi.waitFor(() => expect(root.querySelector('.status.is-failure')).toBeNull())
+    expect(saved).toHaveLength(1)
+  })
+
+  it('names each drop zone after its kind of document, for screen readers', async () => {
+    fillReport()
+    continueButton()?.click()
+    const input = root.querySelector<HTMLInputElement>('input[name="bankStatements"]')
+    const names = (input?.getAttribute('aria-labelledby') ?? '')
+      .split(' ')
+      .map((id) => root.querySelector(`#${id}`)?.textContent?.trim())
+    expect(names).toEqual(['Bank statement *', 'Drop a file here, or choose one'])
   })
 
   it('adds a receipt and a bank statement dropped on their zones', async () => {
@@ -309,5 +349,38 @@ describe('the wizard', () => {
     )
     expect(discarded).toBe(1)
     expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('')
+  })
+
+  it('keeps the report and says so when the browser does not delete the draft', async () => {
+    fillReport()
+    isDiscarded = false
+    button('[data-action="new-report"]')?.click()
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('[data-notice="discard"]')?.hidden).toBe(false),
+    )
+    expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('ICSE 2026')
+    isDiscarded = true
+    button('[data-action="new-report"]')?.click()
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('[data-notice="discard"]')?.hidden).toBe(true),
+    )
+  })
+
+  it('does not add to a new report a file still being read when New report was clicked', async () => {
+    fillReport()
+    continueButton()?.click()
+    let finishReading = () => {}
+    reading = new Promise((resolve) => {
+      finishReading = resolve
+    })
+    const input = root.querySelector<HTMLInputElement>('input[name="receipts"]')
+    Object.defineProperty(input, 'files', { value: [new File(['%PDF-1.7'], 'late.pdf')] })
+    input?.dispatchEvent(new Event('change'))
+    button('[data-action="new-report"]')?.click()
+    await vi.waitFor(() => expect(discarded).toBe(1))
+    finishReading()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(kept.at(-1)?.expenses ?? []).toEqual([])
+    expect(root.textContent).not.toContain('late.pdf')
   })
 })

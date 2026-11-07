@@ -77,12 +77,13 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
     ['email', report.email],
   ]
   if (report.asksForSupervisor) {
-    required.push(['supervisorName', report.supervisorName])
-    required.push(['supervisorEmail', report.supervisorEmail])
+    required.push(
+      ['supervisorName', report.supervisorName],
+      ['supervisorEmail', report.supervisorEmail],
+    )
   }
   if (report.asksForHost) {
-    required.push(['hostName', report.hostName])
-    required.push(['hostEmail', report.hostEmail])
+    required.push(['hostName', report.hostName], ['hostEmail', report.hostEmail])
   }
   required.push(['purpose', report.purpose])
   if (report.isBusinessTravel) {
