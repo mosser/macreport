@@ -13,30 +13,30 @@ const complete = new Report({
   claimantName: 'Zoë Lefèvre',
   position: 'Faculty',
   email: 'zoe@mcmaster.ca',
-  event: 'ICSE 2026',
+  purpose: 'ICSE 2026',
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   account: '20-123-456',
 })
 
 describe('findings of the Report step', () => {
-  it('names each required field missing, and what it needs', () => {
+  it('names each required field missing; the dates are optional', () => {
     expect(wordings(findingsOfReportStep(new Report()))).toEqual([
-      'Name of claimant: Required.',
-      'Position: Required, one of Faculty, Postdoctoral fellow, Student, Staff, Visitor.',
-      'Email: Required, an email address.',
-      'Event: Required.',
-      'First day of the event: Required, a calendar date.',
-      'Last day of the event: Required, a calendar date, not before the first day.',
-      'Account: Required, free text.',
+      'Name of claimant is required.',
+      'Position is required.',
+      'Email is required.',
+      'Purpose is required.',
+      'Account is required.',
     ])
+    const withoutDates = complete.afterChanging({ firstDay: undefined, lastDay: undefined })
+    expect(findingsOfReportStep(withoutDates)).toEqual([])
   })
 
   it("asks a student or a postdoctoral fellow for their supervisor's name and email", () => {
     for (const position of ['Student', 'Postdoctoral fellow'] as const) {
       expect(wordings(findingsOfReportStep(complete.afterChanging({ position })))).toEqual([
-        "Supervisor: Required: the supervisor's name.",
-        "Supervisor's email: Required, an email address.",
+        'Supervisor is required.',
+        "Supervisor's email is required.",
       ])
     }
   })
@@ -44,16 +44,15 @@ describe('findings of the Report step', () => {
   it("asks a visitor for their host's name and email", () => {
     const visitor = complete.afterChanging({ position: 'Visitor' })
     expect(wordings(findingsOfReportStep(visitor))).toEqual([
-      "Host: Required: the host's name.",
-      "Host's email: Required, an email address.",
+      'Host is required.',
+      "Host's email is required.",
     ])
   })
 
   it('refuses a last day before the first', () => {
     const backwards = complete.afterChanging({ lastDay: new CalendarDate(2026, 10, 2) })
-    expect(wordings(findingsOfReportStep(backwards))).toEqual([
-      'Last day of the event: Required, a calendar date, not before the first day.',
-    ])
+    expect(wordings(findingsOfReportStep(backwards))).toEqual(['Last day is before the first day.'])
+    expect(findingsOfReportStep(backwards.afterChanging({ firstDay: undefined }))).toEqual([])
     const oneDay = complete.afterChanging({ lastDay: new CalendarDate(2026, 10, 3) })
     expect(findingsOfReportStep(oneDay)).toEqual([])
   })
@@ -68,11 +67,11 @@ describe('findings of the Expenses step', () => {
 
   it('names the expense, by its date and description, and the rule', () => {
     expect(wordings(findingsOfExpensesStep(complete.afterAdding(new Expense())))).toEqual([
-      'Expense without date, without description: Date: Required, a calendar date.',
-      'Expense without date, without description: Description: Required. For a meal not only for the claimant, it lists the attendees and their affiliations.',
-      'Expense without date, without description: Claimed amount (CAD): Required, in Canadian dollars, more than zero, at most two decimals.',
-      'Expense without date, without description: Receipt: Required, a PDF, a JPEG image or a PNG image.',
-      'Expense without date, without description: Bank statement: Required, a PDF, a JPEG image or a PNG image.',
+      'Expense without date, without description: Date is required.',
+      'Expense without date, without description: Description is required.',
+      'Expense without date, without description: Claimed amount (CAD) is required.',
+      'Expense without date, without description: Receipt is required.',
+      'Expense without date, without description: Bank statement is required.',
     ])
     const taxi = new Expense({
       date: new CalendarDate(2026, 10, 5),
@@ -81,13 +80,13 @@ describe('findings of the Expenses step', () => {
       receipts: [new Document(Kind.receipt, 'taxi.pdf', new Uint8Array())],
     })
     expect(wordings(findingsOfExpensesStep(complete.afterAdding(taxi)))).toEqual([
-      'Expense 2026-10-05, Taxi: Bank statement: Required, a PDF, a JPEG image or a PNG image.',
+      'Expense 2026-10-05, Taxi: Bank statement is required.',
     ])
   })
 
   it('gathers the findings of every step', () => {
     expect(findingsOf(new Report()).map((finding) => finding.step)).toEqual([
-      ...Array(7).fill('Report'),
+      ...Array(5).fill('Report'),
       'Expenses',
     ])
   })

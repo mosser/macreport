@@ -42,8 +42,8 @@ the template's fields and its table, so that nothing else needs filling in.
 - **Heading.** The McSCert logo, then *McSCert Expense Report*, and the date
   the document was written.
 - **Report fields.** Name of claimant, position, email, then the supervisor
-  and their email for a student or a postdoctoral fellow, the host and their email for a visitor;
-  event, dates of the event, account.
+  and their email for a student or a postdoctoral fellow, the host and their
+  email for a visitor; purpose, its dates when it has some, account.
 - **Attached information.** The four kinds of document, in their order, each
   with a box ticked when its section exists and the labels it holds (R1–R7).
 - **Expenses.** A table of every expense, sorted by date then in the order
@@ -179,6 +179,6 @@ receipt authorizations.
 
 ## Properties
 
-The document's title is *McSCert Expense Report — <event>*, its author the
+The document's title is *McSCert Expense Report — <purpose>*, its author the
 claimant, and its creator *McSCert Expense Report vX.Y.Z*, the version of the
 system that wrote it.

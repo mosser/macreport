@@ -57,7 +57,7 @@ async function reportOf(description: string): Promise<Report> {
     claimantName: 'Zoë Łukasiewicz',
     position: 'Faculty',
     email: 'zoe@mcmaster.ca',
-    event: 'ICSE 2026',
+    purpose: 'ICSE 2026',
     firstDay: new CalendarDate(2026, 10, 3),
     lastDay: new CalendarDate(2026, 10, 7),
     account: '20-123-456',
@@ -152,7 +152,7 @@ describe('writeReportDocument', () => {
         '2026-11-07',
         'Name of claimant',
         'Zoë Łukasiewicz',
-        'Dates of the event',
+        'Dates',
         '2026-10-03 to 2026-10-07',
         'Receipts  R1',
         'Bank statements  S1',
@@ -188,7 +188,7 @@ describe('writeReportDocument', () => {
     ])
   })
 
-  it("names the document after the event, the claimant and the system's version", async () => {
+  it("names the document after the purpose, the claimant and the system's version", async () => {
     const pdf = await written(await reportOf('Taxi'))
     expect(pdf.getTitle()).toBe('McSCert Expense Report — ICSE 2026')
     expect(pdf.getAuthor()).toBe('Zoë Łukasiewicz')

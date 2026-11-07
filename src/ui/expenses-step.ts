@@ -2,10 +2,11 @@ import { Amount } from '../domain/amount.ts'
 import { CalendarDate } from '../domain/calendar-date.ts'
 import type { Document } from '../domain/document.ts'
 import { Expense, type ExpenseFields } from '../domain/expense.ts'
-import { fieldNames, fieldRules, findingsOfExpensesStep } from '../domain/findings.ts'
+import { findingsOfExpensesStep } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { textOrAbsent } from '../domain/text.ts'
+import { fieldName, fieldRule } from './field.ts'
 import { html, type Markup } from './html.ts'
 import type { Context, Step } from './step.ts'
 
@@ -43,10 +44,10 @@ function typed(field: string, value: string): { changes: ExpenseFields; isBroken
 function fileField(field: 'receipts' | 'bankStatements', documents: readonly Document[]): Markup {
   const added = documents.map((document) => html`<span class="added">${document.fileName}</span>`)
   return html`<label class="field">
-    <span class="field-name">${fieldNames[field]}</span>
+    ${fieldName(field)}
     <input name="${field}" type="file" accept="${accepted}" />
     ${added}
-    <span class="rule">${fieldRules[field]}</span>
+    ${fieldRule(field)}
   </label>`
 }
 
@@ -59,20 +60,20 @@ export function expensesStep(readFile: ReadFile): Step {
       const expense = expenseOf(context.report)
       panel.innerHTML = html`<h2>Expense</h2>
         <label class="field">
-          <span class="field-name">${fieldNames.date}</span>
+          ${fieldName('date')}
           <input name="date" type="date" value="${expense.date?.toString() ?? ''}" />
-          <span class="rule" data-rule-of="date">${fieldRules.date}</span>
+          ${fieldRule('date')}
         </label>
         <label class="field">
-          <span class="field-name">${fieldNames.description}</span>
+          ${fieldName('description')}
           <textarea name="description">${expense.description ?? ''}</textarea>
-          <span class="rule">${fieldRules.description}</span>
+          ${fieldRule('description')}
         </label>
         <label class="field">
-          <span class="field-name">${fieldNames.claimedAmount}</span>
+          ${fieldName('claimedAmount')}
           <input name="claimedAmount" type="text" inputmode="decimal"
             value="${expense.claimedAmount ? (expense.claimedAmount.cents / 100).toFixed(2) : ''}" />
-          <span class="rule" data-rule-of="claimedAmount">${fieldRules.claimedAmount}</span>
+          ${fieldRule('claimedAmount')}
         </label>
         ${fileField('receipts', expense.receipts)}
         ${fileField('bankStatements', expense.bankStatements)}`.text

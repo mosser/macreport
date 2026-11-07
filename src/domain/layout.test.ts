@@ -24,7 +24,7 @@ const report = new Report({
   email: 'zoe@mcmaster.ca',
   supervisorName: 'Ada Lovelace',
   supervisorEmail: 'ada@mcmaster.ca',
-  event: 'ICSE 2026',
+  purpose: 'ICSE 2026',
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   account: '20-123-456',
@@ -49,8 +49,8 @@ describe('layoutOf', () => {
       { name: 'Email', value: 'zoe@mcmaster.ca' },
       { name: 'Supervisor', value: 'Ada Lovelace' },
       { name: "Supervisor's email", value: 'ada@mcmaster.ca' },
-      { name: 'Event', value: 'ICSE 2026' },
-      { name: 'Dates of the event', value: '2026-10-03 to 2026-10-07' },
+      { name: 'Purpose', value: 'ICSE 2026' },
+      { name: 'Dates', value: '2026-10-03 to 2026-10-07' },
       { name: 'Account', value: '20-123-456' },
     ])
   })
@@ -64,7 +64,16 @@ describe('layoutOf', () => {
     expect(faculty.map((field) => field.name)).not.toContain('Host')
   })
 
-  it('names the host of a visitor, and gives one day for an event of one day', () => {
+  it('leaves the dates out of a report without, and names its file after its earliest expense', () => {
+    const undated = report.afterChanging({ firstDay: undefined, lastDay: undefined })
+    const layout = layoutOf(undated)
+    expect(layout.coverFields.map((field) => field.name)).not.toContain('Dates')
+    expect(layout.fileName).toBe('expense-report-2026-10-03-zoe-lefevre-smith.pdf')
+    const onlyLast = layoutOf(report.afterChanging({ firstDay: undefined }))
+    expect(onlyLast.coverFields).toContainEqual({ name: 'Dates', value: '2026-10-07' })
+  })
+
+  it('names the host of a visitor, and gives one day for a purpose of one day', () => {
     const visitor = report.afterChanging({
       position: 'Visitor',
       hostName: 'Bo',
@@ -74,7 +83,7 @@ describe('layoutOf', () => {
     const fields = layoutOf(visitor).coverFields
     expect(fields).toContainEqual({ name: 'Host', value: 'Bo' })
     expect(fields).toContainEqual({ name: "Host's email", value: 'bo@mcmaster.ca' })
-    expect(fields).toContainEqual({ name: 'Dates of the event', value: '2026-10-03' })
+    expect(fields).toContainEqual({ name: 'Dates', value: '2026-10-03' })
   })
 
   it('ticks the kinds the report holds, with their labels', () => {

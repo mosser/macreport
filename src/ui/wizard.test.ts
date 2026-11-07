@@ -52,7 +52,7 @@ function fillReport(): void {
   type('claimantName', 'Zoë Lefèvre')
   choose('position', 'Faculty')
   type('email', 'zoe@mcmaster.ca')
-  type('event', 'ICSE 2026')
+  type('purpose', 'ICSE 2026')
   type('firstDay', '2026-10-03')
   type('lastDay', '2026-10-07')
   type('account', '20-123-456')
@@ -82,6 +82,29 @@ describe('the wizard', () => {
     expect(button('[data-action="back"]')?.hidden).toBe(true)
     expect(continueButton()?.disabled).toBe(true)
     expect(button('[data-step="1"]')?.disabled).toBe(true)
+  })
+
+  it('groups the Report step in sections, and marks each required field with an asterisk', () => {
+    const legends = [...root.querySelectorAll('legend')].map((legend) => legend.textContent)
+    expect(legends).toEqual(['Claimant', 'Purpose', 'Account'])
+    const name = (field: string) =>
+      root.querySelector(`[name="${field}"]`)?.closest('label')?.querySelector('.field-name')
+    expect(name('purpose')?.textContent?.trim()).toBe('Purpose *')
+    expect(name('firstDay')?.textContent?.trim()).toBe('First day')
+    expect(
+      root.querySelector('[name="claimantName"]')?.closest('label')?.querySelector('.rule'),
+    ).toBeNull()
+    choose('position', 'Visitor')
+    expect([...root.querySelectorAll('legend')].map((legend) => legend.textContent)).toContain(
+      'Host',
+    )
+  })
+
+  it('offers Continue without dates, which are optional', () => {
+    fillReport()
+    type('firstDay', '')
+    type('lastDay', '')
+    expect(continueButton()?.disabled).toBe(false)
   })
 
   it('offers Continue once every required field of the Report step is valid', () => {
@@ -157,7 +180,7 @@ describe('the wizard', () => {
     fillReport()
     continueButton()?.click()
     button('[data-step="0"]')?.click()
-    type('event', '')
+    type('purpose', '')
     button('[data-step="1"]')?.click()
     button('[data-action="back"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Report')
@@ -172,7 +195,7 @@ describe('the wizard', () => {
     type('account', '')
     button('[data-step="2"]')?.click()
     expect(root.querySelectorAll('.findings li')).toHaveLength(1)
-    expect(root.querySelector('.findings')?.textContent).toContain('Account: Required, free text.')
+    expect(root.querySelector('.findings')?.textContent).toContain('Account is required.')
     expect(button('[data-action="save"]')).toBeNull()
   })
 

@@ -14,12 +14,12 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the event, the dates of the event, the account, the expenses and the additional documents. There is one report at a time. |
+| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the account, the expenses and the additional documents. There is one report at a time. |
 | Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. The report of a student or a postdoctoral fellow names their supervisor, a visitor's their host. |
 | Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
-| Event | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit. |
-| Dates of the event | The first and the last day of the event. One day when they are the same. |
+| Purpose | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit, equipment. A report is not necessarily for an event. |
+| Dates | The first and the last day of the purpose, when it has some. Optional: a report may have both, one, or none. One day when they are the same. |
 | Account | The account the Claimant suggests the expenses be charged to, as free text. |
 | Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipts or the reason it has none, and its bank statements unless it was paid in cash. |
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |

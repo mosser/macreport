@@ -23,7 +23,7 @@ export interface ReportFields {
   readonly supervisorEmail?: string | undefined
   readonly hostName?: string | undefined
   readonly hostEmail?: string | undefined
-  readonly event?: string | undefined
+  readonly purpose?: string | undefined
   readonly firstDay?: CalendarDate | undefined
   readonly lastDay?: CalendarDate | undefined
   readonly account?: string | undefined
@@ -32,8 +32,8 @@ export interface ReportFields {
 
 /**
  * What the Claimant prepares: the claimant's name, position and email, the supervisor of a
- * student or a postdoctoral fellow, or the host of a visitor, the event, the dates of the event, the account and the
- * expenses. An email, when given, is an email address.
+ * student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the
+ * account and the expenses. An email, when given, is an email address.
  */
 export class Report {
   readonly claimantName: string | undefined
@@ -43,7 +43,7 @@ export class Report {
   readonly supervisorEmail: string | undefined
   readonly hostName: string | undefined
   readonly hostEmail: string | undefined
-  readonly event: string | undefined
+  readonly purpose: string | undefined
   readonly firstDay: CalendarDate | undefined
   readonly lastDay: CalendarDate | undefined
   readonly account: string | undefined
@@ -63,7 +63,7 @@ export class Report {
     this.supervisorEmail = fields.supervisorEmail
     this.hostName = fields.hostName
     this.hostEmail = fields.hostEmail
-    this.event = fields.event
+    this.purpose = fields.purpose
     this.firstDay = fields.firstDay
     this.lastDay = fields.lastDay
     this.account = fields.account
@@ -118,7 +118,7 @@ export class Report {
       supervisorEmail: this.supervisorEmail,
       hostName: this.hostName,
       hostEmail: this.hostEmail,
-      event: this.event,
+      purpose: this.purpose,
       firstDay: this.firstDay,
       lastDay: this.lastDay,
       account: this.account,

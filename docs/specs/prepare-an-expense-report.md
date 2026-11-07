@@ -21,11 +21,16 @@ on an empty report.
 The steps follow one another; Back returns to the previous one, and the
 stepper lets the Claimant go back to any step already reached. Every change is
 kept in the draft as soon as it is made, incomplete as it may be: a required
-field left empty, an expense whose receipt is still to come. What a field
-needs is shown next to it; a value typed that does not follow its field's rule
-is shown with that rule, and kept once it does.
+field left empty, an expense whose receipt is still to come. A required
+field is marked with an asterisk (*) next to its name; what it needs besides
+being filled in is shown next to it. A value typed that does not follow its
+field's rule is shown with that rule, and kept once it does.
 
 ### 1. Report
+
+The fields are grouped in sections: **Claimant** (name of claimant, position,
+email), **Supervisor** or **Host** when the position asks for one,
+**Purpose** (purpose, first day, last day) and **Account**.
 
 | Field | Rule |
 |---|---|
@@ -35,9 +40,9 @@ is shown with that rule, and kept once it does.
 | Extension | Optional. Written on missing receipt authorizations. |
 | Supervisor, supervisor's email | Asked of a Student or a Postdoctoral fellow, and then required: the supervisor's name, and an email address. |
 | Host, host's email | Asked of a Visitor, and then required: the host's name, and an email address. |
-| Event | Required. |
-| First day of the event | Required, a calendar date. |
-| Last day of the event | Required, a calendar date, not before the first day. |
+| Purpose | Required. |
+| First day | Optional, a calendar date. |
+| Last day | Optional, a calendar date, not before the first day when both are given. |
 | Account | Required, free text. |
 
 Choosing another position takes the supervisor or the host out of the
@@ -52,7 +57,7 @@ was paid in cash. The Claimant adds, changes and removes expenses.
 
 | Field | Rule |
 |---|---|
-| Date | Required, a calendar date. It may fall outside the dates of the event. |
+| Date | Required, a calendar date. It may fall outside the dates of the report. |
 | Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. |
 | Claimed amount | Required, in Canadian dollars, more than zero, at most two decimals. |
 | Paid in another currency | Optional. When set: the amount, more than zero, at most two decimals, and its currency, a three-letter ISO 4217 code other than CAD. |
@@ -109,8 +114,10 @@ pages. Then the findings, if any.
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as
-`expense-report-<first day of the event>-<claimant>.pdf`, the name of the
-claimant in lower case, without accents, words joined by hyphens. The browser
+`expense-report-<date>-<claimant>.pdf`: the date is the first day of the
+report, or the date of its earliest expense when it has no first day; the
+name of the claimant in lower case, without accents, words joined by
+hyphens. The browser
 does not tell the system whether it wrote the file or the Claimant cancelled,
 so the step says the report document was handed to the browser, with its file
 name, and keeps Save the report on offer to hand it over again. It also says

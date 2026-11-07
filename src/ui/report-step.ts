@@ -1,7 +1,8 @@
 import { CalendarDate } from '../domain/calendar-date.ts'
-import { type Field, fieldNames, fieldRules, findingsOfReportStep } from '../domain/findings.ts'
+import { type Field, findingsOfReportStep } from '../domain/findings.ts'
 import { type Position, positions, type Report, type ReportFields } from '../domain/report.ts'
 import { isEmailAddress, textOrAbsent } from '../domain/text.ts'
+import { fieldName, fieldRule } from './field.ts'
 import { html, type Markup } from './html.ts'
 import type { Context, Step } from './step.ts'
 
@@ -35,9 +36,9 @@ function typed(report: Report, field: string, value: string): Typed {
 
 function input(field: Field, value: string, type: string): Markup {
   return html`<label class="field">
-    <span class="field-name">${fieldNames[field]}</span>
+    ${fieldName(field)}
     <input name="${field}" type="${type}" value="${value}" />
-    <span class="rule" data-rule-of="${field}">${fieldRules[field]}</span>
+    ${fieldRule(field)}
   </label>`
 }
 
@@ -47,33 +48,57 @@ function positionSelect(position: Position | undefined): Markup {
       html`<option value="${choice}" ${choice === position ? html`selected` : ''}>${choice}</option>`,
   )
   return html`<label class="field">
-    <span class="field-name">${fieldNames.position}</span>
+    ${fieldName('position')}
     <select name="position">
       <option value="" ${position === undefined ? html`selected` : ''}></option>
       ${options}
     </select>
-    <span class="rule">${fieldRules.position}</span>
   </label>`
 }
 
-/** Step 1: the claimant, the event, its dates and the account. */
+/** A section of the form: its title, then its fields. */
+function section(title: string, fields: Markup[]): Markup {
+  return html`<fieldset class="section"><legend>${title}</legend>${fields}</fieldset>`
+}
+
+/** The section of the supervisor of a student or a postdoctoral fellow, or of a visitor's host. */
+function supervisorOrHost(report: Report): Markup | undefined {
+  if (report.asksForSupervisor) {
+    return section('Supervisor', [
+      input('supervisorName', report.supervisorName ?? '', 'text'),
+      input('supervisorEmail', report.supervisorEmail ?? '', 'email'),
+    ])
+  }
+  if (report.asksForHost) {
+    return section('Host', [
+      input('hostName', report.hostName ?? '', 'text'),
+      input('hostEmail', report.hostEmail ?? '', 'email'),
+    ])
+  }
+  return undefined
+}
+
+/** Step 1: the claimant, their supervisor or host, the purpose and its dates, the account. */
 export const reportStep: Step = {
   title: 'Report',
 
   render(panel: HTMLElement, context: Context): void {
     const report = context.report
     panel.innerHTML = html`<h2>Report</h2>
-      ${input('claimantName', report.claimantName ?? '', 'text')}
-      ${positionSelect(report.position)}
-      ${input('email', report.email ?? '', 'email')}
-      ${report.asksForSupervisor ? input('supervisorName', report.supervisorName ?? '', 'text') : ''}
-      ${report.asksForSupervisor ? input('supervisorEmail', report.supervisorEmail ?? '', 'email') : ''}
-      ${report.asksForHost ? input('hostName', report.hostName ?? '', 'text') : ''}
-      ${report.asksForHost ? input('hostEmail', report.hostEmail ?? '', 'email') : ''}
-      ${input('event', report.event ?? '', 'text')}
-      ${input('firstDay', report.firstDay?.toString() ?? '', 'date')}
-      ${input('lastDay', report.lastDay?.toString() ?? '', 'date')}
-      ${input('account', report.account ?? '', 'text')}`.text
+      ${section('Claimant', [
+        input('claimantName', report.claimantName ?? '', 'text'),
+        positionSelect(report.position),
+        input('email', report.email ?? '', 'email'),
+      ])}
+      ${supervisorOrHost(report)}
+      ${section('Purpose', [
+        input('purpose', report.purpose ?? '', 'text'),
+        html`<div class="dates">
+          ${input('firstDay', report.firstDay?.toString() ?? '', 'date')}
+          ${input('lastDay', report.lastDay?.toString() ?? '', 'date')}
+        </div>`,
+      ])}
+      ${section('Account', [input('account', report.account ?? '', 'text')])}`.text
 
     panel.querySelector('select')?.addEventListener('change', (event) => {
       const value = (event.target as HTMLSelectElement).value

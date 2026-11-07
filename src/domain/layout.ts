@@ -1,4 +1,5 @@
 import { Amount } from './amount.ts'
+import type { CalendarDate } from './calendar-date.ts'
 import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
@@ -62,9 +63,7 @@ interface Complete {
   readonly claimantName: string
   readonly position: string
   readonly email: string
-  readonly event: string
-  readonly firstDay: string
-  readonly lastDay: string
+  readonly purpose: string
   readonly account: string
 }
 
@@ -84,9 +83,9 @@ export function layoutOf(report: Report): Layout {
     ),
   )
   return {
-    title: `McSCert Expense Report — ${complete.event}`,
+    title: `McSCert Expense Report — ${complete.purpose}`,
     author: complete.claimantName,
-    fileName: fileNameOf(complete),
+    fileName: fileNameOf(complete, report.firstDay ?? expenses[0]?.date),
     coverFields: coverFieldsOf(report, complete),
     attachedInformation: Kind.all.map((kind) => attachedInformationOf(kind, sections)),
     expenses: expenses.map((expense, index) => rowOf(expense, index + 1, labels)),
@@ -97,28 +96,18 @@ export function layoutOf(report: Report): Layout {
 
 function completeReport(report: Report): Complete {
   const findings = findingsOf(report)
-  const { claimantName, position, email, event, firstDay, lastDay, account } = report
+  const { claimantName, position, email, purpose, account } = report
   if (
     findings.length > 0 ||
     claimantName === undefined ||
     position === undefined ||
     email === undefined ||
-    event === undefined ||
-    firstDay === undefined ||
-    lastDay === undefined ||
+    purpose === undefined ||
     account === undefined
   ) {
     throw new TypeError('Only a report without findings has a report document')
   }
-  return {
-    claimantName,
-    position,
-    email,
-    event,
-    firstDay: firstDay.toString(),
-    lastDay: lastDay.toString(),
-    account,
-  }
+  return { claimantName, position, email, purpose, account }
 }
 
 /** Expenses are sorted by date, then kept in the order they were added. */
@@ -129,15 +118,18 @@ function byDate(one: Expense, other: Expense): number {
   return one.date.compareTo(other.date)
 }
 
-/** expense-report-<first day of the event>-<claimant>.pdf, the claimant in lower case, without accents, words joined by hyphens. */
-function fileNameOf(complete: Complete): string {
+/**
+ * expense-report-<date>-<claimant>.pdf: the first day of the report, or the date of its earliest
+ * expense; the claimant in lower case, without accents, words joined by hyphens.
+ */
+function fileNameOf(complete: Complete, date: CalendarDate | undefined): string {
   const claimant = complete.claimantName
     .normalize('NFD')
     .replace(/\p{M}/gu, '')
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-|-$/g, '')
-  return `expense-report-${complete.firstDay}-${claimant}.pdf`
+  return `expense-report-${date?.toString() ?? ''}-${claimant}.pdf`
 }
 
 function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
@@ -154,16 +146,24 @@ function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
     fields.push({ name: fieldNames.hostName, value: report.hostName ?? '' })
     fields.push({ name: fieldNames.hostEmail, value: report.hostEmail ?? '' })
   }
-  const dates =
-    complete.firstDay === complete.lastDay
-      ? complete.firstDay
-      : `${complete.firstDay} to ${complete.lastDay}`
-  fields.push(
-    { name: fieldNames.event, value: complete.event },
-    { name: 'Dates of the event', value: dates },
-    { name: fieldNames.account, value: complete.account },
-  )
+  fields.push({ name: fieldNames.purpose, value: complete.purpose })
+  const dates = datesOf(report.firstDay, report.lastDay)
+  if (dates !== undefined) {
+    fields.push({ name: 'Dates', value: dates })
+  }
+  fields.push({ name: fieldNames.account, value: complete.account })
   return fields
+}
+
+/** The dates of the report: both days, one day when they are the same or only one is given. */
+function datesOf(
+  firstDay: CalendarDate | undefined,
+  lastDay: CalendarDate | undefined,
+): string | undefined {
+  if (firstDay !== undefined && lastDay !== undefined && !firstDay.equals(lastDay)) {
+    return `${firstDay} to ${lastDay}`
+  }
+  return (firstDay ?? lastDay)?.toString()
 }
 
 /**

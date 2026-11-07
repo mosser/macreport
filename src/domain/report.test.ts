@@ -37,7 +37,7 @@ describe('Report', () => {
       supervisorEmail: 'ada@mcmaster.ca',
     })
     expect(student.afterChanging({ position: 'Student' }).supervisorName).toBe('Ada')
-    expect(student.afterChanging({ event: 'ICSE' }).supervisorName).toBe('Ada')
+    expect(student.afterChanging({ purpose: 'ICSE' }).supervisorName).toBe('Ada')
     expect(student.afterChanging({ position: 'Postdoctoral fellow' }).supervisorName).toBe('Ada')
     const staff = student.afterChanging({ position: 'Staff' })
     expect(staff.supervisorName).toBeUndefined()

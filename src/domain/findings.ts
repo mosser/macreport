@@ -19,9 +19,9 @@ export const fieldNames = {
   supervisorEmail: "Supervisor's email",
   hostName: 'Host',
   hostEmail: "Host's email",
-  event: 'Event',
-  firstDay: 'First day of the event',
-  lastDay: 'Last day of the event',
+  purpose: 'Purpose',
+  firstDay: 'First day',
+  lastDay: 'Last day',
   account: 'Account',
   date: 'Date',
   description: 'Description',
@@ -30,34 +30,27 @@ export const fieldNames = {
   bankStatements: 'Bank statement',
 } as const
 
-/** What each field needs, shown next to it and in its finding. */
-export const fieldRules = {
-  claimantName: 'Required.',
-  position: 'Required, one of Faculty, Postdoctoral fellow, Student, Staff, Visitor.',
-  email: 'Required, an email address.',
-  supervisorName: "Required: the supervisor's name.",
-  supervisorEmail: 'Required, an email address.',
-  hostName: "Required: the host's name.",
-  hostEmail: 'Required, an email address.',
-  event: 'Required.',
-  firstDay: 'Required, a calendar date.',
-  lastDay: 'Required, a calendar date, not before the first day.',
-  account: 'Required, free text.',
-  date: 'Required, a calendar date.',
-  description:
-    'Required. For a meal not only for the claimant, it lists the attendees and their affiliations.',
-  claimedAmount: 'Required, in Canadian dollars, more than zero, at most two decimals.',
-  receipts: 'Required, a PDF, a JPEG image or a PNG image.',
-  bankStatements: 'Required, a PDF, a JPEG image or a PNG image.',
-} as const
-
 /** A field of the report or of an expense. */
 export type Field = keyof typeof fieldNames
 
-/** The finding of a field that is missing or does not follow its rule. */
-function fieldFinding(step: FindingStep, field: Field, expense?: Expense): Finding {
-  const subject = expense === undefined ? '' : `${expenseWording(expense)}: `
-  return { step, wording: `${subject}${fieldNames[field]}: ${fieldRules[field]}` }
+/** What a field needs besides being filled in, shown next to it; absent when nothing more. */
+export const fieldRules: Partial<Record<Field, string>> = {
+  email: 'An email address.',
+  supervisorEmail: 'An email address.',
+  hostEmail: 'An email address.',
+  lastDay: 'Not before the first day.',
+  description: 'For a meal not only for the claimant, the attendees and their affiliations.',
+  claimedAmount: 'In Canadian dollars, more than zero, at most two decimals.',
+  receipts: 'A PDF, a JPEG image or a PNG image.',
+  bankStatements: 'A PDF, a JPEG image or a PNG image.',
+}
+
+/** The fields that are optional; every other field, when asked, is required. */
+const optionalFields: ReadonlySet<Field> = new Set<Field>(['firstDay', 'lastDay'])
+
+/** Whether a field must be filled in, marked with an asterisk next to its name. */
+export function isRequired(field: Field): boolean {
+  return !optionalFields.has(field)
 }
 
 /** An expense, by its date and description. */
@@ -67,9 +60,13 @@ function expenseWording(expense: Expense): string {
   return `Expense ${date}, ${description}`
 }
 
-/** The required fields of the Report step that are missing or invalid. */
+function missing(step: FindingStep, field: Field, expense?: Expense): Finding {
+  const subject = expense === undefined ? '' : `${expenseWording(expense)}: `
+  return { step, wording: `${subject}${fieldNames[field]} is required.` }
+}
+
+/** The required fields of the Report step that are missing, and a last day before the first. */
 export function findingsOfReportStep(report: Report): readonly Finding[] {
-  const missing: Field[] = []
   const required: [Field, unknown][] = [
     ['claimantName', report.claimantName],
     ['position', report.position],
@@ -83,21 +80,15 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
     required.push(['hostName', report.hostName])
     required.push(['hostEmail', report.hostEmail])
   }
-  required.push(['event', report.event], ['firstDay', report.firstDay])
-  for (const [field, value] of required) {
-    if (value === undefined) {
-      missing.push(field)
-    }
+  required.push(['purpose', report.purpose], ['account', report.account])
+  const findings = required
+    .filter(([, value]) => value === undefined)
+    .map(([field]) => missing('Report', field))
+  const { firstDay, lastDay } = report
+  if (firstDay !== undefined && lastDay?.isBefore(firstDay)) {
+    findings.push({ step: 'Report', wording: 'Last day is before the first day.' })
   }
-  const lastDay = report.lastDay
-  const firstDay = report.firstDay
-  if (lastDay === undefined || (firstDay !== undefined && lastDay.isBefore(firstDay))) {
-    missing.push('lastDay')
-  }
-  if (report.account === undefined) {
-    missing.push('account')
-  }
-  return missing.map((field) => fieldFinding('Report', field))
+  return findings
 }
 
 /** No expense, or an expense that breaks a rule of the Expenses step. */
@@ -106,13 +97,13 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
     return [{ step: 'Expenses', wording: 'No expense is claimed.' }]
   }
   return report.expenses.flatMap((expense) => {
-    const missing: Field[] = []
-    if (expense.date === undefined) missing.push('date')
-    if (expense.description === undefined) missing.push('description')
-    if (expense.claimedAmount === undefined) missing.push('claimedAmount')
-    if (!expense.hasReceipt) missing.push('receipts')
-    if (!expense.hasBankStatement) missing.push('bankStatements')
-    return missing.map((field) => fieldFinding('Expenses', field, expense))
+    const absent: Field[] = []
+    if (expense.date === undefined) absent.push('date')
+    if (expense.description === undefined) absent.push('description')
+    if (expense.claimedAmount === undefined) absent.push('claimedAmount')
+    if (!expense.hasReceipt) absent.push('receipts')
+    if (!expense.hasBankStatement) absent.push('bankStatements')
+    return absent.map((field) => missing('Expenses', field, expense))
   })
 }
 
