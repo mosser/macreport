@@ -57,23 +57,29 @@ the template's fields and its table, so that nothing else needs filling in.
 - **Attached information.** The four kinds of document, in alphabetical
   order, each with a box ticked when its section exists.
 - **Expenses.** A table of every expense, sorted by date then in the order
-  they were added, and numbered in that order:
+  they were added, and numbered in that order, each on two lines: its
+  fields, then, under its description, its supporting documents.
 
-  | # | Date | Description | Foreign amount | Claimed (CAD) | Supporting documents | Entered |
-  |---|---|---|---|---|---|---|
-  | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | Air Canada booking<br>Visa, October | ☐ |
-  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | Taxi, CDG–hotel<br>cash | ☐ |
+  | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
+  |---|---|---|---|---|---|
+  | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
+  | | | *Air Canada booking · Visa, October* | | | |
+  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | ☐ |
+  | | | *Taxi, CDG–hotel · cash* | | | |
 
   The foreign amount is the currency code then the amount, empty for an
   expense paid in Canadian dollars; it is for information, nothing is
   converted. The supporting documents are the names of the expense's
-  documents, one per line, in the order of the report document, and *cash*
-  for an expense paid in cash; a missing receipt authorization is named by
-  the expense's description. *Entered* is an empty box, a form field that
-  McSCert's administrative staff tick on screen, or by hand on a printed
-  copy, once they have entered the expense. The table continues on the next
-  page when it does not fit, its header repeated; a last row gives the total
-  of the claimed amounts, without a box.
+  documents, in grey, separated by a middle dot, in the order of the report
+  document, and *cash* for an expense paid in cash; a missing receipt
+  authorization is named by the expense's description. They run from under
+  the description to the claimed amount, and on to the next line when they
+  do not fit. *Entered* is an empty box, a form field that McSCert's
+  administrative staff tick on screen, or by hand on a printed copy, once
+  they have entered the expense. The table continues on the next page when
+  it does not fit, its header repeated, an expense starting on the page its
+  documents start on; a last row gives the total of the claimed amounts,
+  without a box.
 
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.

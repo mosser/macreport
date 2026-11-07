@@ -32,9 +32,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- On the cover, an expense's supporting documents are listed by name, one per
-  line, each a link to its document, rather than by label (R1, S1). Section
-  pages have a Name column in place of File.
+- On the cover, each expense takes two lines: its fields, then its supporting
+  documents by name, each a link to its document, rather than a column of
+  labels (R1, S1). Section pages have a Name column in place of File.
+- The Review step shows the expenses the same way, without the Entered
+  boxes, which belong to the report document. Its tables of documents are
+  spaced alike, and a document's name opens it in a new tab of the browser.
 - Every page of the report document is US Letter. A Letter page of a PDF
   document stays as it is; a larger one, an A4 invoice say, is scaled down
   just enough to fit the page (to 94 %); a smaller one, a till receipt, keeps

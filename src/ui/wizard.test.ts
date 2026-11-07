@@ -17,6 +17,8 @@ let isSaved: boolean
 let reading: Promise<void>
 /** How long reading a file takes, by its name, when not as long as any other. */
 let readings: Map<string, Promise<void>>
+/** How many times the Review step let the browser forget its links. */
+let forgotten: number
 
 function options(draft = new Report(), isDraftKept = true): WizardOptions {
   return {
@@ -36,6 +38,12 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
     readFile: async (file: File, kind: Kind) => {
       await (readings.get(file.name) ?? reading)
       return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
+    },
+    links: {
+      urlOf: (document) => `blob:${document.fileName}`,
+      forgetAll: () => {
+        forgotten += 1
+      },
     },
     saveReport: async (report: Report) => {
       if (!isSaved) throw new Error('Input document to `PDFDocument.load` is encrypted')
@@ -105,6 +113,7 @@ beforeEach(() => {
   isSaved = true
   reading = Promise.resolve()
   readings = new Map()
+  forgotten = 0
   mountWizard(root, options())
 })
 
@@ -250,7 +259,6 @@ describe('the wizard', () => {
       '$1,012.35',
       'air-canada',
       'statement',
-      'Entered',
       'Receipts',
       'Bank statements',
     ]) {
@@ -260,6 +268,23 @@ describe('the wizard', () => {
       'Receipts',
       'Bank statements',
     ])
+    expect(text).not.toContain('Entered')
+    expect(root.querySelector('input[type="checkbox"]')).toBeNull()
+    const [expense, supporting] = root.querySelectorAll('table.expenses tbody tr')
+    expect(expense?.textContent).toContain('Air Canada, YYZ–CDG return')
+    expect(supporting?.textContent?.trim()).toBe('air-canada · statement')
+    const links = [...root.querySelectorAll<HTMLAnchorElement>('table a')].map((link) => [
+      link.textContent,
+      link.getAttribute('href'),
+      link.target,
+    ])
+    expect(links).toEqual([
+      ['air-canada', 'blob:air-canada.pdf', '_blank'],
+      ['statement', 'blob:statement.pdf', '_blank'],
+      ['air-canada', 'blob:air-canada.pdf', '_blank'],
+      ['statement', 'blob:statement.pdf', '_blank'],
+    ])
+    expect(forgotten).toBe(1)
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status')).not.toBeNull())
     expect(saved).toHaveLength(1)
@@ -507,7 +532,7 @@ describe('the wizard', () => {
     continueButton()?.click()
     continueButton()?.click()
     expect(root.querySelector('table.expenses')?.textContent).toContain('Visa, October')
-    expect(root.querySelector('table.section')?.textContent).toContain('air-canada')
+    expect(root.querySelector('table.documents')?.textContent).toContain('air-canada')
   })
 
   it('removes a receipt or a bank statement from the expense, with a trash can', async () => {
@@ -555,7 +580,7 @@ describe('the wizard', () => {
     continueButton()?.click()
     const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
     expect(sections).toEqual(['Additional documents', 'Receipts', 'Bank statements'])
-    const additional = root.querySelectorAll('table.section')[0]
+    const additional = root.querySelectorAll('table.documents')[0]
     expect(additional?.textContent).toContain('Itinerary')
     expect(additional?.textContent).not.toContain('Expenses')
   })

@@ -247,8 +247,9 @@ describe('writeReportDocument', () => {
       [3, '/Fit'],
       [6, '/Fit'],
     ])
-    expect(cover?.[0]?.left).toBe(cover?.[1]?.left)
-    expect(cover?.[0]?.bottom).toBeGreaterThan(cover?.[1]?.bottom ?? 0)
+    expect(cover?.[0]?.left).toBeLessThan(cover?.[1]?.left ?? 0)
+    expect(cover?.[0]?.bottom).toBe(cover?.[1]?.bottom)
+    expect(cover?.[0]?.left).toBeCloseTo(54 + 22 + 62 + 4)
     expect(receipts).toEqual([])
     expect(statements).toEqual([])
     for (const links of [boarding, pass, statement]) {
@@ -401,6 +402,23 @@ describe('writeReportDocument', () => {
     }
     const acroForm = pdf.catalog.lookup(PDFName.of('AcroForm'), PDFDict)
     expect(acroForm.get(PDFName.of('DR'))).toBeUndefined()
+  })
+
+  it("names an expense's documents on a line under it, from under its description", async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const at = (text: string) => places.find((place) => place.text === text)
+    expect(at('Supporting documents')).toBeUndefined()
+    const [description, receipt, separator, statement] = [
+      'Air Canada, YYZ–CDG return',
+      'air-canada',
+      ' · ',
+      'statement-octobre',
+    ].map(at)
+    expect(receipt?.x).toBeCloseTo(description?.x ?? 0)
+    expect(receipt?.y).toBeLessThan(description?.y ?? 0)
+    expect([separator?.y, statement?.y]).toEqual([receipt?.y, receipt?.y])
+    expect(statement?.x).toBeGreaterThan(separator?.x ?? 0)
   })
 
   it('heads the cover in its top right corner, level with the logo', async () => {
@@ -557,7 +575,6 @@ describe('writeReportDocument', () => {
     const covers = pdf
       .getPages()
       .map((page) => textsOf(pdf, page))
-      .filter((texts) => !texts.some((text) => text.includes('·')) && !texts.includes('Receipts'))
       .filter((texts) => texts.includes('Description'))
     expect(covers.length).toBeGreaterThan(1)
     const text = covers.flat().join(' ')

@@ -135,8 +135,11 @@ Continue is not offered.
 ### 4. Review
 
 The report as it will be written: the cover, with the table of the expenses
-and its total, then each section with its documents, their labels, their
-names and their pages. Then the findings, if any.
+and its total, each expense on two lines as in the report document, then
+each section with its documents, their labels and their names, every table
+of documents spaced alike. A document's name opens the document in a new
+tab of the browser, from the file the Claimant added. The Entered boxes are
+the report document's alone. Then the findings, if any.
 
 | Finding | Wording |
 |---|---|

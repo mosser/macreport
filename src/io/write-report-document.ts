@@ -32,6 +32,7 @@ import type {
   StampedExpense,
   SupportingDocument,
 } from '../domain/layout.ts'
+import { formatOf } from './format.ts'
 import { bytesOf } from './inlined.ts'
 import { type Orientation, orientationOf } from './orientation.ts'
 import { type Box, fitOf, type PageView, portraitRotationOf, viewOf } from './page-view.ts'
@@ -69,17 +70,14 @@ interface Column {
   readonly width: number
 }
 
-/**
- * A cell of a table: a text, or documents named one per line, each name a link to the first page
- * of its document.
- */
-type Cell = string | readonly SupportingDocument[]
-
-/** A line of a cell, and the label of the document it is a link to, when it is one. */
-interface CellLine {
+/** A name on the line of documents under an expense, and the label of the document it links to. */
+interface NamePiece {
   readonly text: string
-  readonly label?: string
+  readonly label: string
 }
+
+/** What separates two names on the line of documents under an expense. */
+const nameSeparator = ' · '
 
 /** A page of the report document, and the document it belongs to when it belongs to one. */
 interface StampedPage {
@@ -153,14 +151,6 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
   pdf.setProducer(`McSCert Expense Report v${writing.version}`)
   // The Entered boxes are drawn when added; updating them on saving would embed a font of its own.
   return pdf.save({ updateFieldAppearances: false })
-}
-
-/** Whether the bytes are a PDF, a JPEG image or a PNG image, from their first bytes. */
-function formatOf(content: Uint8Array): 'pdf' | 'jpeg' | 'png' {
-  const starts = (...bytes: number[]) => bytes.every((byte, index) => content[index] === byte)
-  if (starts(0x89, 0x50, 0x4e, 0x47)) return 'png'
-  if (starts(0xff, 0xd8, 0xff)) return 'jpeg'
-  return 'pdf'
 }
 
 /** A document ready to go into the report document: its pages copied, or its image embedded. */
@@ -379,32 +369,33 @@ class Writer {
     flow.down(12)
     this.sectionHeading(flow, 'Expenses')
     const columns: Column[] = [
-      { title: '#', width: 20 },
-      { title: 'Date', width: 58 },
-      { title: 'Description', width: 132 },
-      { title: 'Foreign amount', width: 62 },
-      { title: 'Claimed (CAD)', width: 68 },
-      { title: 'Supporting documents', width: 116 },
+      { title: '#', width: 22 },
+      { title: 'Date', width: 62 },
+      { title: 'Description', width: 220 },
+      { title: 'Foreign amount', width: 76 },
+      { title: 'Claimed (CAD)', width: 76 },
       { title: 'Entered', width: 48 },
     ]
     this.table(flow, columns, [])
     for (const row of layout.expenses) {
-      const cells: Cell[] = [
+      const cells = [
         String(row.number),
         row.date,
         row.description,
         row.foreignAmount,
         row.claimedAmount,
-        row.supportingDocuments,
         '',
       ]
-      const place = this.tableRow(flow, columns, cells, this.regular)
+      // An expense and the line of its documents start on the same page.
+      flow.ensure(2 * tableSize * leading + 12)
+      const place = this.tableRow(flow, columns, cells, this.regular, false, false)
       if (place !== undefined) {
         this.expenseRows.set(row.number, place)
         this.enteredBox(row, place, columns)
       }
+      this.documentsLine(flow, row.supportingDocuments, columns)
     }
-    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, '', ''], this.bold)
+    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, ''], this.bold)
     flow.stopContinuing()
   }
 
@@ -670,7 +661,7 @@ class Writer {
   }
 
   /** A table: its header, repeated at the top of every page it continues on, then its rows. */
-  private table(flow: Flow, columns: readonly Column[], rows: readonly Cell[][]): void {
+  private table(flow: Flow, columns: readonly Column[], rows: readonly string[][]): void {
     const header = () => {
       this.tableRow(
         flow,
@@ -689,19 +680,20 @@ class Writer {
 
   /**
    * A row whose cells wrap; a row taller than what is left of the page continues on the next.
-   * The name of a document in a cell is a link to its document. Gives where the row starts.
+   * A rule closes it unless something under it still belongs to it. Gives where the row starts.
    */
   private tableRow(
     flow: Flow,
     columns: readonly Column[],
-    cells: readonly Cell[],
+    cells: readonly string[],
     font: PDFFont,
     isHeader = false,
+    isClosed = true,
   ): Place | undefined {
     const padding = 4
     const lineHeight = tableSize * leading
     const wrapped = columns.map((column, index) =>
-      linesOf(cells[index] ?? '', font, column.width - padding * 2),
+      wrap(cells[index] ?? '', font, tableSize, column.width - padding * 2),
     )
     const lineCount = Math.max(...wrapped.map((lines) => lines.length))
     const colour = isHeader ? this.palette.maroon : this.palette.black
@@ -713,44 +705,80 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const cellLine = wrapped[index]?.[line]
-        if (cellLine !== undefined && cellLine.text !== '') {
-          flow.text(cellLine.text, x + padding, font, tableSize, colour)
-          this.linkLine(flow, cellLine, x + padding, font)
+        const text = wrapped[index]?.[line]
+        if (text !== undefined && text !== '') {
+          flow.text(text, x + padding, font, tableSize, colour)
         }
         x += column.width
       }
       flow.down(lineHeight)
     }
     flow.down(padding)
-    flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
+    if (isClosed) {
+      flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
+    }
     return place
   }
 
-  /** Links a line of a cell drawn at x to the first page of its document, when it names one. */
-  private linkLine(flow: Flow, line: CellLine, x: number, font: PDFFont): void {
-    const page = flow.page
-    if (page === undefined || line.label === undefined) return
-    this.links.push({
-      page,
-      x,
-      y: flow.cursor - tableSize - 2,
-      width: font.widthOfTextAtSize(line.text, tableSize),
-      height: tableSize + 3,
-      target: { label: line.label },
-    })
+  /**
+   * The line under an expense's row: its documents by name, one after the other, from under its
+   * description to its claimed amount, each a link to its document; a name that does not fit
+   * goes on to the next line. A rule closes the expense.
+   */
+  private documentsLine(
+    flow: Flow,
+    documents: readonly SupportingDocument[],
+    columns: readonly Column[],
+  ): void {
+    const padding = 4
+    const lineHeight = tableSize * leading
+    const widths = columns.map((column) => column.width)
+    const left = margin + (widths[0] ?? 0) + (widths[1] ?? 0) + padding
+    const room = (widths[2] ?? 0) + (widths[3] ?? 0) + (widths[4] ?? 0) - 2 * padding
+    const widthOf = (text: string) => this.regular.widthOfTextAtSize(text, tableSize)
+    const lines: NamePiece[][] = []
+    let used = 0
+    for (const { label, name } of documents) {
+      for (const text of wrap(name, this.regular, tableSize, room)) {
+        const line = lines.at(-1)
+        const needed = widthOf(nameSeparator) + widthOf(text)
+        if (line === undefined || used + needed > room) {
+          lines.push([{ text, label }])
+          used = widthOf(text)
+        } else {
+          line.push({ text, label })
+          used += needed
+        }
+      }
+    }
+    for (const line of lines) {
+      flow.ensure(lineHeight + padding)
+      let x = left
+      line.forEach(({ text, label }, index) => {
+        if (index > 0) {
+          flow.text(nameSeparator, x, this.regular, tableSize, this.palette.grey)
+          x += widthOf(nameSeparator)
+        }
+        flow.text(text, x, this.regular, tableSize, this.palette.grey)
+        const page = flow.page
+        if (page !== undefined) {
+          const y = flow.cursor - tableSize - 2
+          this.links.push({
+            page,
+            x,
+            y,
+            width: widthOf(text),
+            height: tableSize + 3,
+            target: { label },
+          })
+        }
+        x += widthOf(text)
+      })
+      flow.down(lineHeight)
+    }
+    flow.down(padding)
+    flow.rule(this.palette.rule, 0.5)
   }
-}
-
-/** The lines a cell wraps into within a width: a document's name starts a line of its own. */
-function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
-  if (typeof cell === 'string') {
-    return wrap(cell, font, tableSize, width).map((text) => ({ text }))
-  }
-  const lines = cell.flatMap(({ label, name }) =>
-    wrap(name, font, tableSize, width).map((text) => ({ text, label })),
-  )
-  return lines.length > 0 ? lines : [{ text: '' }]
 }
 
 /**

@@ -85,8 +85,8 @@ The report document is written as `docs/specs/report-document.md` says:
   document, on paper or with a PDF reader.
 - **An expense paid in cash** has no bank statement; the cover says *cash*
   where its statement's label would be.
-- **The cover's table names each expense's documents**, one per line, and
-  gives each expense an **Entered** box, a form field the administration
+- **The cover's table names each expense's documents**, on a line under the
+  expense, and gives each expense an **Entered** box, a form field the administration
   ticks on screen or by hand on paper as it enters the expense in McMaster's
   system: it shows at a glance what is left to enter.
 - **Every page is US Letter.** A page of a PDF document is scaled down in

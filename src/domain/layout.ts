@@ -22,6 +22,7 @@ export interface AttachedInformation {
 export interface SupportingDocument {
   readonly label: string
   readonly name: string
+  readonly document: Document
 }
 
 /** A row of the cover's table of expenses. */
@@ -273,6 +274,7 @@ function rowOf(expense: Expense, number: number, labels: Map<Document, string>):
   const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
     label: labels.get(document) ?? '',
     name: document.name,
+    document,
   }))
   return {
     number,

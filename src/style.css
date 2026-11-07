@@ -255,6 +255,30 @@ tr.total td {
   font-weight: 600;
 }
 
+/* An expense on two lines: its fields, then its documents, under one rule. */
+tr.expense td {
+  border-bottom: none;
+}
+
+tr.supporting td {
+  padding-top: 0;
+  color: var(--color-secondary-text);
+  font-size: 0.9rem;
+}
+
+/* Every table of documents spaced alike: its labels, then its names, then its expenses. */
+table.documents {
+  table-layout: fixed;
+}
+
+table.documents col.label {
+  width: 5rem;
+}
+
+table.documents col.numbers {
+  width: 8rem;
+}
+
 .findings li {
   color: var(--color-error);
 }

@@ -114,8 +114,8 @@ describe('layoutOf', () => {
         foreignAmount: '',
         claimedAmount: '$1,012.35',
         supportingDocuments: [
-          { label: 'R1', name: 'air-canada' },
-          { label: 'S1', name: 'statement-october' },
+          { label: 'R1', name: 'air-canada', document: receipt },
+          { label: 'S1', name: 'statement-october', document: statement },
         ],
       },
     ])
@@ -124,9 +124,11 @@ describe('layoutOf', () => {
 
   it('names a document as the Claimant named it, on the cover', () => {
     const named = report.afterRenaming(statement, 'Visa, October')
-    expect(layoutOf(named).expenses[0]?.supportingDocuments).toEqual([
-      { label: 'R1', name: 'air-canada' },
-      { label: 'S1', name: 'Visa, October' },
+    expect(
+      layoutOf(named).expenses[0]?.supportingDocuments.map(({ label, name }) => [label, name]),
+    ).toEqual([
+      ['R1', 'air-canada'],
+      ['S1', 'Visa, October'],
     ])
   })
 
