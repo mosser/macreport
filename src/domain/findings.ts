@@ -54,8 +54,10 @@ export const fieldRules: Partial<Record<Field, string>> = {
   travelJustifications:
     'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
   additionalDocuments: 'A PDF, a JPEG image or a PNG image.',
-  documentName: 'Not the name of another document.',
 }
+
+/** What is said under the name of a document that a document before it already has. */
+export const nameTakenWording = 'Another document already has this name.'
 
 /** The fields that are optional; every other field, when asked, is required. */
 const optionalFields: ReadonlySet<Field> = new Set<Field>([

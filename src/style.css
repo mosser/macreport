@@ -24,7 +24,8 @@
   --color-secondary-text: var(--mac-grey);
   --color-rule: var(--mac-accent-light-grey);
   --color-tint: color-mix(in srgb, var(--mac-maroon) 12%, var(--mac-white));
-  --color-warning: color-mix(in srgb, var(--mac-gold) 50%, var(--mac-black));
+  /* Errors: half pink, half maroon, 4.85:1 on white (ADR 0002). */
+  --color-error: color-mix(in srgb, var(--mac-accent-pink) 50%, var(--mac-maroon));
   --color-ok: var(--mac-accent-green);
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -37,7 +38,7 @@
     --color-text: var(--mac-white);
     --color-secondary-text: var(--mac-accent-light-grey);
     --color-tint: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-black));
-    --color-warning: var(--mac-gold);
+    --color-error: var(--mac-accent-pink);
     --color-ok: var(--mac-accent-lime);
   }
 }
@@ -136,7 +137,7 @@ textarea {
 }
 
 .rule.is-broken {
-  color: var(--color-warning);
+  color: var(--color-error);
   font-weight: 600;
 }
 
@@ -168,11 +169,18 @@ textarea {
 
 .remove:hover,
 .remove:focus-visible {
-  border-color: var(--color-warning);
-  color: var(--color-warning);
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
-.document .rule {
+.error {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-error);
+}
+
+.document .error {
   flex-basis: 100%;
 }
 
@@ -248,7 +256,7 @@ tr.total td {
 }
 
 .findings li {
-  color: var(--color-warning);
+  color: var(--color-error);
 }
 
 footer {
@@ -326,6 +334,6 @@ footer p {
 }
 
 .status.is-failure {
-  color: var(--color-warning);
+  color: var(--color-error);
   font-weight: 600;
 }

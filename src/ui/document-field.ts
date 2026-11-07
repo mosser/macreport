@@ -1,5 +1,5 @@
 import type { Document } from '../domain/document.ts'
-import { type Field, fieldNames, fieldRules } from '../domain/findings.ts'
+import { type Field, fieldNames, nameTakenWording } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
@@ -30,7 +30,7 @@ const trashCan = raw(
 
 /**
  * A document added: its name, which the Claimant may change, its file name, and Remove; under its
- * name, the rule it breaks when another document has it.
+ * name, an error when a document before it already has it.
  */
 function documentItem(
   field: DocumentField,
@@ -49,7 +49,7 @@ function documentItem(
     <span class="file-name" id="${id}">${document.fileName}</span>
     <button type="button" class="remove" data-remove="${field.field}" data-index="${index}"
       aria-label="Remove" title="Remove">${trashCan}</button>
-    <span class="rule is-broken" data-name-rule-of="${field.field}-${index}" ${isTaken}>${fieldRules.documentName}</span>
+    <span class="error" role="alert" data-name-taken="${field.field}-${index}" ${isTaken}>${nameTakenWording}</span>
   </li>`
 }
 
@@ -102,13 +102,13 @@ export function listenToDocumentFields(
       Number(element.dataset.index)
     ]
 
-  /** Shows the rule under each name another document before it already has. */
+  /** Shows the error under each name a document before it already has, and only there. */
   const showTakenNames = () => {
     for (const element of panel.querySelectorAll<HTMLInputElement>('input[name="documentName"]')) {
       const document = documentOf(element)
       const isTaken = document !== undefined && context.report.isNameTaken(document)
       panel
-        .querySelector(`[data-name-rule-of="${element.dataset.of}-${element.dataset.index}"]`)
+        .querySelector(`[data-name-taken="${element.dataset.of}-${element.dataset.index}"]`)
         ?.toggleAttribute('hidden', !isTaken)
     }
   }

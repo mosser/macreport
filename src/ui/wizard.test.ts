@@ -408,13 +408,12 @@ describe('the wizard', () => {
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
       'statement (2)',
     ])
-    const rule = () =>
-      root.querySelector<HTMLElement>('[data-name-rule-of="additionalDocuments-0"]')
+    const rule = () => root.querySelector<HTMLElement>('[data-name-taken="additionalDocuments-0"]')
     expect(rule()?.hidden).toBe(true)
     expect(continueButton()?.disabled).toBe(false)
     type('documentName', 'AIR-CANADA')
     expect(rule()?.hidden).toBe(false)
-    expect(rule()?.textContent).toBe('Not the name of another document.')
+    expect(rule()?.textContent).toBe('Another document already has this name.')
     expect(continueButton()?.disabled).toBe(true)
     type('documentName', 'Itinerary')
     expect(rule()?.hidden).toBe(true)

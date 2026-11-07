@@ -127,9 +127,10 @@ step and the report document call the document.
 
 No two documents of the report have the same name, whatever its case. A
 document added whose name another document already has is named after it,
-followed by (2), (3) and so on. A name typed that a document before it, in
-the order of the steps, already has is shown with its rule, *Not the name of
-another document.*, and Continue is not offered.
+followed by (2), (3) and so on. Nothing is shown under a name, unless a
+document before it, in the order of the steps, already has it: the error
+*Another document already has this name.* is then shown under it, and
+Continue is not offered.
 
 ### 4. Review
 

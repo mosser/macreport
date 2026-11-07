@@ -127,7 +127,9 @@ export class Report {
     const isTaken = (candidate: string) =>
       this.documents.some((document) => isSameName(document.name, candidate))
     let candidate = name
-    for (let number = 2; isTaken(candidate); number += 1) {
+    let number = 1
+    while (isTaken(candidate)) {
+      number += 1
       candidate = `${name} (${number})`
     }
     return candidate
