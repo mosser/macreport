@@ -468,8 +468,9 @@ describe('writeReportDocument', () => {
     const report = await reportOf('Taxi 0 ride')
     const expense = report.expenses[0]
     if (expense === undefined) throw new TypeError('No expense')
+    const till = await pdfOf([[226, 400]], 'Till')
     const receipt = (number: number) =>
-      new Document(Kind.receipt, `receipt-${number}.png`, png, `receipt-${number}`)
+      new Document(Kind.receipt, `receipt-${number}.pdf`, till, `receipt-${number}`)
     const words = (count: number) => ' to the hotel and back'.repeat(count)
     // One tall expense after more and more short ones walks down the page, in steps shorter
     // than a page, so that at some step it ends near the page's foot.
@@ -488,7 +489,7 @@ describe('writeReportDocument', () => {
       expect(description).toBeGreaterThanOrEqual(0)
       expect(pageOf((text) => text === `receipt-${tall}`)).toBe(description)
     }
-  })
+  }, 30_000)
 
   it('heads the cover in its top right corner, level with the logo', async () => {
     const pdf = await written(await reportOf('Taxi'))
