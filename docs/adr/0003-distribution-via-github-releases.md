@@ -12,9 +12,13 @@ file. The repository is private.
 
 Options considered:
 
-- **GitHub Pages or another static host.** Gives a URL, but makes the built
-  application public, or needs a paid plan for a private repository, and the
-  Claimant would still be better off keeping the file.
+- **GitHub Pages or another static host.** Gives a URL and a stable origin
+  for the draft (ADR 0008), but needs the repository to be public. It is a
+  second channel once the repository is public, amending this ADR and the
+  single-file rule of ADR 0001 to publish the page as `index.html`. It is
+  served from an origin of its own, never under `mosser.github.io`: browser
+  storage is per origin, and every page of that origin could read the draft,
+  bank statements included.
 - **A shared drive** filled from CI. Needs credentials for the drive in CI and
   someone to keep them valid.
 - **GitHub Releases.** Needs no credential beyond the workflow's own token, and
