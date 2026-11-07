@@ -47,7 +47,7 @@ Options considered:
   - **Completeness** is what a report must have before it is saved, and is
     checked by findings, never by a constructor: required fields, at least
     one expense, a receipt or a missing receipt, a bank statement unless paid
-    in cash, a last day of the event not before the first, text the embedded
+    in cash, a last day not before the first, text the embedded
     font can write. A field the Claimant has not filled in is absent, never an
     invalid value.
 - An expense refers to its documents **by reference**, not by identifier.

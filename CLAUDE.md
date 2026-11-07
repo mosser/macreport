@@ -18,9 +18,12 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** specification and ADRs only. There is no code yet, and none
-is written until the architecture is approved. The specification and the ADRs
-come first; code follows them.
+**Current state:** v0.1.0, a minimal viable product on the `mvp` branch: one
+report, exactly one expense with one receipt and one bank statement, saved as
+the report document (cover, receipt and bank statement sections, stamps). Not
+yet built: several expenses, missing receipts, additional documents, cash,
+foreign amounts, some links, refusing a file, and font findings. The
+specification and the ADRs describe the full system; code follows them.
 
 ## Where things live
 
@@ -115,7 +118,7 @@ first.
 
 ### ADR 0006: PDF
 
-- `@cantoo/pdf-lib` (with `@pdf-lib/fontkit`) is the only PDF library,
+- `@cantoo/pdf-lib` (with `@cantoo/fontkit`) is the only PDF library,
   imported only under `src/io/`. The report document embeds Noto Sans Regular
   and Bold from `src/assets/fonts/`, subset, and no other font.
   Password-protected PDFs are refused.
@@ -161,7 +164,8 @@ first.
 - **No narrating text**, in the interface or in the report document: no
   sentence that introduces a screen or a section, restates its heading or
   explains how to read it. Text is content, a heading or label, a status, a
-  finding, or a notice a decision asks for (the draft notice of ADR 0008).
+  finding, or a notice a decision asks for (the draft notice of ADR 0008, the
+  privacy statement of ADR 0005).
 - Words are the glossary's, in the interface as in the code.
 
 ## Git

@@ -1,0 +1,38 @@
+{
+  "name": "macreport",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prepares an expense report for the McMaster Centre for Software Certification",
+  "license": "MIT",
+  "author": "Sébastien Mosser",
+  "type": "module",
+  "engines": {
+    "node": ">=26 <27"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run --coverage",
+    "coverage": "vitest run --coverage",
+    "check": "bash scripts/check-adr.sh",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "fake-indexeddb": "6.2.6",
+    "happy-dom": "21.0.4",
+    "typescript": "6.0.3",
+    "vite": "8.3.6",
+    "vite-plugin-singlefile": "2.3.4",
+    "vitest": "5.1.0"
+  },
+  "dependencies": {
+    "@cantoo/fontkit": "2.0.12",
+    "@cantoo/pdf-lib": "2.11.1"
+  }
+}

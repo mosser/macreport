@@ -14,12 +14,13 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or the host of a visitor, the event, the dates of the event, the account, the expenses and the additional documents. There is one report at a time. |
-| Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. A student's report names their supervisor, a visitor's their host. |
-| Supervisor | The faculty member who supervises a student claimant, named in the report by their name and email. |
+| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the account, the expenses and the additional documents. There is one report at a time. |
+| Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. The report of a student or a postdoctoral fellow names their supervisor, a visitor's their host. |
+| Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
-| Event | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit. |
-| Dates of the event | The first and the last day of the event. One day when they are the same. |
+| Purpose | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit, equipment. A report is not necessarily for an event. |
+| Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates. |
+| Dates | The first and the last day of a business travel. One day when they are the same. |
 | Account | The account the Claimant suggests the expenses be charged to, as free text. |
 | Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipts or the reason it has none, and its bank statements unless it was paid in cash. |
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |
@@ -40,11 +41,12 @@ document.
 | New report | Discarding the draft, its expenses and its documents, to start another report. |
 | Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
 | Report document | The single PDF the system writes from a report without findings: the cover, then one section per kind of document. It is the only thing that counts once the report is done. |
+| Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
 | Save | The system hands the report document to the browser, which writes it on the Claimant's computer. The document is built in the browser: nothing is fetched or sent over a network. |
 | Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and their total. |
 | Section | The part of the report document holding the documents of one kind, opened by its section pages. |
 | Section page | A page that opens a section: its title and the list of its documents, each with its label, its pages and the expenses it supports. The list continues on as many section pages as it needs. |
-| Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the numbers of the expenses that document supports, and the page number out of the total. |
+| Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |
 | Link | A label or an expense number in the report document that a reader clicks, on screen, to go to the document's first page or to the expense's row on the cover. |
 
 ### Kinds of document

@@ -44,8 +44,12 @@ The interface uses **the DOM directly**, with two small in-house pieces.
   the step; both go through the same handler.
 - **Styling** is `src/style.css`, which holds the palette (ADR 0002) and every
   rule.
-- **Footer.** Under the wizard, every step shows McSCert, McMaster University,
-  and the version of the system.
+- **Footer.** Under the wizard, every step shows the system and its version,
+  McSCert and McMaster University, then the privacy statement: what the
+  Claimant enters and adds stays in this browser, on this computer, and
+  nothing is collected, sent or shared (ADR 0001). Receipts and bank
+  statements are personal and financial data, and a Claimant handing them to
+  a web page is entitled to know where they go.
 
 ## Consequences
 
