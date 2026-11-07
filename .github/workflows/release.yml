@@ -7,10 +7,6 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: release
-  cancel-in-progress: false
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -47,17 +43,23 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    # One deployment at a time; a newer one waiting replaces an older one waiting.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Serve the released file as index.html
+      - name: Serve the file of the latest release as index.html
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          latest="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          echo "Deploying ${latest}"
           mkdir site
-          gh release download "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" \
-            --pattern "macreport-${GITHUB_REF_NAME}.html" --output site/index.html
+          gh release download "${latest}" --repo "${GITHUB_REPOSITORY}" \
+            --pattern "macreport-${latest}.html" --output site/index.html
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site

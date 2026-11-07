@@ -59,10 +59,14 @@ Both come from `.github/workflows/release.yml`.
   missing or empty.
 - **Artefact.** One asset, `macreport-vX.Y.Z.html`, the file the build emits
   under the name the build gives it.
-- **Pages.** Once the release is published, a second job fetches its asset and
-  deploys it, unchanged, as the `index.html` of the site. The site always
-  serves the latest release. The `github-pages` environment accepts
-  deployments from `main` and from tags `v*.*.*`.
+- **Pages.** Once the release is published, a second job fetches the asset of
+  the latest release, whichever tag started the run, and deploys it,
+  unchanged, as the `index.html` of the site: the site always serves the
+  latest release, and re-running an older release's job cannot put an older
+  version back. Deployments run one at a time; release jobs are never queued
+  behind one another, so no tag waits on another to be published. The
+  `github-pages` environment accepts deployments from `main` and from tags
+  `v*.*.*`.
 - **Immutability.** A release is never edited or re-uploaded; a broken release
   is followed by a new version.
 - **Supply chain.** The workflow grants no permission at its top level. The
@@ -105,8 +109,8 @@ A change is compliant with this ADR when:
 - `.github/workflows/release.yml` triggers only on `vX.Y.Z` tags, checks the tag
   against `package.json`, takes the release notes from `CHANGELOG.md` with
   `scripts/release-notes.sh`, attaches exactly one asset named
-  `macreport-vX.Y.Z.html`, and deploys that asset as `index.html` to GitHub
-  Pages only after the release is published;
+  `macreport-vX.Y.Z.html`, and, only after the release is published, deploys
+  the asset of the latest release as `index.html` to GitHub Pages;
 - every action in the workflows is a first-party `actions/*` step pinned to a
   full commit SHA, except the SonarQube scan of ADR 0004, pinned the same way;
 - no other workflow or script creates, edits or deletes releases, or deploys

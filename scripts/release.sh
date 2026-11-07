@@ -33,7 +33,7 @@ git fetch --quiet --tags origin main
 git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null && die "the tag $tag already exists"
 [ -z "$(git ls-remote --tags origin "refs/tags/$tag")" ] || die "the tag $tag already exists on origin"
 gh release view "$tag" >/dev/null 2>&1 && die "the GitHub release $tag already exists"
-bash scripts/release-notes.sh "$version" >/dev/null 2>&1 && die "CHANGELOG.md already has a section [$version]"
+grep -qE "^## \[${version//./\\.}\]( |$)" CHANGELOG.md && die "CHANGELOG.md already has a section [$version]"
 latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
 if [ -n "$latest" ]; then
   node -e '
@@ -46,13 +46,15 @@ fi
 # Something to release.
 bash scripts/release-notes.sh Unreleased >/dev/null || die "nothing to release"
 
-# Prepare the release commit; undo everything if a step fails or the push is declined.
+# Prepare the release commit. Until the push succeeds, a failure, an
+# interruption or a refusal deletes the tag and puts main back where it was.
 start=$(git rev-parse HEAD)
 undo() {
   git tag --delete "$tag" >/dev/null 2>&1 || true
   git reset --quiet --hard "$start"
 }
 trap 'echo "release: failed, main is back at ${start:0:7}" >&2; undo' ERR
+trap 'echo "release: interrupted, main is back at ${start:0:7}" >&2; undo; exit 130' INT TERM
 
 npm version "$version" --no-git-tag-version --allow-same-version >/dev/null
 today=$(date +%Y-%m-%d)
@@ -68,7 +70,6 @@ npm run verify
 git add package.json package-lock.json CHANGELOG.md
 git commit --quiet -m "Release $tag"
 git tag --annotate "$tag" -m "$tag"
-trap - ERR
 
 echo
 git show --stat --format='%h %s' HEAD
@@ -84,5 +85,6 @@ if [ "$answer" != y ] && [ "$answer" != Y ]; then
 fi
 
 git push --atomic origin main "$tag"
+trap - ERR INT TERM
 echo "release: $tag pushed; the release workflow publishes it:"
 echo "  $(gh repo view --json url --jq .url)/actions/workflows/release.yml"
