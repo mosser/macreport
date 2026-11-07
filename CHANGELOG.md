@@ -13,8 +13,9 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
 - One HTML file, `macreport-v0.1.0.html`, that opens in a browser from disk
   and sends nothing over a network.
 - The Report step: name of claimant, position, email, the supervisor of a
-  student or the host of a visitor, event, dates of the event, account. Each
-  field shows what it needs, and Continue is offered once every one is valid.
+  student or a postdoctoral fellow, or the host of a visitor, event, dates of
+  the event, account. Each field shows what it needs, and Continue is offered
+  once every one is valid.
 - The Expenses step, for exactly one expense: its date, description and
   claimed amount in Canadian dollars, with one receipt and one bank statement,
   each a PDF, a JPEG image or a PNG image.

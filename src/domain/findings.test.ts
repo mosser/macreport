@@ -32,12 +32,13 @@ describe('findings of the Report step', () => {
     ])
   })
 
-  it("asks a student for their supervisor's name and email", () => {
-    const student = complete.afterChanging({ position: 'Student' })
-    expect(wordings(findingsOfReportStep(student))).toEqual([
-      "Supervisor: Required: the supervisor's name.",
-      "Supervisor's email: Required, an email address.",
-    ])
+  it("asks a student or a postdoctoral fellow for their supervisor's name and email", () => {
+    for (const position of ['Student', 'Postdoctoral fellow'] as const) {
+      expect(wordings(findingsOfReportStep(complete.afterChanging({ position })))).toEqual([
+        "Supervisor: Required: the supervisor's name.",
+        "Supervisor's email: Required, an email address.",
+      ])
+    }
   })
 
   it("asks a visitor for their host's name and email", () => {

@@ -42,7 +42,7 @@ the template's fields and its table, so that nothing else needs filling in.
 - **Heading.** The McSCert logo, then *McSCert Expense Report*, and the date
   the document was written.
 - **Report fields.** Name of claimant, position, email, then the supervisor
-  and their email for a student, the host and their email for a visitor;
+  and their email for a student or a postdoctoral fellow, the host and their email for a visitor;
   event, dates of the event, account.
 - **Attached information.** The four kinds of document, in their order, each
   with a box ticked when its section exists and the labels it holds (R1–R7).

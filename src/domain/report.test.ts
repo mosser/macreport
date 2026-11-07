@@ -19,11 +19,16 @@ describe('Report', () => {
     expect(() => new Report({ hostEmail: 'nope' })).toThrow(TypeError)
   })
 
-  it('asks for a supervisor of a student and a host of a visitor', () => {
+  it('asks for a supervisor of a student or a postdoctoral fellow, and a host of a visitor', () => {
     expect(new Report({ position: 'Student' }).asksForSupervisor).toBe(true)
+    expect(new Report({ position: 'Postdoctoral fellow' }).asksForSupervisor).toBe(true)
     expect(new Report({ position: 'Student' }).asksForHost).toBe(false)
     expect(new Report({ position: 'Visitor' }).asksForHost).toBe(true)
-    expect(new Report({ position: 'Faculty' }).asksForSupervisor).toBe(false)
+    expect(new Report({ position: 'Visitor' }).asksForSupervisor).toBe(false)
+    for (const position of ['Faculty', 'Staff'] as const) {
+      expect(new Report({ position }).asksForSupervisor).toBe(false)
+      expect(new Report({ position }).asksForHost).toBe(false)
+    }
   })
 
   it('takes the supervisor out when another position is chosen', () => {
@@ -33,6 +38,7 @@ describe('Report', () => {
     })
     expect(student.afterChanging({ position: 'Student' }).supervisorName).toBe('Ada')
     expect(student.afterChanging({ event: 'ICSE' }).supervisorName).toBe('Ada')
+    expect(student.afterChanging({ position: 'Postdoctoral fellow' }).supervisorName).toBe('Ada')
     const staff = student.afterChanging({ position: 'Staff' })
     expect(staff.supervisorName).toBeUndefined()
     expect(staff.supervisorEmail).toBeUndefined()

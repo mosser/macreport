@@ -106,13 +106,18 @@ describe('the wizard', () => {
     )
   })
 
-  it('asks a student for their supervisor, and takes them out when another position is chosen', () => {
+  it('asks a student or a postdoctoral fellow for their supervisor, and takes them out for another position', () => {
     fillReport()
     choose('position', 'Student')
     expect(root.querySelector('[name="supervisorName"]')).not.toBeNull()
     expect(continueButton()?.disabled).toBe(true)
     type('supervisorName', 'Ada Lovelace')
     type('supervisorEmail', 'ada@mcmaster.ca')
+    expect(continueButton()?.disabled).toBe(false)
+    choose('position', 'Postdoctoral fellow')
+    expect(root.querySelector<HTMLInputElement>('[name="supervisorName"]')?.value).toBe(
+      'Ada Lovelace',
+    )
     expect(continueButton()?.disabled).toBe(false)
     choose('position', 'Visitor')
     expect(root.querySelector('[name="supervisorName"]')).toBeNull()

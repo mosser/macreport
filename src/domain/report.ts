@@ -32,7 +32,7 @@ export interface ReportFields {
 
 /**
  * What the Claimant prepares: the claimant's name, position and email, the supervisor of a
- * student or the host of a visitor, the event, the dates of the event, the account and the
+ * student or a postdoctoral fellow, or the host of a visitor, the event, the dates of the event, the account and the
  * expenses. An email, when given, is an email address.
  */
 export class Report {
@@ -70,9 +70,9 @@ export class Report {
     this.expenses = fields.expenses ?? []
   }
 
-  /** Whether the report asks for a supervisor: it does of a student. */
+  /** Whether the report asks for a supervisor: it does of a student or a postdoctoral fellow. */
   get asksForSupervisor(): boolean {
-    return this.position === 'Student'
+    return this.position === 'Student' || this.position === 'Postdoctoral fellow'
   }
 
   /** Whether the report asks for a host: it does of a visitor. */

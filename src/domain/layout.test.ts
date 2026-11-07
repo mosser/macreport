@@ -55,6 +55,15 @@ describe('layoutOf', () => {
     ])
   })
 
+  it('names the supervisor of a postdoctoral fellow, and no one for faculty', () => {
+    const postdoc = layoutOf(report.afterChanging({ position: 'Postdoctoral fellow' })).coverFields
+    expect(postdoc).toContainEqual({ name: 'Supervisor', value: 'Ada Lovelace' })
+    expect(postdoc).toContainEqual({ name: "Supervisor's email", value: 'ada@mcmaster.ca' })
+    const faculty = layoutOf(report.afterChanging({ position: 'Faculty' })).coverFields
+    expect(faculty.map((field) => field.name)).not.toContain('Supervisor')
+    expect(faculty.map((field) => field.name)).not.toContain('Host')
+  })
+
   it('names the host of a visitor, and gives one day for an event of one day', () => {
     const visitor = report.afterChanging({
       position: 'Visitor',

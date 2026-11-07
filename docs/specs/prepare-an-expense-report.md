@@ -33,7 +33,7 @@ is shown with that rule, and kept once it does.
 | Position | Required, one of Faculty, Postdoctoral fellow, Student, Staff, Visitor. |
 | Email | Required, an email address. |
 | Extension | Optional. Written on missing receipt authorizations. |
-| Supervisor, supervisor's email | Asked of a Student, and then required: the supervisor's name, and an email address. |
+| Supervisor, supervisor's email | Asked of a Student or a Postdoctoral fellow, and then required: the supervisor's name, and an email address. |
 | Host, host's email | Asked of a Visitor, and then required: the host's name, and an email address. |
 | Event | Required. |
 | First day of the event | Required, a calendar date. |
