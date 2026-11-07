@@ -93,19 +93,6 @@ function failure(error: DOMException | null): Error {
   return error ?? new Error('The browser did not say why it failed')
 }
 
-/**
- * The documents of a report, each once: its travel justifications, the receipts and bank
- * statements of its expenses, and its additional documents.
- */
-function documentsOf(report: Report): Document[] {
-  const documents = [
-    ...report.travelJustifications,
-    ...report.expenses.flatMap((expense) => [...expense.receipts, ...expense.bankStatements]),
-    ...report.additionalDocuments,
-  ]
-  return [...new Set(documents)]
-}
-
 const text = (value: unknown) => (typeof value === 'string' ? textOrAbsent(value) : undefined)
 const email = (value: unknown) => {
   const typed = text(value)
@@ -190,7 +177,7 @@ class IndexedDraftStore implements DraftStore {
       const chosen = new Map<Uint8Array, string>()
       /** Contents written by this transaction: their identifiers hold once it commits. */
       const written = new Map<Uint8Array, string>()
-      for (const document of documentsOf(report)) {
+      for (const document of report.documents) {
         let identifier = this.identifiers.get(document.content) ?? chosen.get(document.content)
         if (identifier === undefined) {
           identifier = crypto.randomUUID()
@@ -271,7 +258,7 @@ function recordOf(
     bankStatements: expense.bankStatements.map(identifier),
   }))
   const names = Object.fromEntries(
-    documentsOf(report)
+    report.documents
       .filter((document) => document.name !== document.afterNaming('').name)
       .map((document) => [identifier(document), document.name]),
   )

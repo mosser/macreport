@@ -1,5 +1,5 @@
 import type { Document } from '../domain/document.ts'
-import { type Field, fieldNames } from '../domain/findings.ts'
+import { type Field, fieldNames, fieldRules } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
@@ -28,9 +28,18 @@ const trashCan = raw(
   '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
 )
 
-/** A document added: its name, which the Claimant may change, its file name, and Remove. */
-function documentItem(field: DocumentField, document: Document, index: number): Markup {
+/**
+ * A document added: its name, which the Claimant may change, its file name, and Remove; under its
+ * name, the rule it breaks when another document has it.
+ */
+function documentItem(
+  field: DocumentField,
+  report: Report,
+  document: Document,
+  index: number,
+): Markup {
   const id = `file-of-${field.field}-${index}`
+  const isTaken = report.isNameTaken(document) ? '' : html`hidden`
   return html`<li class="document">
     <label class="document-name">
       <span class="field-name">${fieldNames.documentName}</span>
@@ -40,6 +49,7 @@ function documentItem(field: DocumentField, document: Document, index: number): 
     <span class="file-name" id="${id}">${document.fileName}</span>
     <button type="button" class="remove" data-remove="${field.field}" data-index="${index}"
       aria-label="Remove" title="Remove">${trashCan}</button>
+    <span class="rule is-broken" data-name-rule-of="${field.field}-${index}" ${isTaken}>${fieldRules.documentName}</span>
   </li>`
 }
 
@@ -52,7 +62,7 @@ export function documentFieldOf(field: DocumentField, report: Report): Markup {
   const documents = field.documentsIn(report)
   const list =
     documents.length > 0
-      ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, document, index))}</ul>`
+      ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, report, document, index))}</ul>`
       : ''
   const isFull = field.holdsOneDocument && documents.length > 0
   const zone = isFull
@@ -92,6 +102,17 @@ export function listenToDocumentFields(
       Number(element.dataset.index)
     ]
 
+  /** Shows the rule under each name another document before it already has. */
+  const showTakenNames = () => {
+    for (const element of panel.querySelectorAll<HTMLInputElement>('input[name="documentName"]')) {
+      const document = documentOf(element)
+      const isTaken = document !== undefined && context.report.isNameTaken(document)
+      panel
+        .querySelector(`[data-name-rule-of="${element.dataset.of}-${element.dataset.index}"]`)
+        ?.toggleAttribute('hidden', !isTaken)
+    }
+  }
+
   /** Chosen or dropped, a file goes through the same handler; files are read side by side. */
   const add = async (name: string | undefined, file: File | undefined) => {
     const field = fieldNamed(name)
@@ -101,7 +122,8 @@ export function listenToDocumentFields(
     const adding = (lastAdded.get(context) ?? Promise.resolve()).then(async () => {
       const document = await reading
       if (context.session !== session) return
-      context.change(field.afterAdding(context.report, document))
+      const named = document.afterNaming(context.report.freeNameLike(document.name))
+      context.change(field.afterAdding(context.report, named))
       context.refresh()
     })
     lastAdded.set(
@@ -133,6 +155,7 @@ export function listenToDocumentFields(
       const document = documentOf(element)
       if (document === undefined) return
       context.change(context.report.afterRenaming(document, element.value))
+      showTakenNames()
       context.refreshActions()
     })
   }

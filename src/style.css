@@ -172,6 +172,10 @@ textarea {
   color: var(--color-warning);
 }
 
+.document .rule {
+  flex-basis: 100%;
+}
+
 .file-name {
   font-size: 0.9rem;
   color: var(--color-ok);

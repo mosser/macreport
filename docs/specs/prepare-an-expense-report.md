@@ -125,6 +125,12 @@ a statement or a programme named as the Claimant calls it. A name left empty
 is the file name without its extension again. The name is what the Review
 step and the report document call the document.
 
+No two documents of the report have the same name, whatever its case. A
+document added whose name another document already has is named after it,
+followed by (2), (3) and so on. A name typed that a document before it, in
+the order of the steps, already has is shown with its rule, *Not the name of
+another document.*, and Continue is not offered.
+
 ### 4. Review
 
 The report as it will be written: the cover, with the table of the expenses
@@ -137,6 +143,7 @@ names and their pages. Then the findings, if any.
 | No expense | No expense is claimed. |
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
 | A business travel has no travel justification | At least one travel justification is required. |
+| A document has the name of a document before it | The document, by its file name, and its name. |
 | A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a name: the document, by its kind and file name. |
 
 **Save the report** is offered when there is no finding. It writes the report

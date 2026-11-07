@@ -22,7 +22,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   Travel justifications and Other documents. It lists no expenses.
 - A name for every document, receipts and bank statements included: its file
   name without its extension (`scan-0042.pdf` is named `scan-0042`), unless
-  the Claimant types another next to it. The Review step and the
+  the Claimant types another next to it. No two documents have the same
+  name: a file added under a name already taken is numbered (`scan-0042
+  (2)`), and a name typed that another document has must be changed. The Review step and the
   report document call each document by its name.
 - An **Entered** box for each expense on the cover: a form field McSCert's
   administrative staff tick on screen, or by hand on a printed copy, once

@@ -121,6 +121,32 @@ describe('findings of the Additional documents step', () => {
     expect(findingsOfAdditionalDocumentsStep(elsewhere)).toEqual([])
   })
 
+  it('finds a document named as one before it, at the step of the later one', () => {
+    const receipt = new Document(Kind.receipt, 'scan.pdf', new Uint8Array([1]), 'Hotel')
+    const statement = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([2]), 'HOTEL')
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([3]), 'hotel')
+    const report = complete
+      .afterChanging({ isBusinessTravel: false, additionalDocuments: [poster] })
+      .afterAdding(
+        new Expense({
+          date: new CalendarDate(2026, 10, 5),
+          description: 'Taxi',
+          claimedAmount: new Amount(8710),
+          receipts: [receipt],
+          bankStatements: [statement],
+        }),
+      )
+    expect(findingsOfExpensesStep(report)).toEqual([
+      { step: 'Expenses', wording: "visa.pdf: Name HOTEL is already another document's." },
+    ])
+    expect(findingsOfAdditionalDocumentsStep(report)).toEqual([
+      {
+        step: 'Additional documents',
+        wording: "poster.png: Name hotel is already another document's.",
+      },
+    ])
+  })
+
   it('requires a travel justification, but neither an additional document nor a name', () => {
     expect(isRequired('travelJustifications')).toBe(true)
     expect(isRequired('additionalDocuments')).toBe(false)

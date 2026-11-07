@@ -98,6 +98,41 @@ export class Report {
     this.additionalDocuments = additionalDocuments
   }
 
+  /**
+   * Every document of the report, each once, in the order of the steps: the receipts and bank
+   * statements of its expenses, then its travel justifications and its additional documents.
+   */
+  get documents(): readonly Document[] {
+    return [
+      ...new Set([
+        ...this.expenses.flatMap((expense) => [...expense.receipts, ...expense.bankStatements]),
+        ...this.travelJustifications,
+        ...this.additionalDocuments,
+      ]),
+    ]
+  }
+
+  /**
+   * Whether a document of the report has a name a document before it already has, in the order
+   * of the steps: no two documents have the same name, whatever its case.
+   */
+  isNameTaken(document: Document): boolean {
+    const documents = this.documents
+    const before = documents.slice(0, Math.max(documents.indexOf(document), 0))
+    return before.some((other) => isSameName(other.name, document.name))
+  }
+
+  /** The name given if no document of the report has it, or that name followed by (2), (3)… */
+  freeNameLike(name: string): string {
+    const isTaken = (candidate: string) =>
+      this.documents.some((document) => isSameName(document.name, candidate))
+    let candidate = name
+    for (let number = 2; isTaken(candidate); number += 1) {
+      candidate = `${name} (${number})`
+    }
+    return candidate
+  }
+
   /** Whether the report asks for a supervisor: it does of a student or a postdoctoral fellow. */
   get asksForSupervisor(): boolean {
     return this.position === 'Student' || this.position === 'Postdoctoral fellow'
@@ -195,4 +230,9 @@ export class Report {
       additionalDocuments: this.additionalDocuments,
     }
   }
+}
+
+/** Whether two names are the same, whatever their case. */
+function isSameName(one: string, other: string): boolean {
+  return one.toLocaleLowerCase('en') === other.toLocaleLowerCase('en')
 }
