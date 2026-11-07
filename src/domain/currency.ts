@@ -15,6 +15,9 @@ const codes = [
   .join(' ')
   .split(' ')
 
+/** The English names of currencies, as the JavaScript runtime knows them. */
+const names = new Intl.DisplayNames('en', { type: 'currency', fallback: 'code' })
+
 /** A currency other than the Canadian dollar, by its three-letter ISO 4217 code: EUR, USD, JPY. */
 export class Currency {
   /** Every currency, by its code in alphabetical order. */
@@ -33,6 +36,11 @@ export class Currency {
   static parse(text: string): Currency | undefined {
     const code = text.trim().toUpperCase()
     return Currency.all.find((currency) => currency.code === code)
+  }
+
+  /** The currency's name in English, as Euro; its code when the runtime does not know it. */
+  get name(): string {
+    return names.of(this.code) ?? this.code
   }
 
   /** The currency as its code. */

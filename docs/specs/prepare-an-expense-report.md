@@ -63,20 +63,23 @@ justifications out. Continue is offered once every required field is valid.
 The expenses, sorted by date, then in the order they were added. Each shows
 its date, its description, its foreign amount, its claimed amount, its
 receipt or that its receipt is missing, its bank statement or that it was
-paid in cash, and, in red, what it still lacks. Each has **Change** and
-**Remove**; under them, **Add an expense**.
+paid in cash, and, in red, what it still lacks. A document's name opens the
+document in a new tab of the browser. Each has **Change**, a pen, and
+**Remove**, a trash can. **Add an expense** stands above them.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
 **Change** opens the fields of an expense, filled in. Every change is kept as
-it is typed, as on any step. **Done** closes the fields and shows the
-expenses. Leaving the step closes them too.
+it is typed, as on any step. While they are open, Continue is not offered:
+**Done** closes them and shows the expenses. Leaving the step closes them
+too.
 
 | Field | Rule |
 |---|---|
 | Date | Required, a calendar date. It may fall outside the dates of the report. |
 | Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. It may run over several lines: its line breaks are kept on the Review step and in the report document. |
 | Claimed amount (CAD) | Required, in Canadian dollars, more than zero, at most two decimals. Optional for an expense paid in another currency, McSCert then working it out. |
-| Paid in another currency | Optional. When ticked: **Foreign amount**, more than zero, at most two decimals, and **Currency**, a three-letter ISO 4217 code other than CAD, are required. Unticked, the expense has neither. |
+| Paid in another currency | Optional. When ticked: **Foreign amount**, more than zero, at most two decimals, and **Currency**, a three-letter ISO 4217 code other than CAD, its name shown
+under it, are required. Unticked, the expense has neither. |
 | Receipt | One, unless the receipt is missing. |
 | I don't have the receipt | When ticked: the expense has no receipt, and two more fields are required: **Paid to**, who was paid, and **Reason**, why the receipt is missing. |
 | Paid in cash | When ticked: the expense has no bank statement. |

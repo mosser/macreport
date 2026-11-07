@@ -164,9 +164,13 @@ textarea {
   margin-bottom: 0;
 }
 
-.remove {
+/* A button showing an icon only, named for screen readers by its label. */
+.icon {
   display: inline-flex;
   padding: 0.35rem;
+}
+
+.remove {
   margin-bottom: 0.1rem;
 }
 
@@ -383,6 +387,17 @@ footer p {
   font-weight: 600;
 }
 
+/* The name of the currency typed, under its code. */
+.currency-name {
+  display: block;
+  font-size: 0.9rem;
+}
+
+/* Add an expense, above the list of expenses. */
+.add-expense {
+  margin-bottom: 1rem;
+}
+
 /* What an expense still lacks, under its documents in the list of expenses. */
 .lacks {
   margin: 0.25rem 0 0;
@@ -392,7 +407,7 @@ footer p {
   font-weight: 600;
 }
 
-/* Change and Remove, side by side, beside the two lines of their expense. */
+/* Change and Remove, a pen and a trash can side by side, beside the two lines of their expense. */
 td.expense-actions {
   white-space: nowrap;
   text-align: right;

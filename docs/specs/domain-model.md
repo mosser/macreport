@@ -26,7 +26,7 @@ document.
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |
 | Claimed amount | The amount in Canadian dollars asked back for an expense, more than zero, to the cent. An expense paid in another currency may have none: McSCert then works it out from the foreign amount. |
 | Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt: more than zero, to the cent. The system converts nothing and asks for no exchange rate. |
-| Currency | A currency other than the Canadian dollar, by its three-letter ISO 4217 code: EUR, USD, JPY. |
+| Currency | A currency other than the Canadian dollar, by its three-letter ISO 4217 code and its name in English: EUR, Euro. |
 | Total | What the report claims: the sum of the claimed amounts, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |

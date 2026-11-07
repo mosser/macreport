@@ -9,20 +9,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Several expenses per report. The Expenses step lists them, sorted by date,
-  each with its amounts, its documents and, in red, what it still lacks.
-  **Add an expense** opens empty fields, **Change** opens an expense's fields
-  filled in, and **Done** goes back to the list; every change is kept as it
-  is typed.
-- **Remove** takes an expense out of the report once confirmed. A receipt or
-  a bank statement no other expense uses leaves the report with it, and the
-  confirmation names each.
+  each with its amounts, its documents, each a link that opens it in a new
+  tab, and, in red, what it still lacks. **Add an expense**, above the list,
+  opens empty fields, **Change** (a pen) opens an
+  expense's fields filled in, and **Done** goes back to the list, where
+  Continue is offered again; every change is kept as it is typed.
+- **Remove** (a trash can) takes an expense out of the report once
+  confirmed. A receipt or a bank statement no other expense uses leaves the
+  report with it, and the confirmation names each.
 - A receipt or a bank statement already in the report can be chosen for
   another expense, under **Or choose one already added**: one bank statement
   for every expense of a trip. A file added again, with the same content, is
   not added twice: the document already there is chosen, and the step says
   so (*Already in the report, as Visa, October: chosen.*).
 - **Paid in another currency**: an expense's foreign amount and its currency,
-  a three-letter ISO 4217 code, suggested as it is typed. Its claimed amount
+  a three-letter ISO 4217 code, suggested with its name as it is typed. Its claimed amount
   in Canadian dollars may then be left empty, for McSCert to work out. On the
   cover, the total gives the sum of the claimed amounts, then, one per line,
   the sum of each currency's foreign amounts left without a claimed amount

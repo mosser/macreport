@@ -8,7 +8,8 @@ import {
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
-import { html, type Markup, raw } from './html.ts'
+import { html, type Markup } from './html.ts'
+import { trashCan } from './icons.ts'
 import type { Context } from './step.ts'
 
 /** Reads a file the Claimant adds into a document of a kind. */
@@ -35,11 +36,6 @@ export interface DocumentField {
 
 const accepted = 'application/pdf,image/jpeg,image/png'
 
-/** A trash can, drawn in the colour of the text of the button that holds it. */
-const trashCan = raw(
-  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
-)
-
 /**
  * A document added: its name, which the Claimant may change, its file name, and Remove; under its
  * name, an error when a document before it already has it.
@@ -59,7 +55,7 @@ function documentItem(
         value="${document.name}" placeholder="${document.afterNaming('').name}" aria-describedby="${id}" />
     </label>
     <span class="file-name" id="${id}">${document.fileName}</span>
-    <button type="button" class="remove" data-remove="${field.field}" data-index="${index}"
+    <button type="button" class="icon remove" data-remove="${field.field}" data-index="${index}"
       aria-label="Remove" title="Remove">${trashCan}</button>
     <span class="error" role="alert" data-name-taken="${field.field}-${index}" ${isTaken}>${nameTakenWording}</span>
   </li>`

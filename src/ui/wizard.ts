@@ -2,10 +2,11 @@ import type { Report } from '../domain/report.ts'
 import { additionalDocumentsStep } from './additional-documents-step.ts'
 import { confirmed } from './confirmation.ts'
 import type { ReadFile } from './document-field.ts'
+import type { DocumentLinks } from './document-link.ts'
 import { expensesStep } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
-import { type DocumentLinks, reviewStep, type SaveReport } from './review-step.ts'
+import { reviewStep, type SaveReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
 
 /** What the wizard needs from the page it runs in. */
@@ -35,7 +36,7 @@ export interface WizardOptions {
 export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   const steps: readonly Step[] = [
     reportStep,
-    expensesStep(options.readFile),
+    expensesStep(options.readFile, options.links),
     additionalDocumentsStep(options.readFile),
     reviewStep(options.saveReport, () => isDraftKept, options.links),
   ]
@@ -130,8 +131,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         <section class="panel"></section>
         <div class="actions">
           <button data-action="back" ${current === 0 ? html`hidden` : ''}>Back</button>
-          <button class="primary" data-action="continue"
-            ${current === steps.length - 1 ? html`hidden` : ''}>Continue</button>
+          <button class="primary" data-action="continue">Continue</button>
         </div>
       </main>
       <footer>
@@ -163,10 +163,12 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
 
   function refreshActions(): void {
     const isAdding = additions.size > 0
-    const canContinue = stepAt(current).canContinue(report) && !isAdding
+    const step = stepAt(current)
+    const canContinue = step.canContinue(report) && !isAdding
     const continueButton = root.querySelector<HTMLButtonElement>('[data-action="continue"]')
     if (continueButton !== null) {
       continueButton.disabled = !canContinue
+      continueButton.hidden = current === steps.length - 1 || !(step.offersContinue?.() ?? true)
     }
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-step]')) {
       const step = Number(button.dataset.step)

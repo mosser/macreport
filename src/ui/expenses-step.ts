@@ -22,8 +22,10 @@ import {
   listenToDocumentFields,
   type ReadFile,
 } from './document-field.ts'
+import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
 import { fieldName, fieldRule } from './field.ts'
 import { html, type Markup } from './html.ts'
+import { pen, trashCan } from './icons.ts'
 import type { Context, Step } from './step.ts'
 
 /** The expense whose fields are open: its rank in the order the expenses were added, and the report it is of. */
@@ -105,19 +107,31 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
   ]
 }
 
-/** A field typed in, with its name, its rule, and the value the expense keeps. */
-function input(field: Field, value: string, attributes: Markup, expense: Expense): Markup {
+/** A field typed in, with its name, what follows it, its rule, and the value the expense keeps. */
+function input(
+  field: Field,
+  value: string,
+  attributes: Markup,
+  expense: Expense,
+  after: Markup = html``,
+): Markup {
   return html`<label class="field">
     ${fieldName(field, isRequired(field, expense))}
     <input name="${field}" ${attributes} value="${value}" />
+    ${after}
     ${fieldRule(field)}
   </label>`
 }
 
-/** The currencies offered as the Claimant types one. */
+/** The currencies offered as the Claimant types one, each by its code and its name. */
 const currencies = html`<datalist id="currencies">${Currency.all.map(
-  (currency) => html`<option value="${currency.code}"></option>`,
+  (currency) => html`<option value="${currency.code}">${currency.name}</option>`,
 )}</datalist>`
+
+/** The name of a currency, under its code; nothing until the code is one. */
+function currencyNameOf(currency: Currency | undefined): string {
+  return currency === undefined || currency.name === currency.code ? '' : currency.name
+}
 
 /** The fields of an expense, filled in, its receipt and bank statement, and Done. */
 function formOf(
@@ -132,7 +146,7 @@ function formOf(
   const foreign = expense.isPaidInAnotherCurrency
     ? html`<div class="dates">
         ${input('foreignAmount', expense.foreignAmount?.typed ?? '', html`type="text" inputmode="decimal"`, expense)}
-        ${input('currency', expense.currency?.code ?? '', html`type="text" list="currencies" maxlength="3" autocomplete="off"`, expense)}
+        ${input('currency', expense.currency?.code ?? '', html`type="text" list="currencies" maxlength="3" autocomplete="off"`, expense, html`<span class="currency-name" data-currency-name>${currencyNameOf(expense.currency)}</span>`)}
         ${currencies}
       </div>`
     : ''
@@ -163,13 +177,14 @@ function formOf(
 }
 
 /**
- * The expenses, sorted by date, each with its fields, its documents and what it still lacks,
- * Change and Remove; then Add an expense.
+ * The expenses, sorted by date, each with its fields, its documents, each a link that opens it in
+ * a new tab, and what it still lacks,
+ * Change, a pen, and Remove, a trash can; Add an expense above them.
  */
-function listOf(report: Report): Markup {
+function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
     const index = report.expenses.indexOf(expense)
-    const names = expense.documents.map((document) => document.name).join(' · ')
+    const names = namesOf(expense.documents, linkOf)
     const lacks = missingFieldsOf(expense).map((field) => html`<li>${requiredWording(field)}</li>`)
     return html`<tr class="expense">
         <td>${expense.date?.toString() ?? ''}</td>
@@ -177,8 +192,10 @@ function listOf(report: Report): Markup {
         <td>${expense.foreignAmountText}</td>
         <td>${expense.claimedAmount?.toString() ?? ''}</td>
         <td class="expense-actions" rowspan="2">
-          <button type="button" data-change="${index}">Change</button>
-          <button type="button" data-remove-expense="${index}">Remove</button>
+          <button type="button" class="icon" data-change="${index}"
+            aria-label="Change" title="Change">${pen}</button>
+          <button type="button" class="icon remove" data-remove-expense="${index}"
+            aria-label="Remove" title="Remove">${trashCan}</button>
         </td>
       </tr>
       <tr class="supporting"><td></td><td colspan="3">${names}
@@ -194,8 +211,8 @@ function listOf(report: Report): Markup {
         </table>`
       : ''
   return html`<h2>Expenses</h2>
-    ${table}
-    <button type="button" data-action="add-expense">Add an expense</button>`
+    <button type="button" class="add-expense" data-action="add-expense">Add an expense</button>
+    ${table}`
 }
 
 /** What Remove asks of an expense: the expense, and each document that leaves with it. */
@@ -214,7 +231,7 @@ function removalOf(report: Report, expense: Expense) {
  * Step 2: the expenses, each changed or removed, and Add an expense; or the fields of the
  * expense added or changed, until Done.
  */
-export function expensesStep(readFile: ReadFile): Step {
+export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
   let opened: Opened | undefined
   /** The document chosen again for a file added again, by its field, while the expense is open. */
   const chosenAgain = new Map<Field, Document>()
@@ -234,6 +251,10 @@ export function expensesStep(readFile: ReadFile): Step {
       element.addEventListener('input', () => {
         const { changes, isBroken } = typed(element.name, element.value)
         context.change(afterChanging(context.report, index, (each) => each.afterChanging(changes)))
+        if (element.name === 'currency') {
+          const name = panel.querySelector('[data-currency-name]')
+          if (name !== null) name.textContent = currencyNameOf(changes.currency)
+        }
         panel
           .querySelector(`[data-rule-of="${element.name}"]`)
           ?.classList.toggle('is-broken', isBroken)
@@ -260,7 +281,7 @@ export function expensesStep(readFile: ReadFile): Step {
   }
 
   const renderList = (panel: HTMLElement, context: Context) => {
-    panel.innerHTML = listOf(context.report).text
+    panel.innerHTML = listOf(context.report, linksAnew(links)).text
     panel.querySelector('[data-action="add-expense"]')?.addEventListener('click', () => {
       context.change(context.report.afterAdding(new Expense()))
       open(context, context.report.expenses.length - 1)
@@ -298,6 +319,10 @@ export function expensesStep(readFile: ReadFile): Step {
 
     canContinue(report: Report): boolean {
       return findingsOfExpensesStep(report).length === 0
+    },
+
+    offersContinue(): boolean {
+      return opened === undefined
     },
 
     leave(): void {

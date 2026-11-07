@@ -54,6 +54,13 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
 const button = (selector: string) => root.querySelector<HTMLButtonElement>(selector)
 const continueButton = () => button('[data-action="continue"]')
 
+/** Closes the fields of an expense, if open, with Done, then clicks Continue, which must be shown. */
+function proceed(): void {
+  button('[data-action="done"]')?.click()
+  expect(continueButton()?.hidden).toBe(false)
+  continueButton()?.click()
+}
+
 function type(name: string, value: string): void {
   const field = root.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`)
   if (field === null) throw new TypeError(`No field ${name}`)
@@ -193,7 +200,7 @@ describe('the wizard', () => {
     mountWizard(root, options(new Report(), false))
     expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(false)
     fillReport()
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(false)
   })
 
@@ -248,7 +255,7 @@ describe('the wizard', () => {
 
   it('goes from the report to its expense, its receipt and bank statement, then reviews and saves it', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
     expect(continueButton()?.disabled).toBe(true)
     openExpense()
@@ -260,10 +267,10 @@ describe('the wizard', () => {
     await fillExpense()
     expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('1012.35')
     expect(continueButton()?.disabled).toBe(false)
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('h2')?.textContent).toBe('Additional documents')
     expect(continueButton()?.disabled).toBe(false)
-    continueButton()?.click()
+    proceed()
 
     expect(root.querySelector('h2')?.textContent).toBe('Review')
     expect(continueButton()?.hidden).toBe(true)
@@ -298,7 +305,9 @@ describe('the wizard', () => {
       ['air-canada', 'blob:air-canada.pdf', '_blank'],
       ['statement', 'blob:statement.pdf', '_blank'],
     ])
-    expect(forgotten).toBe(1)
+    const before = forgotten
+    button('[data-step="3"]')?.click()
+    expect(forgotten).toBe(before + 1)
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status')).not.toBeNull())
     expect(saved).toHaveLength(1)
@@ -318,10 +327,10 @@ describe('the wizard', () => {
 
   it('says the report document could not be written, and keeps the report to save again', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
-    continueButton()?.click()
+    proceed()
+    proceed()
     isSaved = false
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status.is-failure')).not.toBeNull())
@@ -336,7 +345,7 @@ describe('the wizard', () => {
 
   it('names each drop zone after its kind of document, for screen readers', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     openExpense()
     const input = root.querySelector<HTMLInputElement>('input[name="bankStatements"]')
     const names = (input?.getAttribute('aria-labelledby') ?? '')
@@ -347,7 +356,7 @@ describe('the wizard', () => {
 
   it('adds a receipt and a bank statement dropped on their zones', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     openExpense()
     const zone = root.querySelector<HTMLElement>('[data-drop="receipts"]')
     expect(zone?.textContent).toContain('Drop a file here, or choose one')
@@ -377,7 +386,7 @@ describe('the wizard', () => {
 
   it('lists the findings at the Review step of a report that has some, and offers no save', () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     button('[data-step="0"]')?.click()
     type('purpose', '')
     button('[data-step="1"]')?.click()
@@ -387,10 +396,10 @@ describe('the wizard', () => {
 
   it('reviews the findings of a report reached with something missing', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
-    continueButton()?.click()
+    proceed()
+    proceed()
     button('[data-step="0"]')?.click()
     type('account', '')
     button('[data-step="3"]')?.click()
@@ -404,7 +413,7 @@ describe('the wizard', () => {
     choose('position', 'Student')
     type('supervisorName', 'Ada Lovelace')
     type('supervisorEmail', 'ada@mcmaster.ca')
-    continueButton()?.click()
+    proceed()
     await fillExpense()
     button('[data-action="new-report"]')?.click()
     const dialog = document.querySelector('dialog.confirmation')
@@ -456,12 +465,12 @@ describe('the wizard', () => {
 
   it('keeps the line breaks of a description, from the Expenses step to the Review step', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
     type('description', 'Dinner with:\nAda Lovelace (McMaster)')
     expect(kept.at(-1)?.expenses[0]?.description).toBe('Dinner with:\nAda Lovelace (McMaster)')
-    continueButton()?.click()
-    continueButton()?.click()
+    proceed()
+    proceed()
     const style = document.createElement('style')
     style.textContent = readFileSync('src/style.css', 'utf8')
     document.head.append(style)
@@ -473,9 +482,9 @@ describe('the wizard', () => {
 
   it('never gives two documents the same name', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
+    proceed()
     await add('additionalDocuments', 'statement.pdf')
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
       'statement (2)',
@@ -523,10 +532,10 @@ describe('the wizard', () => {
 
   it('holds Continue and the steps ahead while a file is being added', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
-    continueButton()?.click()
+    proceed()
+    proceed()
     button('[data-step="2"]')?.click()
     const finish = giveSlowly('additionalDocuments', 'late.pdf')
     expect(continueButton()?.disabled).toBe(true)
@@ -540,7 +549,7 @@ describe('the wizard', () => {
 
   it('adds one receipt to an expense, however many are given before the first is added', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     openExpense()
     const finishFirst = giveSlowly('receipts', 'first.pdf')
     const finishSecond = giveSlowly('receipts', 'second.pdf')
@@ -555,7 +564,7 @@ describe('the wizard', () => {
 
   it('adds every file dropped where several are taken, and the first where one is', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     openExpense()
     const dropped = (field: string, fileNames: string[]) => {
       const drop = new Event('drop', { cancelable: true })
@@ -572,7 +581,7 @@ describe('the wizard', () => {
     type('date', '2026-10-03')
     type('description', 'Hotel')
     type('claimedAmount', '300')
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('input[name="additionalDocuments"]')?.hasAttribute('multiple')).toBe(
       true,
     )
@@ -586,21 +595,21 @@ describe('the wizard', () => {
 
   it('makes a new report wait for none of the files of the last, and forgets its links', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
-    continueButton()?.click()
-    expect(forgotten).toBe(1)
+    proceed()
+    proceed()
     button('[data-step="2"]')?.click()
+    const before = forgotten
     const finishOld = giveSlowly('additionalDocuments', 'old.pdf')
     button('[data-action="new-report"]')?.click()
     await answer('confirm')
     await vi.waitFor(() => expect(root.querySelector('h2')?.textContent).toBe('Report'))
-    expect(forgotten).toBe(2)
+    expect(forgotten).toBe(before + 1)
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
+    proceed()
     await add('additionalDocuments', 'new.pdf')
     expect(continueButton()?.disabled).toBe(false)
     finishOld()
@@ -610,9 +619,9 @@ describe('the wizard', () => {
 
   it('adds files in the order they were given, however long each takes to read', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
+    proceed()
     const finished: (() => void)[] = []
     for (const fileName of ['first.pdf', 'second.pdf']) {
       readings.set(
@@ -641,7 +650,7 @@ describe('the wizard', () => {
 
   it('does not add to a new report a file still being read when New report was clicked', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     openExpense()
     let finishReading = () => {}
     reading = new Promise((resolve) => {
@@ -661,7 +670,7 @@ describe('the wizard', () => {
 
   it('names a receipt or a bank statement after its file, until the Claimant names it otherwise', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
     const names = () => [...root.querySelectorAll<HTMLInputElement>('input[name="documentName"]')]
     expect(names().map((input) => input.value)).toEqual(['air-canada', 'statement'])
@@ -682,15 +691,15 @@ describe('the wizard', () => {
     expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.name).toBe('statement')
     statementName.value = 'Visa, October'
     statementName.dispatchEvent(new Event('input'))
-    continueButton()?.click()
-    continueButton()?.click()
+    proceed()
+    proceed()
     expect(root.querySelector('table.expenses')?.textContent).toContain('Visa, October')
     expect(root.querySelector('table.documents')?.textContent).toContain('air-canada')
   })
 
   it('removes a receipt or a bank statement from the expense, with a trash can', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
     expect(root.querySelector('[data-drop="receipts"]')).toBeNull()
     expect(root.querySelector('[data-drop="bankStatements"]')).toBeNull()
@@ -713,9 +722,9 @@ describe('the wizard', () => {
 
   it('adds, names and removes additional documents, which are optional', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('[data-drop="travelJustifications"]')).toBeNull()
     expect(continueButton()?.disabled).toBe(false)
     await add('additionalDocuments', 'itinerary.pdf')
@@ -730,7 +739,7 @@ describe('the wizard', () => {
     button('[data-remove="additionalDocuments"][data-index="1"]')?.click()
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual(['Itinerary'])
     expect(root.textContent).not.toContain('poster')
-    continueButton()?.click()
+    proceed()
     const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
     expect(sections).toEqual(['Additional documents', 'Receipts', 'Bank statements'])
     const additional = root.querySelectorAll('table.documents')[0]
@@ -743,9 +752,9 @@ describe('the wizard', () => {
     tick('businessTravel', true)
     type('firstDay', '2026-10-03')
     type('lastDay', '2026-10-07')
-    continueButton()?.click()
+    proceed()
     await fillExpense()
-    continueButton()?.click()
+    proceed()
     const name = root
       .querySelector('[data-drop="travelJustifications"]')
       ?.closest('.field')
@@ -757,7 +766,7 @@ describe('the wizard', () => {
     expect(button('[data-step="3"]')?.disabled).toBe(true)
     await add('travelJustifications', 'invitation.pdf')
     expect(continueButton()?.disabled).toBe(false)
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('h3')?.textContent).toBe('Additional documents')
     expect([...root.querySelectorAll('h4')].map((heading) => heading.textContent)).toEqual([
       'Travel justifications',
@@ -777,7 +786,7 @@ describe('the Expenses step', () => {
 
   async function twoExpensesSharingTheStatement(): Promise<void> {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
     button('[data-action="done"]')?.click()
     openExpense()
@@ -790,7 +799,7 @@ describe('the Expenses step', () => {
 
   it('lists the expenses by date, each with what it still lacks, and opens one filled in to change it', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('table.expense-list')).toBeNull()
     await fillExpense()
     button('[data-action="done"]')?.click()
@@ -801,9 +810,9 @@ describe('the Expenses step', () => {
     type('description', 'Taxi')
     button('[data-action="done"]')?.click()
     expect(rows()).toEqual([
-      ['2026-10-01', 'Taxi', '', '', 'Change Remove'],
+      ['2026-10-01', 'Taxi', '', '', ''],
       ['', 'Claimed amount (CAD) is required.Receipt is required.Bank statement is required.'],
-      ['2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', 'Change Remove'],
+      ['2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', ''],
       ['', 'air-canada · statement'],
     ])
     expect([...root.querySelectorAll('.lacks li')].map((lack) => lack.textContent)).toEqual([
@@ -812,13 +821,26 @@ describe('the Expenses step', () => {
       'Bank statement is required.',
     ])
     expect(continueButton()?.disabled).toBe(true)
+    const actions = [...root.querySelectorAll('td.expense-actions button')].slice(0, 2)
+    expect(actions.map((action) => action.getAttribute('aria-label'))).toEqual(['Change', 'Remove'])
+    expect(
+      actions.map((action) => action.querySelector('svg')?.getAttribute('aria-hidden')),
+    ).toEqual(['true', 'true'])
+    const listed = [...root.querySelectorAll<HTMLAnchorElement>('table.expense-list a')]
+    expect(
+      listed.map((link) => [link.textContent, link.getAttribute('href'), link.target]),
+    ).toEqual([
+      ['air-canada', 'blob:air-canada.pdf', '_blank'],
+      ['statement', 'blob:statement.pdf', '_blank'],
+    ])
     button('[data-change="1"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Expense')
+    expect(continueButton()?.hidden).toBe(true)
     expect(root.querySelector<HTMLTextAreaElement>('[name="description"]')?.value).toBe('Taxi')
     type('claimedAmount', '87.10')
     expect(kept.at(-1)?.expenses[1]?.claimedAmount?.cents).toBe(8710)
     button('[data-action="back"]')?.click()
-    continueButton()?.click()
+    proceed()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
   })
 
@@ -880,7 +902,7 @@ describe('the Expenses step', () => {
 
   it('asks an expense paid in another currency for its foreign amount and currency, its claimed amount optional', async () => {
     fillReport()
-    continueButton()?.click()
+    proceed()
     await fillExpense()
     type('claimedAmount', '')
     expect(root.querySelector('[name="foreignAmount"]')).toBeNull()
@@ -900,7 +922,10 @@ describe('the Expenses step', () => {
     expect(root.querySelector('[data-rule-of="currency"]')?.classList.contains('is-broken')).toBe(
       true,
     )
+    expect(root.querySelector('[data-currency-name]')?.textContent).toBe('')
+    expect(root.querySelector('#currencies option[value="EUR"]')?.textContent).toBe('Euro')
     type('currency', 'eur')
+    expect(root.querySelector('[data-currency-name]')?.textContent).toBe('Euro')
     expect(root.querySelector('[data-rule-of="currency"]')?.classList.contains('is-broken')).toBe(
       false,
     )
@@ -908,8 +933,8 @@ describe('the Expenses step', () => {
     expect(continueButton()?.disabled).toBe(false)
     button('[data-action="done"]')?.click()
     expect(rows()[0]?.slice(2, 4)).toEqual(['EUR 640.00', ''])
-    continueButton()?.click()
-    continueButton()?.click()
+    proceed()
+    proceed()
     const total = [...root.querySelectorAll('tr.total td')].map((cell) => cell.textContent)
     expect(total).toEqual(['', '', 'Total', '', 'EUR 640.00'])
     button('[data-step="1"]')?.click()

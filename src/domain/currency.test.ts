@@ -12,6 +12,12 @@ describe('Currency', () => {
     expect(Currency.parse('')).toBeUndefined()
   })
 
+  it('has an English name, or its code when the runtime does not know it', () => {
+    expect(Currency.parse('EUR')?.name).toBe('Euro')
+    expect(Currency.parse('JPY')?.name).toBe('Japanese Yen')
+    expect(Currency.all.every((currency) => currency.name.length > 0)).toBe(true)
+  })
+
   it('is one object per code, offered in alphabetical order', () => {
     expect(Currency.parse('eur')).toBe(Currency.parse('EUR'))
     const codes = Currency.all.map((currency) => currency.code)
