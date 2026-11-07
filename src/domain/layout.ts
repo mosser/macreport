@@ -12,11 +12,10 @@ export interface CoverField {
   readonly value: string
 }
 
-/** A kind of document on the cover: ticked when its section exists, with the labels it holds. */
+/** A kind of document on the cover: ticked when its section exists. */
 export interface AttachedInformation {
   readonly kind: Kind
   readonly isAttached: boolean
-  readonly labels: string
 }
 
 /** A row of the cover's table of expenses. */
@@ -26,17 +25,18 @@ export interface ExpenseRow {
   readonly description: string
   readonly foreignAmount: string
   readonly claimedAmount: string
-  readonly supportingDocuments: string
+  /** The labels of the documents supporting the expense, in the order of the report document. */
+  readonly supportingDocuments: readonly string[]
 }
 
 /** A document of a section: its label, and the expenses it supports. */
 export interface LabelledDocument {
   readonly label: string
   readonly document: Document
-  /** The numbers of the expenses the document supports, as in 1, 3, 4. */
-  readonly expenseNumbers: string
-  /** The expenses the document supports, as its stamp says them: Expense 2, or Expenses 1, 3, 4. */
-  readonly expenses: string
+  /** The numbers of the expenses the document supports. */
+  readonly expenseNumbers: readonly number[]
+  /** How its stamp names them: Expense for one, Expenses for several. */
+  readonly expensesName: 'Expense' | 'Expenses'
 }
 
 /** The part of the report document holding the documents of one kind. */
@@ -181,21 +181,15 @@ function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
   const documents = [...supported].map(([document, numbers], rank) => ({
     label: `${kind.letter}${rank + 1}`,
     document,
-    expenseNumbers: numbers.join(', '),
-    expenses: `${numbers.length === 1 ? 'Expense' : 'Expenses'} ${numbers.join(', ')}`,
+    expenseNumbers: numbers,
+    expensesName: numbers.length === 1 ? ('Expense' as const) : ('Expenses' as const),
   }))
   return { kind, title: kind.plural, documents }
 }
 
 function attachedInformationOf(kind: Kind, sections: readonly Section[]): AttachedInformation {
-  const documents = sections.find((section) => section.kind === kind)?.documents ?? []
-  const first = documents[0]?.label
-  const last = documents.at(-1)?.label
-  let labels = ''
-  if (first !== undefined && last !== undefined) {
-    labels = first === last ? first : `${first}–${last}`
-  }
-  return { kind, isAttached: documents.length > 0, labels }
+  const isAttached = sections.some((section) => section.kind === kind)
+  return { kind, isAttached }
 }
 
 function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
@@ -208,7 +202,7 @@ function rowOf(expense: Expense, number: number, labels: Map<Document, string>):
     description: expense.description ?? '',
     foreignAmount: '',
     claimedAmount: expense.claimedAmount?.toString() ?? '',
-    supportingDocuments: supporting.join(', '),
+    supportingDocuments: supporting,
   }
 }
 

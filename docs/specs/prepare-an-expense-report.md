@@ -66,9 +66,10 @@ was paid in cash. The Claimant adds, changes and removes expenses.
 | Paid in cash | When ticked: the expense has no bank statement. |
 | Bank statements | At least one, unless the expense was paid in cash. |
 
-Receipts and bank statements are added from the expense, or chosen among the
-receipts and bank statements already in the report. The same document may be
-chosen by several expenses. Removing an expense, or a document from an
+Receipts and bank statements are added from the expense, dropped on the zone
+of their kind or chosen from the computer, or chosen among the receipts and
+bank statements already in the report. The same document may be chosen by
+several expenses. Removing an expense, or a document from an
 expense, takes out of the report any receipt or bank statement no expense
 refers to any more.
 

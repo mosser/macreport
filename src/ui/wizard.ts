@@ -109,5 +109,9 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     }
   }
 
+  // A file dropped outside a drop zone would make the browser open it, and lose the report.
+  for (const kind of ['dragover', 'drop']) {
+    root.ownerDocument.addEventListener(kind, (event) => event.preventDefault())
+  }
   refresh()
 }

@@ -14,7 +14,7 @@ function coverOf(layout: Layout): Markup {
   const rows = layout.expenses.map(
     (row) => html`<tr>
       <td>${row.number}</td><td>${row.date}</td><td>${row.description}</td>
-      <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td><td>${row.supportingDocuments}</td>
+      <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td><td>${row.supportingDocuments.join(', ')}</td>
     </tr>`,
   )
   return html`<table class="cover-fields">${fields}</table>
@@ -34,7 +34,7 @@ function sectionsOf(layout: Layout): Markup[] {
         <thead><tr><th>Label</th><th>File</th><th>Expenses</th></tr></thead>
         <tbody>${section.documents.map(
           (entry) =>
-            html`<tr><td>${entry.label}</td><td>${entry.document.fileName}</td><td>${entry.expenseNumbers}</td></tr>`,
+            html`<tr><td>${entry.label}</td><td>${entry.document.fileName}</td><td>${entry.expenseNumbers.join(', ')}</td></tr>`,
         )}</tbody>
       </table>`,
   )

@@ -86,18 +86,14 @@ describe('layoutOf', () => {
     expect(fields).toContainEqual({ name: 'Dates', value: '2026-10-03' })
   })
 
-  it('ticks the kinds the report holds, with their labels', () => {
+  it('ticks the kinds the report holds', () => {
     expect(
-      layoutOf(report).attachedInformation.map(({ kind, isAttached, labels }) => [
-        kind.name,
-        isAttached,
-        labels,
-      ]),
+      layoutOf(report).attachedInformation.map(({ kind, isAttached }) => [kind.name, isAttached]),
     ).toEqual([
-      ['Receipt', true, 'R1'],
-      ['Missing receipt authorization', false, ''],
-      ['Bank statement', true, 'S1'],
-      ['Additional document', false, ''],
+      ['Receipt', true],
+      ['Missing receipt authorization', false],
+      ['Bank statement', true],
+      ['Additional document', false],
     ])
   })
 
@@ -110,7 +106,7 @@ describe('layoutOf', () => {
         description: 'Air Canada, YYZ–CDG return',
         foreignAmount: '',
         claimedAmount: '$1,012.35',
-        supportingDocuments: 'R1, S1',
+        supportingDocuments: ['R1', 'S1'],
       },
     ])
     expect(layout.total).toBe('$1,012.35')
@@ -120,10 +116,10 @@ describe('layoutOf', () => {
     const sections = layoutOf(report).sections
     expect(sections.map((section) => section.title)).toEqual(['Receipts', 'Bank statements'])
     expect(sections[0]?.documents).toEqual([
-      { label: 'R1', document: receipt, expenseNumbers: '1', expenses: 'Expense 1' },
+      { label: 'R1', document: receipt, expenseNumbers: [1], expensesName: 'Expense' },
     ])
     expect(sections[1]?.documents).toEqual([
-      { label: 'S1', document: statement, expenseNumbers: '1', expenses: 'Expense 1' },
+      { label: 'S1', document: statement, expenseNumbers: [1], expensesName: 'Expense' },
     ])
   })
 
@@ -140,13 +136,12 @@ describe('layoutOf', () => {
     expect(
       layout.expenses.map((row) => [row.number, row.description, row.supportingDocuments]),
     ).toEqual([
-      [1, 'Taxi', 'R1, S1'],
-      [2, 'Air Canada, YYZ–CDG return', 'R2, S1'],
+      [1, 'Taxi', ['R1', 'S1']],
+      [2, 'Air Canada, YYZ–CDG return', ['R2', 'S1']],
     ])
     expect(layout.total).toBe('$1,099.45')
     expect(layout.sections[1]?.documents).toEqual([
-      { label: 'S1', document: statement, expenseNumbers: '1, 2', expenses: 'Expenses 1, 2' },
+      { label: 'S1', document: statement, expenseNumbers: [1, 2], expensesName: 'Expenses' },
     ])
-    expect(layout.attachedInformation[0]?.labels).toBe('R1–R2')
   })
 })

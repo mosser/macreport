@@ -6,6 +6,7 @@ import {
   PDFDict,
   PDFDocument,
   PDFName,
+  PDFNumber,
   type PDFPage,
   PDFRawStream,
   PDFRef,
@@ -138,7 +139,50 @@ function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
   return texts
 }
 
+/** The links of a page: the number of the page each goes to, how, and where it is clicked. */
+function linksOf(pdf: PDFDocument, page: PDFPage) {
+  const references = pdf.getPages().map((each) => each.ref.toString())
+  const annotations = page.node.Annots()?.asArray() ?? []
+  return annotations.map((reference) => {
+    const annotation = pdf.context.lookup(reference, PDFDict)
+    const destination = annotation.lookup(PDFName.of('Dest'), PDFArray)
+    const top = destination.lookupMaybe(3, PDFNumber)?.asNumber()
+    const [left] = annotation
+      .lookup(PDFName.of('Rect'), PDFArray)
+      .asArray()
+      .map((value) => (value as PDFNumber).asNumber())
+    return {
+      to: references.indexOf(destination.get(0)?.toString() ?? '') + 1,
+      how: destination.lookup(1, PDFName).asString(),
+      ...(top === undefined ? {} : { top }),
+      left: left ?? 0,
+    }
+  })
+}
+
 describe('writeReportDocument', () => {
+  it("links each label of an expense's row to its document, and each page of a document back to the row", async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const pages = pdf.getPages()
+    const [cover, receipts, boarding, pass, statements, statement] = pages.map((page) =>
+      linksOf(pdf, page),
+    )
+    expect(cover?.map(({ to, how }) => [to, how])).toEqual([
+      [3, '/Fit'],
+      [6, '/Fit'],
+    ])
+    expect(cover?.[0]?.left).toBeLessThan(cover?.[1]?.left ?? 0)
+    expect(receipts).toEqual([])
+    expect(statements).toEqual([])
+    for (const links of [boarding, pass, statement]) {
+      expect(links?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
+    }
+    const row = boarding?.[0]?.top ?? 0
+    expect(row).toBeGreaterThan(54)
+    expect(row).toBeLessThan(792 - 54)
+    expect(statement?.[0]?.top).toBe(row)
+  })
+
   it('writes the cover, then each section, its section page and its documents', async () => {
     const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
     const pages = pdf.getPages()
@@ -154,8 +198,8 @@ describe('writeReportDocument', () => {
         'Zoë Łukasiewicz',
         'Dates',
         '2026-10-03 to 2026-10-07',
-        'Receipts  R1',
-        'Bank statements  S1',
+        'Receipts',
+        'Bank statements',
         'Missing receipt authorizations',
         'Air Canada, YYZ–CDG return',
         '$1,012.35',

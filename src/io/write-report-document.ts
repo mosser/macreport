@@ -1,5 +1,12 @@
 import fontkit from '@cantoo/fontkit'
-import { PDFDocument, type PDFFont, type PDFImage, type PDFPage, rgb } from '@cantoo/pdf-lib'
+import {
+  type PDFArray,
+  PDFDocument,
+  type PDFFont,
+  type PDFImage,
+  type PDFPage,
+  rgb,
+} from '@cantoo/pdf-lib'
 import boldFont from '../assets/fonts/NotoSans-Bold.ttf?inline'
 import regularFont from '../assets/fonts/NotoSans-Regular.ttf?inline'
 import logoImage from '../assets/mcscert-left-col.png?inline'
@@ -36,10 +43,29 @@ interface Column {
   readonly width: number
 }
 
-/** A page of the report document and what its stamp says besides the page number. */
+/** A page of the report document, and the document it belongs to when it belongs to one. */
 interface StampedPage {
   readonly page: PDFPage
-  readonly stamp: string
+  readonly entry?: LabelledDocument
+}
+
+/** What a link goes to: the first page of a document, or the row of an expense on the cover. */
+type Target = { readonly label: string } | { readonly expenseNumber: number }
+
+/** A rectangle of a page that a reader clicks to go to a target. */
+interface Link {
+  readonly page: PDFPage
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+  readonly target: Target
+}
+
+/** Where a row starts: its page, and the height of its top on that page. */
+interface Place {
+  readonly page: PDFPage
+  readonly top: number
 }
 
 /** A document read for its pages: a PDF to copy, or an image to place on a page of its own. */
@@ -67,6 +93,7 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
     await writer.writeSection(section)
   }
   writer.stampEveryPage()
+  writer.link()
   pdf.setTitle(writing.layout.title)
   pdf.setAuthor(writing.layout.author)
   pdf.setCreator(`McSCert Expense Report v${writing.version}`)
@@ -137,7 +164,7 @@ function breakWord(word: string, fits: (text: string) => boolean): string[] {
  */
 class Flow {
   pageCount = 0
-  private page: PDFPage | undefined
+  private current: PDFPage | undefined
   private y = 0
   private continuation: () => void = () => {}
   private readonly writer: Writer
@@ -151,6 +178,16 @@ class Flow {
 
   get top(): number {
     return letterPortrait[1] - margin
+  }
+
+  /** The page being written; absent when only counting. */
+  get page(): PDFPage | undefined {
+    return this.current
+  }
+
+  /** The height the next line starts at. */
+  get cursor(): number {
+    return this.y
   }
 
   /** What is drawn at the top of each page after the first, such as a table's header. */
@@ -175,11 +212,11 @@ class Flow {
   }
 
   text(text: string, x: number, font: PDFFont, size: number, colour: Colour): void {
-    this.page?.drawText(text, { x, y: this.y - size, size, font, color: colourOf(colour) })
+    this.current?.drawText(text, { x, y: this.y - size, size, font, color: colourOf(colour) })
   }
 
   rule(colour: Colour, thickness: number): void {
-    this.page?.drawLine({
+    this.current?.drawLine({
       start: { x: margin, y: this.y },
       end: { x: letterPortrait[0] - margin, y: this.y },
       thickness,
@@ -188,7 +225,7 @@ class Flow {
   }
 
   box(x: number, size: number, colour: Colour, isTicked: boolean): void {
-    const page = this.page
+    const page = this.current
     if (page === undefined) return
     const bottom = this.y - size
     page.drawRectangle({
@@ -209,10 +246,10 @@ class Flow {
 
   private newPage(): void {
     this.pageCount += 1
-    this.page = this.isCounting ? undefined : this.writer.addGeneratedPage()
+    this.current = this.isCounting ? undefined : this.writer.addGeneratedPage()
     this.y = this.top
     const logoHeight = (logoWidth * this.writer.logo.height) / this.writer.logo.width
-    this.page?.drawImage(this.writer.logo, {
+    this.current?.drawImage(this.writer.logo, {
       x: margin,
       y: this.y - logoHeight,
       width: logoWidth,
@@ -234,6 +271,9 @@ interface Means {
 class Writer {
   readonly pages: StampedPage[] = []
   readonly logo: PDFImage
+  private readonly links: Link[] = []
+  private readonly firstPages = new Map<string, PDFPage>()
+  private readonly expenseRows = new Map<number, Place>()
   private readonly pdf: PDFDocument
   private readonly palette: Palette
   private readonly regular: PDFFont
@@ -249,7 +289,7 @@ class Writer {
 
   addGeneratedPage(): PDFPage {
     const page = this.pdf.addPage(letterPortrait)
-    this.pages.push({ page, stamp: '' })
+    this.pages.push({ page })
     return page
   }
 
@@ -267,8 +307,7 @@ class Writer {
       const height = bodySize * leading
       flow.ensure(height)
       flow.box(margin, bodySize, this.palette.black, information.isAttached)
-      const text = [information.kind.plural, information.labels].filter(Boolean).join('  ')
-      flow.text(text, margin + 18, this.regular, bodySize, this.palette.black)
+      flow.text(information.kind.plural, margin + 18, this.regular, bodySize, this.palette.black)
       flow.down(height)
     }
     flow.down(12)
@@ -281,15 +320,22 @@ class Writer {
       { title: 'Claimed (CAD)', width: 76 },
       { title: 'Supporting documents', width: 102 },
     ]
-    const rows = layout.expenses.map((row) => [
-      String(row.number),
-      row.date,
-      row.description,
-      row.foreignAmount,
-      row.claimedAmount,
-      row.supportingDocuments,
-    ])
-    this.table(flow, columns, rows)
+    this.table(flow, columns, [])
+    for (const row of layout.expenses) {
+      const cells = [
+        String(row.number),
+        row.date,
+        row.description,
+        row.foreignAmount,
+        row.claimedAmount,
+        row.supportingDocuments.join(', '),
+      ]
+      const linked = { column: 5, targets: row.supportingDocuments.map((label) => ({ label })) }
+      const place = this.tableRow(flow, columns, cells, this.regular, false, linked)
+      if (place !== undefined) {
+        this.expenseRows.set(row.number, place)
+      }
+    }
     this.tableRow(flow, columns, ['', '', 'Total', '', layout.total, ''], this.bold)
     flow.stopContinuing()
   }
@@ -308,20 +354,67 @@ class Writer {
     }
   }
 
+  /**
+   * Stamps every page: the label of its document and the expenses it supports, each a link to
+   * the expense's row on the cover, then the page number out of the total.
+   */
   stampEveryPage(): void {
     const total = this.pages.length
-    this.pages.forEach(({ page, stamp }, index) => {
-      const text = [stamp, `${index + 1} / ${total}`].filter(Boolean).join(' · ')
+    this.pages.forEach(({ page, entry }, index) => {
+      const numbers = entry?.expenseNumbers.map(String) ?? []
+      const prefix = entry === undefined ? '' : `${entry.label} · ${entry.expensesName} `
+      const pageNumber = `${index + 1} / ${total}`
+      const text =
+        entry === undefined ? pageNumber : `${prefix}${numbers.join(', ')} · ${pageNumber}`
       const box = page.getCropBox()
-      const width = this.regular.widthOfTextAtSize(text, stampSize)
+      const width = (piece: string) => this.regular.widthOfTextAtSize(piece, stampSize)
+      const x = box.x + box.width - margin - width(text)
+      const y = box.y + stampBaseline
       page.drawText(text, {
-        x: box.x + box.width - margin - width,
-        y: box.y + stampBaseline,
+        x,
+        y,
         size: stampSize,
         font: this.regular,
         color: colourOf(this.palette.grey),
       })
+      let before = prefix
+      for (const number of numbers) {
+        this.links.push({
+          page,
+          x: x + width(before),
+          y: y - 2,
+          width: width(number),
+          height: stampSize + 3,
+          target: { expenseNumber: Number(number) },
+        })
+        before += `${number}, `
+      }
     })
+  }
+
+  /** Adds every link, now that every page of the report document exists. */
+  link(): void {
+    const context = this.pdf.context
+    for (const link of this.links) {
+      const target = link.target
+      let destination: PDFArray | undefined
+      if ('label' in target) {
+        const page = this.firstPages.get(target.label)
+        destination = page && context.obj([page.ref, 'Fit'])
+      } else {
+        const row = this.expenseRows.get(target.expenseNumber)
+        destination = row && context.obj([row.page.ref, 'XYZ', null, row.top, null])
+      }
+      if (destination === undefined) continue
+      const annotation = context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: [link.x, link.y, link.x + link.width, link.y + link.height],
+        Border: [0, 0, 0],
+        Dest: destination,
+      })
+      link.page.node.addAnnot(context.register(annotation))
+    }
   }
 
   private sectionPage(flow: Flow, section: Section, sources: Source[], firstPage: number): void {
@@ -338,19 +431,19 @@ class Writer {
       const count = sources[index]?.pageCount ?? 1
       const pages = count === 1 ? String(page) : `${page}–${page + count - 1}`
       page += count
-      return [entry.label, entry.document.fileName, pages, entry.expenseNumbers]
+      return [entry.label, entry.document.fileName, pages, entry.expenseNumbers.join(', ')]
     })
     this.table(flow, columns, rows)
     flow.stopContinuing()
   }
 
   private async copy(entry: LabelledDocument, source: Source): Promise<void> {
-    const stamp = `${entry.label} · ${entry.expenses}`
     if (source.format === 'pdf') {
       const copied = await this.pdf.copyPages(source.pdf, source.pdf.getPageIndices())
       for (const page of copied) {
-        this.pages.push({ page: this.pdf.addPage(page), stamp })
+        this.pages.push({ page: this.pdf.addPage(page), entry })
       }
+      this.markFirstPage(entry, this.pages.length - copied.length)
       return
     }
     const image =
@@ -366,7 +459,15 @@ class Writer {
     const [width, height] = [image.width * scale, image.height * scale]
     const page = this.pdf.addPage(size)
     page.drawImage(image, { x: (size[0] - width) / 2, y: (size[1] - height) / 2, width, height })
-    this.pages.push({ page, stamp })
+    this.pages.push({ page, entry })
+    this.markFirstPage(entry, this.pages.length - 1)
+  }
+
+  private markFirstPage(entry: LabelledDocument, index: number): void {
+    const first = this.pages[index]?.page
+    if (first !== undefined) {
+      this.firstPages.set(entry.label, first)
+    }
   }
 
   private paragraph(flow: Flow, text: string, font: PDFFont, size: number, colour: Colour): void {
@@ -415,14 +516,18 @@ class Writer {
     }
   }
 
-  /** A row whose cells wrap; a row taller than what is left of the page continues on the next. */
+  /**
+   * A row whose cells wrap; a row taller than what is left of the page continues on the next.
+   * The labels of a linked cell become links to their documents. Gives where the row starts.
+   */
   private tableRow(
     flow: Flow,
     columns: readonly Column[],
     cells: readonly string[],
     font: PDFFont,
     isHeader = false,
-  ): void {
+    linked?: { readonly column: number; readonly targets: readonly { label: string }[] },
+  ): Place | undefined {
     const padding = 4
     const lineHeight = tableSize * leading
     const wrapped = columns.map((column, index) =>
@@ -431,6 +536,8 @@ class Writer {
     const lineCount = Math.max(...wrapped.map((lines) => lines.length))
     const colour = isHeader ? this.palette.maroon : this.palette.black
     flow.ensure(Math.min(lineCount * lineHeight + padding * 2, flow.top - 2 * margin))
+    const page = flow.page
+    const place = page === undefined ? undefined : { page, top: flow.cursor }
     flow.down(padding)
     for (let line = 0; line < lineCount; line += 1) {
       flow.ensure(lineHeight + padding)
@@ -439,6 +546,9 @@ class Writer {
         const text = wrapped[index]?.[line]
         if (text !== undefined && text !== '') {
           flow.text(text, x + padding, font, tableSize, colour)
+          if (linked?.column === index) {
+            this.linkLabels(flow, text, x + padding, font, linked.targets)
+          }
         }
         x += column.width
       }
@@ -446,6 +556,33 @@ class Writer {
     }
     flow.down(padding)
     flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
+    return place
+  }
+
+  /** Links each label found in a line of text drawn at x to the first page of its document. */
+  private linkLabels(
+    flow: Flow,
+    text: string,
+    x: number,
+    font: PDFFont,
+    targets: readonly { label: string }[],
+  ): void {
+    const page = flow.page
+    if (page === undefined) return
+    let from = 0
+    for (const target of targets) {
+      const at = text.indexOf(target.label, from)
+      if (at < 0) continue
+      from = at + target.label.length
+      this.links.push({
+        page,
+        x: x + font.widthOfTextAtSize(text.slice(0, at), tableSize),
+        y: flow.cursor - tableSize - 2,
+        width: font.widthOfTextAtSize(target.label, tableSize),
+        height: tableSize + 3,
+        target,
+      })
+    }
   }
 }
 

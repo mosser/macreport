@@ -41,14 +41,18 @@ function typed(field: string, value: string): { changes: ExpenseFields; isBroken
   return { changes: { description: textOrAbsent(value) }, isBroken: false }
 }
 
+/** A zone a file is dropped on, or clicked to choose one; it shows the file added. */
 function fileField(field: 'receipts' | 'bankStatements', documents: readonly Document[]): Markup {
   const added = documents.map((document) => html`<span class="added">${document.fileName}</span>`)
-  return html`<label class="field">
+  const content = added.length > 0 ? added : html`<span>Drop a file here, or choose one</span>`
+  return html`<div class="field">
     ${fieldName(field)}
-    <input name="${field}" type="file" accept="${accepted}" />
-    ${added}
+    <label class="drop-zone" data-drop="${field}">
+      <input name="${field}" type="file" accept="${accepted}" />
+      ${content}
+    </label>
     ${fieldRule(field)}
-  </label>`
+  </div>`
 }
 
 /** Step 2: the expense, with its receipt and its bank statement. */
@@ -90,16 +94,30 @@ export function expensesStep(readFile: ReadFile): Step {
           context.refreshActions()
         })
       }
+      /** Chosen or dropped, a file goes through the same handler. */
+      const add = async (field: string, file: File | undefined) => {
+        if (file === undefined) return
+        const kind = field === 'receipts' ? Kind.receipt : Kind.bankStatement
+        const document = await readFile(file, kind)
+        const changes =
+          field === 'receipts' ? { receipts: [document] } : { bankStatements: [document] }
+        context.change(afterChanging(context.report, changes))
+        context.refresh()
+      }
       for (const element of panel.querySelectorAll<HTMLInputElement>('input[type="file"]')) {
-        element.addEventListener('change', async () => {
-          const file = element.files?.[0]
-          if (file === undefined) return
-          const kind = element.name === 'receipts' ? Kind.receipt : Kind.bankStatement
-          const document = await readFile(file, kind)
-          const changes =
-            element.name === 'receipts' ? { receipts: [document] } : { bankStatements: [document] }
-          context.change(afterChanging(context.report, changes))
-          context.refresh()
+        element.addEventListener('change', () => add(element.name, element.files?.[0]))
+      }
+      for (const zone of panel.querySelectorAll<HTMLElement>('[data-drop]')) {
+        const isOver = (over: boolean) => (event: Event) => {
+          event.preventDefault()
+          zone.classList.toggle('is-dragged-over', over)
+        }
+        zone.addEventListener('dragenter', isOver(true))
+        zone.addEventListener('dragover', isOver(true))
+        zone.addEventListener('dragleave', isOver(false))
+        zone.addEventListener('drop', (event) => {
+          isOver(false)(event)
+          add(zone.dataset.drop ?? '', (event as DragEvent).dataTransfer?.files[0])
         })
       }
     },

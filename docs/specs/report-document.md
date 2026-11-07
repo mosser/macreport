@@ -45,7 +45,8 @@ the template's fields and its table, so that nothing else needs filling in.
   and their email for a student or a postdoctoral fellow, the host and their
   email for a visitor; purpose, its dates when it has some, account.
 - **Attached information.** The four kinds of document, in their order, each
-  with a box ticked when its section exists and the labels it holds (R1–R7).
+  with a box ticked when its section exists. The labels are in the table of
+  expenses, not here.
 - **Expenses.** A table of every expense, sorted by date then in the order
   they were added, and numbered in that order:
 
@@ -149,7 +150,6 @@ what they name.
 
 | Where | Link | Goes to |
 |---|---|---|
-| Cover, attached information | A label | The first page of its document |
 | Cover, expenses | A label among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
 | Section page | An expense number | The expense's row on the cover |

@@ -176,6 +176,35 @@ describe('the wizard', () => {
     expect(button('[data-action="save"]')).not.toBeNull()
   })
 
+  it('adds a receipt and a bank statement dropped on their zones', async () => {
+    fillReport()
+    continueButton()?.click()
+    const zone = root.querySelector<HTMLElement>('[data-drop="receipts"]')
+    expect(zone?.textContent).toContain('Drop a file here, or choose one')
+    const over = new Event('dragover', { cancelable: true })
+    zone?.dispatchEvent(over)
+    expect(over.defaultPrevented).toBe(true)
+    expect(zone?.classList.contains('is-dragged-over')).toBe(true)
+    zone?.dispatchEvent(new Event('dragleave', { cancelable: true }))
+    expect(zone?.classList.contains('is-dragged-over')).toBe(false)
+    for (const [field, fileName] of [
+      ['receipts', 'taxi.pdf'],
+      ['bankStatements', 'october.pdf'],
+    ] as const) {
+      const drop = new Event('drop', { cancelable: true })
+      Object.defineProperty(drop, 'dataTransfer', {
+        value: { files: [new File(['%PDF-1.7'], fileName)] },
+      })
+      root.querySelector(`[data-drop="${field}"]`)?.dispatchEvent(drop)
+      await vi.waitFor(() =>
+        expect(root.querySelector(`[data-drop="${field}"]`)?.textContent).toContain(fileName),
+      )
+    }
+    const elsewhere = new Event('drop', { bubbles: true, cancelable: true })
+    document.body.dispatchEvent(elsewhere)
+    expect(elsewhere.defaultPrevented).toBe(true)
+  })
+
   it('lists the findings at the Review step of a report that has some, and offers no save', () => {
     fillReport()
     continueButton()?.click()
