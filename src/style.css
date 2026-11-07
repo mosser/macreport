@@ -1,0 +1,221 @@
+/* palette:start (ADR 0002: the only colour literals of the system) */
+:root {
+  --mac-maroon: #7a003c;
+  --mac-gold: #fdbf57;
+  --mac-grey: #495965;
+  --mac-white: #ffffff;
+  --mac-black: #000000;
+  --mac-accent-pink: #ff9980;
+  --mac-accent-lime: #e4ea6c;
+  --mac-accent-green: #0e5b3d;
+  --mac-accent-blue: #0d5d78;
+  --mac-accent-sky: #aad5e1;
+  --mac-accent-purple: #cc99cc;
+  --mac-accent-light-grey: #dbdbdd;
+}
+/* palette:end */
+
+:root {
+  --color-primary: var(--mac-maroon);
+  --color-on-primary: var(--mac-white);
+  --color-highlight: var(--mac-gold);
+  --color-surface: var(--mac-white);
+  --color-text: var(--mac-black);
+  --color-secondary-text: var(--mac-grey);
+  --color-rule: var(--mac-accent-light-grey);
+  --color-tint: color-mix(in srgb, var(--mac-maroon) 12%, var(--mac-white));
+  --color-warning: color-mix(in srgb, var(--mac-gold) 50%, var(--mac-black));
+  --color-ok: var(--mac-accent-green);
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: var(--mac-black);
+    --color-text: var(--mac-white);
+    --color-secondary-text: var(--mac-accent-light-grey);
+    --color-tint: color-mix(in srgb, var(--mac-maroon) 40%, var(--mac-black));
+    --color-warning: var(--mac-gold);
+    --color-ok: var(--mac-accent-lime);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.masthead img {
+  height: 2.5rem;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.masthead .new-report {
+  margin-left: auto;
+}
+
+main {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.notice {
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 4px solid var(--color-highlight);
+  background: var(--color-tint);
+}
+
+.stepper {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+h2 {
+  color: var(--color-primary);
+  margin-top: 0;
+}
+
+label,
+.field {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.field-name {
+  display: block;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-secondary-text);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+textarea {
+  min-height: 4rem;
+}
+
+.rule {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-secondary-text);
+}
+
+.rule.is-broken {
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.added {
+  font-size: 0.9rem;
+  color: var(--color-ok);
+}
+
+button {
+  padding: 0.45rem 1rem;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stepper button {
+  border: 1px solid var(--color-rule);
+  background: transparent;
+  color: var(--color-secondary-text);
+}
+
+.stepper button[aria-current="step"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+th {
+  color: var(--color-primary);
+  text-align: left;
+  border-bottom: 2px solid var(--color-primary);
+}
+
+th,
+td {
+  padding: 0.3rem 0.5rem;
+  vertical-align: top;
+}
+
+td {
+  border-bottom: 1px solid var(--color-rule);
+}
+
+tr.total td {
+  font-weight: 600;
+}
+
+.findings li {
+  color: var(--color-warning);
+}
+
+footer {
+  max-width: 56rem;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+  font-size: 0.85rem;
+  color: var(--color-secondary-text);
+}
