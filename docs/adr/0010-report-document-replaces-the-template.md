@@ -56,8 +56,8 @@ The report document is written as `docs/specs/report-document.md` says:
   Receipts and bank statements are added from the expenses they support;
   travel justifications (invitation, conference programme) and additional
   documents (itinerary, boarding passes, notes) from the report.
-- **A document has a name**, its file name unless the Claimant gives it
-  another, so that the cover and the section pages call it what a reader
+- **A document has a name**, its file name without its extension unless the
+  Claimant gives it another, so that the cover and the section pages call it what a reader
   recognizes (*Visa, October*) rather than what a bank or a browser called
   the file.
 - **A missing receipt authorization per expense without a receipt**, written

@@ -87,10 +87,10 @@ describe('the draft store', () => {
       restored.travelJustifications.map((document) => [document.name, document.fileName]),
     ).toEqual([['Invitation from ICSE', 'invitation.pdf']])
     expect(restored.additionalDocuments.map((document) => [document.name, document.kind])).toEqual([
-      ['poster.png', Kind.additionalDocument],
+      ['poster', Kind.additionalDocument],
     ])
     expect(restored.expenses[0]?.bankStatements[0]?.name).toBe('Visa, October')
-    expect(restored.expenses[0]?.receipts[0]?.name).toBe('reçu.pdf')
+    expect(restored.expenses[0]?.receipts[0]?.name).toBe('reçu')
   })
 
   it('keeps the content of a document once, however many times the Claimant names it', async () => {
@@ -209,7 +209,7 @@ describe('the draft store', () => {
     expect(restored.expenses).toHaveLength(2)
     expect(restored.expenses[0]?.claimedAmount).toBeUndefined()
     expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual(['a.pdf'])
-    expect(restored.expenses[0]?.receipts[0]?.name).toBe('a.pdf')
+    expect(restored.expenses[0]?.receipts[0]?.name).toBe('a')
     expect(restored.expenses[0]?.bankStatements).toEqual([])
     expect(restored.travelJustifications).toEqual([])
     expect(restored.additionalDocuments).toEqual([])

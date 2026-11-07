@@ -29,7 +29,7 @@ document.
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has at least one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
-| Name | What a document is called in the report and in the report document: its file name, unless the Claimant gives it another. |
+| Name | What a document is called in the report and in the report document: its file name without its extension, unless the Claimant gives it another. |
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
 | Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense. |
 | Bank statement | A document an expense refers to: a bank or credit card statement showing the charge. Added from an expense, and often referred to by several. The Claimant redacts it, before adding it or in the saved report document; the system does not redact. |

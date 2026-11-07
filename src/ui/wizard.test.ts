@@ -244,8 +244,8 @@ describe('the wizard', () => {
     for (const expected of [
       'Zoë Lefèvre',
       '$1,012.35',
-      'air-canada.pdf',
-      'statement.pdf',
+      'air-canada',
+      'statement',
       'Entered',
       'Receipts',
       'Bank statements',
@@ -418,7 +418,12 @@ describe('the wizard', () => {
     continueButton()?.click()
     await fillExpense()
     const names = () => [...root.querySelectorAll<HTMLInputElement>('input[name="documentName"]')]
-    expect(names().map((input) => input.value)).toEqual(['air-canada.pdf', 'statement.pdf'])
+    expect(names().map((input) => input.value)).toEqual(['air-canada', 'statement'])
+    expect(names().map((input) => input.placeholder)).toEqual(['air-canada', 'statement'])
+    expect([...root.querySelectorAll('.file-name')].map((file) => file.textContent)).toEqual([
+      'air-canada.pdf',
+      'statement.pdf',
+    ])
     const statementName = names()[1]
     if (statementName === undefined) throw new TypeError('No name')
     statementName.value = 'Visa, October'
@@ -428,14 +433,14 @@ describe('the wizard', () => {
     expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.fileName).toBe('statement.pdf')
     statementName.value = ''
     statementName.dispatchEvent(new Event('input'))
-    expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.name).toBe('statement.pdf')
+    expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.name).toBe('statement')
     statementName.value = 'Visa, October'
     statementName.dispatchEvent(new Event('input'))
     expect(root.querySelector('[data-remove]')).toBeNull()
     continueButton()?.click()
     continueButton()?.click()
     expect(root.querySelector('table.expenses')?.textContent).toContain('Visa, October')
-    expect(root.querySelector('table.section')?.textContent).toContain('air-canada.pdf')
+    expect(root.querySelector('table.section')?.textContent).toContain('air-canada')
   })
 
   it('adds, names and removes additional documents, which are optional', async () => {
@@ -448,14 +453,14 @@ describe('the wizard', () => {
     await add('additionalDocuments', 'itinerary.pdf')
     await add('additionalDocuments', 'poster.png')
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
-      'itinerary.pdf',
-      'poster.png',
+      'itinerary',
+      'poster',
     ])
     type('documentName', 'Itinerary')
     expect(kept.at(-1)?.additionalDocuments[0]?.name).toBe('Itinerary')
     button('[data-remove="additionalDocuments"][data-index="1"]')?.click()
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual(['Itinerary'])
-    expect(root.textContent).not.toContain('poster.png')
+    expect(root.textContent).not.toContain('poster')
     continueButton()?.click()
     const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
     expect(sections).toEqual(['Receipts', 'Bank statements', 'Additional documents'])

@@ -118,11 +118,12 @@ once handles each on its own.
 
 ### Naming a document
 
-A document added takes its file name as its name. Next to it, its **Name**
-is a field the Claimant may change at any time, on the step it was added
-from: an invoice, a statement or a programme named as the Claimant calls it.
-A name left empty is the file name again. The name is what the Review step
-and the report document call the document.
+A document added takes its file name, without its extension (`.pdf`,
+`.jpeg`, `.png`), as its name. Next to it, its **Name** is a field the
+Claimant may change at any time, on the step it was added from: an invoice,
+a statement or a programme named as the Claimant calls it. A name left empty
+is the file name without its extension again. The name is what the Review
+step and the report document call the document.
 
 ### 4. Review
 

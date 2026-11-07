@@ -265,8 +265,8 @@ describe('writeReportDocument', () => {
         'Additional documents',
         'Air Canada, YYZ–CDG return',
         '$1,012.35',
-        'air-canada.pdf',
-        'statement-octobre.png',
+        'air-canada',
+        'statement-octobre',
         'Entered',
         'Total',
         '1 / 6',
@@ -278,7 +278,7 @@ describe('writeReportDocument', () => {
         'Name',
         'Expenses',
         'R1',
-        'air-canada.pdf',
+        'air-canada',
         '3–4',
         '1',
         '2 / 6',
@@ -287,7 +287,7 @@ describe('writeReportDocument', () => {
     expect(boarding).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
     expect(pass).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
     expect(statements).toEqual(
-      expect.arrayContaining(['Bank statements', 'S1', 'statement-octobre.png', '6', '5 / 6']),
+      expect.arrayContaining(['Bank statements', 'S1', 'statement-octobre', '6', '5 / 6']),
     )
     expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
   })
@@ -316,7 +316,7 @@ describe('writeReportDocument', () => {
     const texts = pdf.getPages().map((page) => textsOf(pdf, page))
     expect(texts).toHaveLength(10)
     const [cover, justifications, justification, , , , statements, , additional, last] = texts
-    expect(cover).toEqual(expect.arrayContaining(['air-canada.pdf', 'Visa, October', '1 / 10']))
+    expect(cover).toEqual(expect.arrayContaining(['air-canada', 'Visa, October', '1 / 10']))
     expect(justifications).toEqual(
       expect.arrayContaining(['Travel justifications', 'Name', 'J1', 'Invitation from ICSE', '3']),
     )
@@ -324,7 +324,7 @@ describe('writeReportDocument', () => {
     expect(justification).toEqual(['J1 · 3 / 10'])
     expect(statements).toEqual(expect.arrayContaining(['S1', 'Visa, October', '1']))
     expect(additional).toEqual(
-      expect.arrayContaining(['Additional documents', 'A1', 'itinerary.pdf', '10']),
+      expect.arrayContaining(['Additional documents', 'A1', 'itinerary', '10']),
     )
     expect(additional).not.toContain('Expenses')
     expect(last).toEqual(['Itinerary', 'A1 · 10 / 10'])

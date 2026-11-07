@@ -17,7 +17,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   of their own labelled J1, J2…, before the receipts; the additional
   documents come last, labelled A1, A2…. Neither section lists expenses.
 - A name for every document, receipts and bank statements included: its file
-  name, unless the Claimant types another next to it. The Review step and the
+  name without its extension (`scan-0042.pdf` is named `scan-0042`), unless
+  the Claimant types another next to it. The Review step and the
   report document call each document by its name.
 - An **Entered** box for each expense on the cover: a form field McSCert's
   administrative staff tick on screen, or by hand on a printed copy, once

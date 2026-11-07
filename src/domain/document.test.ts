@@ -11,10 +11,19 @@ describe('Document', () => {
     expect(new Document(Kind.receipt, decomposed, content).fileName).toBe('reçu.pdf')
   })
 
-  it('is named after its file, unless the Claimant gives it a name', () => {
-    expect(new Document(Kind.receipt, 'scan-0042.pdf', content).name).toBe('scan-0042.pdf')
+  it('is named after its file without its extension, unless the Claimant gives it a name', () => {
+    expect(new Document(Kind.receipt, 'scan-0042.pdf', content).name).toBe('scan-0042')
     expect(new Document(Kind.receipt, 'scan-0042.pdf', content, ' Hotel ').name).toBe('Hotel')
-    expect(new Document(Kind.receipt, 'scan-0042.pdf', content, '  ').name).toBe('scan-0042.pdf')
+    expect(new Document(Kind.receipt, 'scan-0042.pdf', content, '  ').name).toBe('scan-0042')
+  })
+
+  it('takes only the last extension off its file name, and never all of it', () => {
+    const named = (fileName: string) => new Document(Kind.receipt, fileName, content).name
+    expect(named('Reçu Café.JPEG')).toBe('Reçu Café')
+    expect(named('invoice.2026.png')).toBe('invoice.2026')
+    expect(named('statement v1.2')).toBe('statement v1.2')
+    expect(named('README')).toBe('README')
+    expect(named('.pdf')).toBe('.pdf')
   })
 
   it('is named otherwise as a copy, keeping its kind, file name and content', () => {
@@ -25,7 +34,7 @@ describe('Document', () => {
     expect(named.kind).toBe(Kind.bankStatement)
     expect(named.fileName).toBe('scan-0042.pdf')
     expect(named.content).toBe(content)
-    expect(named.afterNaming('').name).toBe('scan-0042.pdf')
+    expect(named.afterNaming('').name).toBe('scan-0042')
   })
 })
 

@@ -251,7 +251,7 @@ class IndexedDraftStore implements DraftStore {
     }))
     const names = Object.fromEntries(
       documentsOf(report)
-        .filter((document) => document.name !== document.fileName)
+        .filter((document) => document.name !== document.afterNaming('').name)
         .map((document) => [identifier(document), document.name]),
     )
     return {

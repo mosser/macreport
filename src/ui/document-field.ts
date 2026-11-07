@@ -33,7 +33,7 @@ function documentItem(field: DocumentField, document: Document, index: number): 
     <label class="document-name">
       <span class="field-name">${fieldNames.documentName}</span>
       <input name="documentName" type="text" data-of="${field.field}" data-index="${index}"
-        value="${document.name}" placeholder="${document.fileName}" aria-describedby="${id}" />
+        value="${document.name}" placeholder="${document.afterNaming('').name}" aria-describedby="${id}" />
     </label>
     <span class="file-name" id="${id}">${document.fileName}</span>
     ${remove}
