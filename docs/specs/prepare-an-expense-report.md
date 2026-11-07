@@ -30,7 +30,7 @@ is shown with that rule, and kept once it does.
 | Field | Rule |
 |---|---|
 | Name of claimant | Required. |
-| Position | Required, one of Faculty, Student, Staff, Visitor. |
+| Position | Required, one of Faculty, Postdoctoral fellow, Student, Staff, Visitor. |
 | Email | Required, an email address. |
 | Extension | Optional. Written on missing receipt authorizations. |
 | Supervisor, supervisor's email | Asked of a Student, and then required: the supervisor's name, and an email address. |

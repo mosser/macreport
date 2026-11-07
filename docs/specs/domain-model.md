@@ -15,7 +15,7 @@ document.
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
 | Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or the host of a visitor, the event, the dates of the event, the account, the expenses and the additional documents. There is one report at a time. |
-| Position | What the claimant is at McSCert: Faculty, Student, Staff or Visitor. A student's report names their supervisor, a visitor's their host. |
+| Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. A student's report names their supervisor, a visitor's their host. |
 | Supervisor | The faculty member who supervises a student claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
 | Event | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit. |
