@@ -436,11 +436,30 @@ describe('the wizard', () => {
     expect(kept.at(-1)?.expenses[0]?.bankStatements[0]?.name).toBe('statement')
     statementName.value = 'Visa, October'
     statementName.dispatchEvent(new Event('input'))
-    expect(root.querySelector('[data-remove]')).toBeNull()
     continueButton()?.click()
     continueButton()?.click()
     expect(root.querySelector('table.expenses')?.textContent).toContain('Visa, October')
     expect(root.querySelector('table.section')?.textContent).toContain('air-canada')
+  })
+
+  it('removes a receipt or a bank statement from the expense, with a trash can', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    const remove = button('[data-remove="receipts"][data-index="0"]')
+    expect(remove?.getAttribute('aria-label')).toBe('Remove')
+    expect(remove?.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+    remove?.click()
+    expect(kept.at(-1)?.expenses[0]?.receipts).toEqual([])
+    expect(
+      root.querySelector('[data-drop="receipts"]')?.closest('.field')?.textContent,
+    ).not.toContain('air-canada.pdf')
+    expect(continueButton()?.disabled).toBe(true)
+    button('[data-remove="bankStatements"][data-index="0"]')?.click()
+    expect(kept.at(-1)?.expenses[0]?.bankStatements).toEqual([])
+    await add('receipts', 'hotel.pdf')
+    await add('bankStatements', 'visa.pdf')
+    expect(continueButton()?.disabled).toBe(false)
   })
 
   it('adds, names and removes additional documents, which are optional', async () => {

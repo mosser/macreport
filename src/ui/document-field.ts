@@ -3,7 +3,7 @@ import { type Field, fieldNames } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
-import { html, type Markup } from './html.ts'
+import { html, type Markup, raw } from './html.ts'
 import type { Context } from './step.ts'
 
 /** Reads a file the Claimant adds into a document of a kind. */
@@ -13,8 +13,6 @@ export type ReadFile = (file: File, kind: Kind) => Promise<Document>
 export interface DocumentField {
   readonly field: Field
   readonly kind: Kind
-  /** Whether a document is removed from the field, rather than replaced by the next one added. */
-  readonly isRemovable: boolean
   /** The documents of the field, in the order they were added. */
   documentsIn(report: Report): readonly Document[]
   /** The report, with a document added to the field. */
@@ -23,12 +21,14 @@ export interface DocumentField {
 
 const accepted = 'application/pdf,image/jpeg,image/png'
 
+/** A trash can, drawn in the colour of the text of the button that holds it. */
+const trashCan = raw(
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+)
+
 /** A document added: its name, which the Claimant may change, its file name, and Remove. */
 function documentItem(field: DocumentField, document: Document, index: number): Markup {
   const id = `file-of-${field.field}-${index}`
-  const remove = field.isRemovable
-    ? html`<button type="button" data-remove="${field.field}" data-index="${index}">Remove</button>`
-    : ''
   return html`<li class="document">
     <label class="document-name">
       <span class="field-name">${fieldNames.documentName}</span>
@@ -36,7 +36,8 @@ function documentItem(field: DocumentField, document: Document, index: number): 
         value="${document.name}" placeholder="${document.afterNaming('').name}" aria-describedby="${id}" />
     </label>
     <span class="file-name" id="${id}">${document.fileName}</span>
-    ${remove}
+    <button type="button" class="remove" data-remove="${field.field}" data-index="${index}"
+      aria-label="Remove" title="Remove">${trashCan}</button>
   </li>`
 }
 

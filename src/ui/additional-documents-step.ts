@@ -15,7 +15,6 @@ import type { Context, Step } from './step.ts'
 const travelJustifications: DocumentField = {
   field: 'travelJustifications',
   kind: Kind.travelJustification,
-  isRemovable: true,
   documentsIn: (report: Report) => report.travelJustifications,
   afterAdding: (report: Report, document: Document) =>
     report.afterChanging({ travelJustifications: [...report.travelJustifications, document] }),
@@ -25,7 +24,6 @@ const travelJustifications: DocumentField = {
 const additionalDocuments: DocumentField = {
   field: 'additionalDocuments',
   kind: Kind.additionalDocument,
-  isRemovable: true,
   documentsIn: (report: Report) => report.additionalDocuments,
   afterAdding: (report: Report, document: Document) =>
     report.afterChanging({ additionalDocuments: [...report.additionalDocuments, document] }),

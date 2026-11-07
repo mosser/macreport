@@ -42,21 +42,19 @@ function typed(field: string, value: string): { changes: ExpenseFields; isBroken
   return { changes: { description: textOrAbsent(value) }, isBroken: false }
 }
 
-/** The receipt of the expense: the one added last. */
+/** The receipt of the expense: the one added last, until it is removed. */
 const receipts: DocumentField = {
   field: 'receipts',
   kind: Kind.receipt,
-  isRemovable: false,
   documentsIn: (report: Report) => expenseOf(report).receipts,
   afterAdding: (report: Report, document: Document) =>
     afterChanging(report, { receipts: [document] }),
 }
 
-/** The bank statement of the expense: the one added last. */
+/** The bank statement of the expense: the one added last, until it is removed. */
 const bankStatements: DocumentField = {
   field: 'bankStatements',
   kind: Kind.bankStatement,
-  isRemovable: false,
   documentsIn: (report: Report) => expenseOf(report).bankStatements,
   afterAdding: (report: Report, document: Document) =>
     afterChanging(report, { bankStatements: [document] }),

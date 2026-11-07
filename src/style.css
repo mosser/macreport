@@ -160,6 +160,18 @@ textarea {
   margin-bottom: 0;
 }
 
+.remove {
+  display: inline-flex;
+  padding: 0.35rem;
+  margin-bottom: 0.1rem;
+}
+
+.remove:hover,
+.remove:focus-visible {
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
 .file-name {
   font-size: 0.9rem;
   color: var(--color-ok);

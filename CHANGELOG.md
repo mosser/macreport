@@ -13,6 +13,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   conference programme); other additional documents (an itinerary, a poster,
   boarding passes) are optional. Each is dropped on its zone or chosen from
   the computer, and can be removed.
+- A receipt or a bank statement can be removed from the expense, as any
+  document can, with the trash can next to it.
 - In the report document, the travel justifications come first, in a section
   of their own labelled J1, J2…, before the receipts; the additional
   documents come last, labelled A1, A2…. Neither section lists expenses.
