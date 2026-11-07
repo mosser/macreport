@@ -3,9 +3,9 @@ import logo from './assets/mcscert-left-rev.png?inline'
 import favicon from './assets/mcscert-stack-col.png?inline'
 import { CalendarDate } from './domain/calendar-date.ts'
 import { layoutOf } from './domain/layout.ts'
-import type { Report } from './domain/report.ts'
+import { Report } from './domain/report.ts'
 import { documentOf } from './io/add-file.ts'
-import { claimantMemory } from './io/draft-store.ts'
+import { openDraftStore } from './io/draft-store.ts'
 import { paletteFrom } from './io/palette.ts'
 import { save } from './io/save.ts'
 import { writeReportDocument } from './io/write-report-document.ts'
@@ -38,11 +38,14 @@ const root = document.getElementById('app')
 if (root === null) {
   throw new TypeError('The page has no element to mount the wizard on')
 }
-const memory = claimantMemory()
+const drafts = await openDraftStore()
 mountWizard(root, {
-  claimant: await memory.recall(),
-  remember: (claimant) => {
-    memory.remember(claimant)
+  draft: await drafts.restore(),
+  isDraftKept: drafts.isKept,
+  keep: (report) => drafts.keep(report),
+  discard: async () => {
+    await drafts.discard()
+    return new Report()
   },
   version: __VERSION__,
   logo,

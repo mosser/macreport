@@ -15,10 +15,6 @@ The system is one file opened from disk with no server (ADR 0001), so whatever
 keeps the draft is in the browser. A draft holds documents, PDFs and images
 of a few megabytes each, and bank statements among them.
 
-A claimant prepares one report after another, and their name, position and
-email are the same each time: typing them again for each report is a chore,
-and a chance of a typo on the report document.
-
 Under `file://`, browsers differ: the storage origin of a local file is
 browser-specific, and storage may be refused or cleared.
 
@@ -45,15 +41,10 @@ Options considered:
   refused or fails, the system works without it and the wizard shows a notice
   on every step that closing the page will lose the report. The system asks
   the browser for persistent storage, and goes on whatever the answer.
-- **The claimant is remembered** in the same database, apart from the draft:
-  their name, position and email, as last entered, written at once like the
-  draft. An empty report starts with them. New report keeps them; clearing a
-  field forgets it.
 - **New report** deletes the draft and its documents.
 - `src/io/draft-store.ts` is the only module that touches IndexedDB; it maps
-  the domain model to what IndexedDB keeps and back (ADR 0007). Nothing but
-  the draft and the claimant remembered is stored in the browser, and nothing
-  in `localStorage`.
+  the domain model to what IndexedDB keeps and back (ADR 0007). Nothing else
+  is stored in the browser, and nothing in `localStorage`.
 
 ## Consequences
 
@@ -61,7 +52,6 @@ Options considered:
 
 - Closing the page, or the browser, loses nothing in the usual case.
 - Bank statements stay on the Claimant's computer.
-- A claimant types their name, position and email once, not once a report.
 
 **Negative / accepted trade-offs**
 
@@ -83,5 +73,4 @@ A change is compliant with this ADR when:
 - only `src/io/draft-store.ts` uses IndexedDB, and no file uses `localStorage`,
   `sessionStorage`, cookies or the Cache API;
 - every IndexedDB access is guarded, and the system works when it is missing;
-- New report deletes the draft and every document's content, and keeps only
-  the claimant remembered: their name, position and email.
+- New report deletes the draft and every document's content.

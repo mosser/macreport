@@ -14,13 +14,6 @@ export const positions: readonly Position[] = [
   'Visitor',
 ]
 
-/** The claimant remembered from one report to the next: their name, position and email. */
-export interface Claimant {
-  readonly claimantName?: string | undefined
-  readonly position?: Position | undefined
-  readonly email?: string | undefined
-}
-
 /** What a report is made of; a field the Claimant has not filled in is absent. */
 export interface ReportFields {
   readonly claimantName?: string | undefined
@@ -91,11 +84,6 @@ export class Report {
     return this.position === 'Visitor'
   }
 
-  /** The claimant of the report, remembered for the next one. */
-  get claimant(): Claimant {
-    return { claimantName: this.claimantName, position: this.position, email: this.email }
-  }
-
   /**
    * The same report, with the fields given changed. Choosing another position takes the
    * supervisor or the host out of the report; unticking business travel takes the dates out.
@@ -111,11 +99,6 @@ export class Report {
       firstDay: changed.isBusinessTravel ? changed.firstDay : undefined,
       lastDay: changed.isBusinessTravel ? changed.lastDay : undefined,
     })
-  }
-
-  /** A new report, empty but for its claimant: their name, position and email. */
-  newReport(): Report {
-    return new Report(this.claimant)
   }
 
   /** The same report, claiming one more expense. */

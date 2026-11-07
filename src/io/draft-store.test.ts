@@ -1,62 +1,177 @@
 import { IDBFactory } from 'fake-indexeddb'
 import { describe, expect, it } from 'vitest'
-import { claimantMemory } from './draft-store.ts'
+import { Amount } from '../domain/amount.ts'
+import { CalendarDate } from '../domain/calendar-date.ts'
+import { Document } from '../domain/document.ts'
+import { Expense } from '../domain/expense.ts'
+import { Kind } from '../domain/kind.ts'
+import { Report } from '../domain/report.ts'
+import { openDraftStore } from './draft-store.ts'
 
-const zoe = { claimantName: 'Zoë Lefèvre', position: 'Student', email: 'zoe@mcmaster.ca' } as const
+const receipt = new Document(Kind.receipt, 'reçu.pdf', new Uint8Array([37, 80, 68, 70]))
+const statement = new Document(Kind.bankStatement, 'october.png', new Uint8Array([137, 80]))
 
-describe('claimantMemory', () => {
-  it('remembers nothing at first', async () => {
-    expect(await claimantMemory(new IDBFactory()).recall()).toEqual({})
+const report = new Report({
+  claimantName: 'Zoë Lefèvre',
+  position: 'Student',
+  email: 'zoe@mcmaster.ca',
+  supervisorName: 'Ada Lovelace',
+  supervisorEmail: 'ada@mcmaster.ca',
+  purpose: 'ICSE 2026',
+  isBusinessTravel: true,
+  firstDay: new CalendarDate(2026, 10, 3),
+  lastDay: new CalendarDate(2026, 10, 7),
+  account: '20-123-456',
+}).afterAdding(
+  new Expense({
+    date: new CalendarDate(2026, 10, 3),
+    description: 'Air Canada',
+    claimedAmount: new Amount(101235),
+    receipts: [receipt],
+    bankStatements: [statement],
+  }),
+)
+
+/** Writes a draft record as it is, as an older or damaged draft would be. */
+async function written(factory: IDBFactory, draft: unknown, documents: Record<string, unknown>) {
+  const store = await openDraftStore(factory)
+  await store.discard()
+  const database = await new Promise<IDBDatabase>((resolve) => {
+    const request = factory.open('macreport', 2)
+    request.onsuccess = () => resolve(request.result)
+  })
+  const transaction = database.transaction(['draft', 'documents'], 'readwrite')
+  transaction.objectStore('draft').put(draft, 'report')
+  for (const [key, value] of Object.entries(documents)) {
+    transaction.objectStore('documents').put(value, key)
+  }
+  await new Promise((resolve) => {
+    transaction.oncomplete = resolve
+  })
+  database.close()
+}
+
+describe('the draft store', () => {
+  it('opens on an empty report when there is no draft', async () => {
+    const store = await openDraftStore(new IDBFactory())
+    expect(store.isKept).toBe(true)
+    expect(await store.restore()).toEqual(new Report())
   })
 
-  it('remembers the claimant from one report to the next', async () => {
+  it('keeps every field, the expense and its documents, from one opening to the next', async () => {
     const factory = new IDBFactory()
-    await claimantMemory(factory).remember(zoe)
-    expect(await claimantMemory(factory).recall()).toEqual(zoe)
+    expect(await (await openDraftStore(factory)).keep(report)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.claimantName).toBe('Zoë Lefèvre')
+    expect(restored.supervisorEmail).toBe('ada@mcmaster.ca')
+    expect(restored.isBusinessTravel).toBe(true)
+    expect(restored.lastDay?.toString()).toBe('2026-10-07')
+    const expense = restored.expenses[0]
+    expect(expense?.claimedAmount?.cents).toBe(101235)
+    expect(expense?.receipts[0]?.fileName).toBe('reçu.pdf')
+    expect([...(expense?.receipts[0]?.content ?? [])]).toEqual([37, 80, 68, 70])
+    expect(expense?.bankStatements[0]?.kind).toBe(Kind.bankStatement)
   })
 
-  it('forgets a field left empty', async () => {
+  it('keeps a report half-done, and deletes a document no expense refers to any more', async () => {
     const factory = new IDBFactory()
-    const memory = claimantMemory(factory)
-    await memory.remember(zoe)
-    await memory.remember({ ...zoe, email: undefined })
-    expect(await memory.recall()).toEqual({ ...zoe, email: undefined })
-  })
-
-  it('keeps only what follows the rules of each field', async () => {
-    const factory = new IDBFactory()
-    await new Promise<void>((resolve) => {
-      const request = factory.open('macreport', 1)
-      request.onupgradeneeded = () => {
-        const store = request.result.createObjectStore('claimant')
-        store.put({ claimantName: '  ', position: 'Dean', email: 'not an email' }, 'claimant')
-      }
+    const store = await openDraftStore(factory)
+    await store.keep(report)
+    const expense = report.expenses[0] ?? new Expense()
+    const replaced = new Document(Kind.receipt, 'new.pdf', new Uint8Array([1]))
+    const halfDone = report
+      .afterChanging({ account: undefined })
+      .afterReplacing(expense, expense.afterChanging({ receipts: [replaced], date: undefined }))
+    await store.keep(halfDone)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.account).toBeUndefined()
+    expect(restored.expenses[0]?.date).toBeUndefined()
+    expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual(['new.pdf'])
+    const keys = await new Promise<IDBValidKey[]>((resolve) => {
+      const request = factory.open('macreport', 2)
       request.onsuccess = () => {
-        request.result.close()
-        resolve()
+        const all = request.result.transaction('documents').objectStore('documents').getAllKeys()
+        all.onsuccess = () => resolve(all.result)
       }
     })
-    expect(await claimantMemory(factory).recall()).toEqual({
-      claimantName: undefined,
-      position: undefined,
-      email: undefined,
-    })
+    expect(keys).toHaveLength(2)
+  })
+
+  it('deletes the draft and its documents for New report', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    await store.keep(report)
+    await store.discard()
+    expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
+  })
+
+  it('keeps only what follows the rules of each field from a damaged draft', async () => {
+    const factory = new IDBFactory()
+    await written(
+      factory,
+      {
+        claimantName: '  ',
+        position: 'Dean',
+        email: 'not an email',
+        isBusinessTravel: false,
+        firstDay: '2026-10-03',
+        expenses: [
+          { claimedAmount: -3, receipts: ['a', 'b', 'missing'], bankStatements: 'b' },
+          'not an expense',
+        ],
+      },
+      {
+        a: { letter: 'R', fileName: 'a.pdf', content: new Uint8Array([1]) },
+        b: { letter: 'S', fileName: 'b.pdf', content: new Uint8Array([2]) },
+        c: { letter: 'X', fileName: 'c.pdf', content: new Uint8Array([3]) },
+        d: 'not a document',
+      },
+    )
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.claimantName).toBeUndefined()
+    expect(restored.position).toBeUndefined()
+    expect(restored.email).toBeUndefined()
+    expect(restored.firstDay).toBeUndefined()
+    expect(restored.expenses).toHaveLength(2)
+    expect(restored.expenses[0]?.claimedAmount).toBeUndefined()
+    expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual(['a.pdf'])
+    expect(restored.expenses[0]?.bankStatements).toEqual([])
+    await written(factory, 'not a report', {})
+    expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
   })
 
   it('works without the browser keeping anything, or when it refuses', async () => {
-    const none = claimantMemory(undefined)
-    await none.remember(zoe)
-    expect(await none.recall()).toEqual({})
-    const refusing = {
-      open: () => {
-        throw new Error('The browser refuses')
-      },
-    } as unknown as IDBFactory
-    await claimantMemory(refusing).remember(zoe)
-    expect(await claimantMemory(refusing).recall()).toEqual({})
+    for (const factory of [
+      undefined,
+      {
+        open: () => {
+          throw new Error('The browser refuses')
+        },
+      } as unknown as IDBFactory,
+    ]) {
+      const store = await openDraftStore(factory)
+      expect(store.isKept).toBe(false)
+      expect(await store.keep(report)).toBe(false)
+      await store.discard()
+      expect(await store.restore()).toEqual(new Report())
+    }
+  })
+
+  it('says so when the browser stops keeping the draft', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    const database = await new Promise<IDBDatabase>((resolve) => {
+      const request = factory.open('macreport', 2)
+      request.onsuccess = () => resolve(request.result)
+    })
+    database.close()
+    ;(store as unknown as { database: IDBDatabase }).database.close()
+    expect(await store.keep(report)).toBe(false)
+    expect(await store.restore()).toEqual(new Report())
+    await store.discard()
   })
 
   it("uses the browser's own storage when given none", async () => {
-    expect(await claimantMemory().recall()).toEqual({})
+    expect((await openDraftStore()).isKept).toBe(false)
   })
 })

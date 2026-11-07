@@ -17,9 +17,9 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   the purpose, ticked as a business travel when it has dates, then its first
   and last day, and the account. Required fields are marked with an asterisk,
   and Continue is offered once every one is valid.
-- The claimant is remembered by the browser from one report to the next:
-  their name, position and email, as last entered. **New report** keeps them;
-  clearing a field forgets it.
+- The draft: the browser keeps the report as it is left, fields, expense and
+  documents, from one opening to the next. When the browser refuses, the
+  system says on every step that closing the page will lose the report.
 - The Expenses step, for exactly one expense: its date, description and
   claimed amount in Canadian dollars, with one receipt and one bank statement,
   each a PDF, a JPEG image or a PNG image, dropped on its zone or chosen from
@@ -38,13 +38,11 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   expense in a stamp goes back to its row on the cover.
   Text is written in Noto Sans, so names in the Latin, Greek and Cyrillic
   alphabets keep their accents.
-- **New report**, which discards the report after confirmation and keeps the
-  claimant.
+- **New report**, which deletes the draft and its documents after
+  confirmation, and empties the form.
 
 ### Known limitations
 
-- No draft is kept: closing the page loses the report, but for the claimant
-  remembered, and the system says so.
 - One expense per report; no missing receipt, payment in cash, foreign amount
   or additional document.
 - Files are not checked when added: a damaged or password-protected PDF fails

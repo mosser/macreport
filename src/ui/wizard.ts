@@ -1,4 +1,4 @@
-import { type Claimant, Report } from '../domain/report.ts'
+import type { Report } from '../domain/report.ts'
 import { expensesStep, type ReadFile } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
@@ -15,18 +15,14 @@ export interface WizardOptions {
   readonly confirm: (question: string) => boolean
   readonly readFile: ReadFile
   readonly saveReport: SaveReport
-  /** The claimant remembered from the previous report. */
-  readonly claimant: Claimant
-  /** Remembers the claimant for the next report, each time it changes. */
-  readonly remember: (claimant: Claimant) => void
-}
-
-function isSameClaimant(one: Claimant, other: Claimant): boolean {
-  return (
-    one.claimantName === other.claimantName &&
-    one.position === other.position &&
-    one.email === other.email
-  )
+  /** The draft the browser kept, or an empty report. */
+  readonly draft: Report
+  /** Whether the browser keeps the draft. */
+  readonly isDraftKept: boolean
+  /** Keeps the report as the draft, at once; gives whether the browser kept it. */
+  readonly keep: (report: Report) => Promise<boolean>
+  /** Deletes the draft and its documents, for New report; gives the empty report. */
+  readonly discard: () => Promise<Report>
 }
 
 /**
@@ -37,9 +33,10 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   const steps: readonly Step[] = [
     reportStep,
     expensesStep(options.readFile),
-    reviewStep(options.saveReport),
+    reviewStep(options.saveReport, () => isDraftKept),
   ]
-  let report = new Report(options.claimant)
+  let report = options.draft
+  let isDraftKept = options.isDraftKept
   let current = 0
   let reached = 0
 
@@ -48,10 +45,11 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
       return report
     },
     change(changed: Report) {
-      if (!isSameClaimant(report.claimant, changed.claimant)) {
-        options.remember(changed.claimant)
-      }
       report = changed
+      options.keep(changed).then((isKept) => {
+        isDraftKept = isKept
+        root.querySelector<HTMLElement>('.notice')?.toggleAttribute('hidden', isKept)
+      })
     },
     refresh,
     refreshActions,
@@ -78,7 +76,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         <button class="new-report" data-action="new-report">New report</button>
       </header>
       <main>
-        <p class="notice">No draft is kept: closing the page will lose the report.</p>
+        <p class="notice" ${isDraftKept ? html`hidden` : ''}>No draft is kept: closing the page will lose the report.</p>
         <ol class="stepper">
           ${steps.map(
             (step, index) => html`<li><button data-step="${index}"
@@ -100,9 +98,11 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     }
     root.querySelector('[data-action="new-report"]')?.addEventListener('click', () => {
       if (options.confirm('Discard this report, its expense and its documents?')) {
-        report = report.newReport()
-        reached = 0
-        go(0)
+        options.discard().then((empty) => {
+          report = empty
+          reached = 0
+          go(0)
+        })
       }
     })
     root.querySelector('[data-action="back"]')?.addEventListener('click', () => go(current - 1))

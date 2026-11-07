@@ -22,7 +22,7 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 report, exactly one expense with one receipt and one bank statement, saved as
 the report document (cover, receipt and bank statement sections, stamps). Not
 yet built: several expenses, missing receipts, additional documents, cash,
-foreign amounts, the draft, links, refusing a file, and font findings. The
+foreign amounts, some links, refusing a file, and font findings. The
 specification and the ADRs describe the full system; code follows them.
 
 ## Where things live

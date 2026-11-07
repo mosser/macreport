@@ -9,17 +9,12 @@ The system is one HTML file the Claimant opens in their browser, from their
 computer. When the browser kept a draft, the system opens on it, at the
 Report step; otherwise it opens on an empty report.
 
-The browser also remembers the claimant: their name, position and email, as
-last entered, from one report to the next. An empty report starts with them,
-and clearing a field forgets it. Remembering them is best effort, as keeping
-the draft is.
-
 When the browser refuses to keep a draft, the system says so on every step:
 closing the page will lose the report. Everything else works.
 
 **New report** is offered on every step. It asks for confirmation, then
 discards the draft, its expenses and its documents, and opens the Report step
-on an empty report, for the claimant remembered.
+on an empty report.
 
 ## The steps
 

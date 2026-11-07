@@ -68,26 +68,6 @@ describe('Report', () => {
     expect(new Report().afterChanging({ firstDay: first }).firstDay).toBeUndefined()
   })
 
-  it('starts a new report for the same claimant: their name, position and email', () => {
-    const report = new Report({
-      claimantName: 'Zoë',
-      position: 'Student',
-      email: 'zoe@mcmaster.ca',
-      supervisorName: 'Ada',
-      purpose: 'ICSE',
-    }).afterAdding(new Expense())
-    expect(report.claimant).toEqual({
-      claimantName: 'Zoë',
-      position: 'Student',
-      email: 'zoe@mcmaster.ca',
-    })
-    const next = report.newReport()
-    expect(next.claimant).toEqual(report.claimant)
-    expect(next.supervisorName).toBeUndefined()
-    expect(next.purpose).toBeUndefined()
-    expect(next.expenses).toEqual([])
-  })
-
   it('adds and replaces an expense', () => {
     const expense = new Expense({ description: 'Taxi' })
     const report = new Report().afterAdding(expense)

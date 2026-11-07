@@ -2,19 +2,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Document } from '../domain/document.ts'
 import type { Kind } from '../domain/kind.ts'
-import type { Claimant, Report } from '../domain/report.ts'
+import { Report } from '../domain/report.ts'
 import { mountWizard, type WizardOptions } from './wizard.ts'
 
 let root: HTMLElement
 let saved: Report[]
 let confirmation: boolean
-let remembered: Claimant[]
+let kept: Report[]
+let isKept: boolean
+let discarded: number
 
-function options(claimant: Claimant = {}): WizardOptions {
+function options(draft = new Report(), isDraftKept = true): WizardOptions {
   return {
-    claimant,
-    remember: (changed) => {
-      remembered.push(changed)
+    draft,
+    isDraftKept,
+    keep: async (report) => {
+      kept.push(report)
+      return isKept
+    },
+    discard: async () => {
+      discarded += 1
+      return new Report()
     },
     version: '0.1.0',
     logo: 'logo.png',
@@ -81,7 +89,9 @@ beforeEach(() => {
   root = document.body.firstElementChild as HTMLElement
   saved = []
   confirmation = true
-  remembered = []
+  kept = []
+  isKept = true
+  discarded = 0
   mountWizard(root, options())
 })
 
@@ -127,18 +137,33 @@ describe('the wizard', () => {
     expect(root.querySelector<HTMLInputElement>('[name="firstDay"]')?.value).toBe('')
   })
 
-  it('opens on the claimant remembered, and remembers them each time they change', () => {
+  it('opens on the draft kept, and keeps every change at once', () => {
     document.body.innerHTML = '<div></div>'
     root = document.body.firstElementChild as HTMLElement
-    mountWizard(root, options({ claimantName: 'Zoë Lefèvre', position: 'Staff' }))
+    mountWizard(root, options(new Report({ claimantName: 'Zoë Lefèvre', position: 'Staff' })))
     expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe('Zoë Lefèvre')
     expect(root.querySelector<HTMLSelectElement>('select[name="position"]')?.value).toBe('Staff')
+    expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(true)
     type('purpose', 'ICSE 2026')
-    expect(remembered).toEqual([])
-    type('email', 'zoe@mcmaster.ca')
-    expect(remembered).toEqual([
-      { claimantName: 'Zoë Lefèvre', position: 'Staff', email: 'zoe@mcmaster.ca' },
-    ])
+    expect(kept.at(-1)?.purpose).toBe('ICSE 2026')
+    expect(kept.at(-1)?.claimantName).toBe('Zoë Lefèvre')
+  })
+
+  it('says on every step that closing the page will lose the report, when no draft is kept', async () => {
+    document.body.innerHTML = '<div></div>'
+    root = document.body.firstElementChild as HTMLElement
+    mountWizard(root, options(new Report(), false))
+    expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(false)
+    fillReport()
+    continueButton()?.click()
+    expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(false)
+  })
+
+  it('says so as soon as the browser stops keeping the draft', async () => {
+    expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(true)
+    isKept = false
+    type('purpose', 'ICSE 2026')
+    await vi.waitFor(() => expect(root.querySelector<HTMLElement>('.notice')?.hidden).toBe(false))
   })
 
   it('offers Continue once every required field of the Report step is valid', () => {
@@ -206,6 +231,9 @@ describe('the wizard', () => {
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status')).not.toBeNull())
     expect(saved).toHaveLength(1)
+    expect(root.textContent).toContain(
+      'The draft, bank statements included, stays in this browser until New report.',
+    )
     expect(root.querySelector('.status')?.textContent).toContain(
       'expense-report-2026-10-03-zoe-lefevre.pdf',
     )
@@ -264,15 +292,18 @@ describe('the wizard', () => {
     expect(button('[data-action="save"]')).toBeNull()
   })
 
-  it('starts a new report for the same claimant once the Claimant confirms', () => {
+  it('discards the draft and empties the form once the Claimant confirms a new report', async () => {
     fillReport()
     confirmation = false
     button('[data-action="new-report"]')?.click()
+    expect(discarded).toBe(0)
     expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('ICSE 2026')
     confirmation = true
     button('[data-action="new-report"]')?.click()
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe(''),
+    )
+    expect(discarded).toBe(1)
     expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('')
-    expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe('Zoë Lefèvre')
-    expect(root.querySelector<HTMLInputElement>('[name="email"]')?.value).toBe('zoe@mcmaster.ca')
   })
 })

@@ -41,7 +41,7 @@ function sectionsOf(layout: Layout): Markup[] {
 }
 
 /** Step 3: the report as it will be written, then its findings, and Save the report. */
-export function reviewStep(saveReport: SaveReport): Step {
+export function reviewStep(saveReport: SaveReport, isDraftKept: () => boolean): Step {
   let savedAs: string | undefined
   return {
     title: 'Review',
@@ -58,7 +58,8 @@ export function reviewStep(saveReport: SaveReport): Step {
       const status =
         savedAs === undefined
           ? ''
-          : html`<p class="status">The report document was handed to the browser: ${savedAs}.</p>`
+          : html`<p class="status">The report document was handed to the browser: ${savedAs}.</p>
+              ${isDraftKept() ? html`<p class="status">The draft, bank statements included, stays in this browser until New report.</p>` : ''}`
       panel.innerHTML = html`<h2>Review</h2>
         ${coverOf(layout)}
         ${sectionsOf(layout)}
