@@ -147,7 +147,7 @@ function linksOf(pdf: PDFDocument, page: PDFPage) {
     const annotation = pdf.context.lookup(reference, PDFDict)
     const destination = annotation.lookup(PDFName.of('Dest'), PDFArray)
     const top = destination.lookupMaybe(3, PDFNumber)?.asNumber()
-    const [left] = annotation
+    const [left = 0, , right = 0] = annotation
       .lookup(PDFName.of('Rect'), PDFArray)
       .asArray()
       .map((value) => (value as PDFNumber).asNumber())
@@ -155,7 +155,8 @@ function linksOf(pdf: PDFDocument, page: PDFPage) {
       to: references.indexOf(destination.get(0)?.toString() ?? '') + 1,
       how: destination.lookup(1, PDFName).asString(),
       ...(top === undefined ? {} : { top }),
-      left: left ?? 0,
+      left,
+      width: right - left,
     }
   })
 }
@@ -181,6 +182,25 @@ describe('writeReportDocument', () => {
     expect(row).toBeGreaterThan(54)
     expect(row).toBeLessThan(792 - 54)
     expect(statement?.[0]?.top).toBe(row)
+    expect(boarding?.[0]?.width).toBeGreaterThan(120)
+  })
+
+  it('puts the expenses of a stamp too wide for its page on a line of their own, above it', async () => {
+    const narrow = new Document(Kind.receipt, 'till.pdf', await pdfOf([[226, 600]], 'Till'))
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const expense = report.expenses[0]
+    if (expense === undefined) throw new TypeError('No expense')
+    const pdf = await written(
+      report.afterReplacing(expense, expense.afterChanging({ receipts: [narrow] })),
+    )
+    const till = pdf.getPage(2)
+    expect(till.getWidth()).toBe(226)
+    expect(textsOf(pdf, till)).toEqual([
+      'Till',
+      'R1 · 3 / 5',
+      'Expense 1: Air Canada, YYZ–CDG return',
+    ])
+    expect(linksOf(pdf, till).map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
   })
 
   it('writes the cover, then each section, its section page and its documents', async () => {
@@ -211,12 +231,12 @@ describe('writeReportDocument', () => {
     expect(receipts).toEqual(
       expect.arrayContaining(['Receipts', 'R1', 'air-canada.pdf', '3–4', '1', '2 / 6']),
     )
-    expect(boarding).toEqual(['Boarding', 'R1 · Expense 1 · 3 / 6'])
-    expect(pass).toEqual(['Boarding', 'R1 · Expense 1 · 4 / 6'])
+    expect(boarding).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
+    expect(pass).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
     expect(statements).toEqual(
       expect.arrayContaining(['Bank statements', 'S1', 'statement-octobre.png', '6', '5 / 6']),
     )
-    expect(statement).toEqual(['S1 · Expense 1 · 6 / 6'])
+    expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
   })
 
   it('keeps every page of a PDF document as it is, and places an image on a Letter page that matches it', async () => {

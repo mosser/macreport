@@ -29,9 +29,10 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   table of expenses and total), then a section of receipts and a section of bank
   statements, each opened by a section page listing its documents with their
   pages. PDF pages are copied as they are, images placed on a Letter page of
-  their own, and every page is stamped with its label, its expense and its
-  page number. On screen, a label in the table of expenses opens its
-  document, and the expense in a stamp goes back to its row on the cover.
+  their own, and every page is stamped with its label, its expense (number
+  and the first 30 characters of its description) and its page number. On
+  screen, a label in the table of expenses opens its document, and the
+  expense in a stamp goes back to its row on the cover.
   Text is written in Noto Sans, so names in the Latin, Greek and Cyrillic
   alphabets keep their accents.
 - **New report**, which discards the report after confirmation.

@@ -29,14 +29,24 @@ export interface ExpenseRow {
   readonly supportingDocuments: readonly string[]
 }
 
+/** An expense as the stamp of a document names it: its number, and the start of its description. */
+export interface StampedExpense {
+  readonly number: number
+  /** Expense 1: Air Canada, YYZ–CDG return; a description over 30 characters cut, with an ellipsis. */
+  readonly name: string
+}
+
+/** The number of characters of a description a stamp keeps. */
+const stampedDescriptionLength = 30
+
 /** A document of a section: its label, and the expenses it supports. */
 export interface LabelledDocument {
   readonly label: string
   readonly document: Document
   /** The numbers of the expenses the document supports. */
   readonly expenseNumbers: readonly number[]
-  /** How its stamp names them: Expense for one, Expenses for several. */
-  readonly expensesName: 'Expense' | 'Expenses'
+  /** The expenses it supports, as its stamp names them. */
+  readonly expenses: readonly StampedExpense[]
 }
 
 /** The part of the report document holding the documents of one kind. */
@@ -171,20 +181,31 @@ function datesOf(
  * the order they were added, each in the report once whatever the number of expenses it supports.
  */
 function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
-  const supported = new Map<Document, number[]>()
+  const supported = new Map<Document, StampedExpense[]>()
   expenses.forEach((expense, index) => {
     const documents = kind === Kind.receipt ? expense.receipts : expense.bankStatements
+    const stamped = stampedExpenseOf(expense, index + 1)
     for (const document of documents) {
-      supported.set(document, [...(supported.get(document) ?? []), index + 1])
+      supported.set(document, [...(supported.get(document) ?? []), stamped])
     }
   })
-  const documents = [...supported].map(([document, numbers], rank) => ({
+  const documents = [...supported].map(([document, stamped], rank) => ({
     label: `${kind.letter}${rank + 1}`,
     document,
-    expenseNumbers: numbers,
-    expensesName: numbers.length === 1 ? ('Expense' as const) : ('Expenses' as const),
+    expenseNumbers: stamped.map((expense) => expense.number),
+    expenses: stamped,
   }))
   return { kind, title: kind.plural, documents }
+}
+
+/** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */
+function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
+  const characters = [...(expense.description ?? '')]
+  const description =
+    characters.length > stampedDescriptionLength
+      ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
+      : characters.join('')
+  return { number, name: `Expense ${number}: ${description}` }
 }
 
 function attachedInformationOf(kind: Kind, sections: readonly Section[]): AttachedInformation {

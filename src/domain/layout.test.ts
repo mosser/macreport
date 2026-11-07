@@ -116,11 +116,38 @@ describe('layoutOf', () => {
     const sections = layoutOf(report).sections
     expect(sections.map((section) => section.title)).toEqual(['Receipts', 'Bank statements'])
     expect(sections[0]?.documents).toEqual([
-      { label: 'R1', document: receipt, expenseNumbers: [1], expensesName: 'Expense' },
+      {
+        label: 'R1',
+        document: receipt,
+        expenseNumbers: [1],
+        expenses: [{ number: 1, name: 'Expense 1: Air Canada, YYZ–CDG return' }],
+      },
     ])
     expect(sections[1]?.documents).toEqual([
-      { label: 'S1', document: statement, expenseNumbers: [1], expensesName: 'Expense' },
+      {
+        label: 'S1',
+        document: statement,
+        expenseNumbers: [1],
+        expenses: [{ number: 1, name: 'Expense 1: Air Canada, YYZ–CDG return' }],
+      },
     ])
+  })
+
+  it('names an expense in a stamp by the first 30 characters of its description', () => {
+    const dinner = report.afterReplacing(
+      flight,
+      flight.afterChanging({ description: 'Dinner with the programme committee of ICSE' }),
+    )
+    expect(layoutOf(dinner).sections[0]?.documents[0]?.expenses).toEqual([
+      { number: 1, name: 'Expense 1: Dinner with the programme comm…' },
+    ])
+    const exactly = report.afterReplacing(
+      flight,
+      flight.afterChanging({ description: 'Ζ'.repeat(30) }),
+    )
+    expect(layoutOf(exactly).sections[0]?.documents[0]?.expenses[0]?.name).toBe(
+      `Expense 1: ${'Ζ'.repeat(30)}`,
+    )
   })
 
   it('sorts expenses by date and lists a shared document once, with every expense it supports', () => {
@@ -141,7 +168,15 @@ describe('layoutOf', () => {
     ])
     expect(layout.total).toBe('$1,099.45')
     expect(layout.sections[1]?.documents).toEqual([
-      { label: 'S1', document: statement, expenseNumbers: [1, 2], expensesName: 'Expenses' },
+      {
+        label: 'S1',
+        document: statement,
+        expenseNumbers: [1, 2],
+        expenses: [
+          { number: 1, name: 'Expense 1: Taxi' },
+          { number: 2, name: 'Expense 2: Air Canada, YYZ–CDG return' },
+        ],
+      },
     ])
   })
 })

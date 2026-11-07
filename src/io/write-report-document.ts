@@ -12,7 +12,7 @@ import regularFont from '../assets/fonts/NotoSans-Regular.ttf?inline'
 import logoImage from '../assets/mcscert-left-col.png?inline'
 import type { CalendarDate } from '../domain/calendar-date.ts'
 import type { Document } from '../domain/document.ts'
-import type { LabelledDocument, Layout, Section } from '../domain/layout.ts'
+import type { LabelledDocument, Layout, Section, StampedExpense } from '../domain/layout.ts'
 import { bytesOf } from './inlined.ts'
 import type { Colour, Palette } from './palette.ts'
 
@@ -48,6 +48,14 @@ interface StampedPage {
   readonly page: PDFPage
   readonly entry?: LabelledDocument
 }
+
+/** A piece of a stamp; an expense in it is a link to the expense's row on the cover. */
+interface StampPiece {
+  readonly text: string
+  readonly expense?: StampedExpense
+}
+
+const stampSeparator = ' · '
 
 /** What a link goes to: the first page of a document, or the row of an expense on the cover. */
 type Target = { readonly label: string } | { readonly expenseNumber: number }
@@ -355,40 +363,59 @@ class Writer {
   }
 
   /**
-   * Stamps every page: the label of its document and the expenses it supports, each a link to
-   * the expense's row on the cover, then the page number out of the total.
+   * Stamps every page: the label of its document and each expense it supports, by its number and
+   * the start of its description, a link to the expense's row on the cover; then the page number
+   * out of the total. When the stamp is wider than the page less its margins, the expenses go on
+   * lines of their own above it.
    */
   stampEveryPage(): void {
     const total = this.pages.length
     this.pages.forEach(({ page, entry }, index) => {
-      const numbers = entry?.expenseNumbers.map(String) ?? []
-      const prefix = entry === undefined ? '' : `${entry.label} · ${entry.expensesName} `
-      const pageNumber = `${index + 1} / ${total}`
-      const text =
-        entry === undefined ? pageNumber : `${prefix}${numbers.join(', ')} · ${pageNumber}`
+      const label: StampPiece[] = entry === undefined ? [] : [{ text: entry.label }]
+      const expenses = (entry?.expenses ?? []).map((expense) => ({ text: expense.name, expense }))
+      const pageNumber = { text: `${index + 1} / ${total}` }
       const box = page.getCropBox()
-      const width = (piece: string) => this.regular.widthOfTextAtSize(piece, stampSize)
-      const x = box.x + box.width - margin - width(text)
-      const y = box.y + stampBaseline
-      page.drawText(text, {
-        x,
-        y,
-        size: stampSize,
-        font: this.regular,
-        color: colourOf(this.palette.grey),
-      })
-      let before = prefix
-      for (const number of numbers) {
-        this.links.push({
+      const oneLine = [...label, ...expenses, pageNumber]
+      const lines =
+        this.widthOf(oneLine) <= box.width - 2 * margin
+          ? [oneLine]
+          : [[...label, pageNumber], ...expenses.toReversed().map((expense) => [expense])]
+      lines.forEach((line, height) => {
+        this.stampLine(
           page,
-          x: x + width(before),
-          y: y - 2,
-          width: width(number),
-          height: stampSize + 3,
-          target: { expenseNumber: Number(number) },
-        })
-        before += `${number}, `
-      }
+          line,
+          box.x + box.width - margin,
+          box.y + stampBaseline + height * stampSize * leading,
+        )
+      })
+    })
+  }
+
+  private widthOf(line: readonly StampPiece[]): number {
+    const text = line.map((piece) => piece.text).join(stampSeparator)
+    return this.regular.widthOfTextAtSize(text, stampSize)
+  }
+
+  /** A line of a stamp ending at the right, each expense in it a link to its row on the cover. */
+  private stampLine(page: PDFPage, line: readonly StampPiece[], right: number, y: number): void {
+    const x = right - this.widthOf(line)
+    const text = line.map((piece) => piece.text).join(stampSeparator)
+    const color = colourOf(this.palette.grey)
+    page.drawText(text, { x, y, size: stampSize, font: this.regular, color })
+    line.forEach((piece, index) => {
+      if (piece.expense === undefined) return
+      const before = line
+        .slice(0, index)
+        .map((each) => each.text + stampSeparator)
+        .join('')
+      this.links.push({
+        page,
+        x: x + this.regular.widthOfTextAtSize(before, stampSize),
+        y: y - 2,
+        width: this.regular.widthOfTextAtSize(piece.text, stampSize),
+        height: stampSize + 3,
+        target: { expenseNumber: piece.expense.number },
+      })
     })
   }
 
