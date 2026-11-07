@@ -32,8 +32,8 @@ export const fieldNames = {
   claimedAmount: 'Claimed amount (CAD)',
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
-  travelJustifications: 'Travel justification',
-  additionalDocuments: 'Additional document',
+  travelJustifications: 'Travel justification(s)',
+  additionalDocuments: 'Additional document(s)',
   documentName: 'Name',
 } as const
 
@@ -132,7 +132,7 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
 /** A business travel without a travel justification: it has at least one. */
 export function findingsOfAdditionalDocumentsStep(report: Report): readonly Finding[] {
   return report.isBusinessTravel && report.travelJustifications.length === 0
-    ? [missing('Additional documents', 'travelJustifications')]
+    ? [{ step: 'Additional documents', wording: 'At least one travel justification is required.' }]
     : []
 }
 

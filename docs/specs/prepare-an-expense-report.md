@@ -94,8 +94,8 @@ from the computer.
 
 | Field | Rule |
 |---|---|
-| Travel justification | Asked of a business travel, and then at least one: an invitation letter, a conference programme, an acceptance notification. |
-| Additional document | Optional, as many as needed: an itinerary, a poster, boarding passes, notes. |
+| Travel justification(s) | Asked of a business travel, and then at least one: an invitation letter, a conference programme, an acceptance notification. |
+| Additional document(s) | Optional, as many as needed: an itinerary, a poster, boarding passes, notes. |
 
 Continue is offered once a business travel has a travel justification.
 
@@ -136,7 +136,7 @@ names and their pages. Then the findings, if any.
 | A required field of the Report step is missing or invalid | The field, and what it needs. |
 | No expense | No expense is claimed. |
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
-| A business travel has no travel justification | Travel justification is required. |
+| A business travel has no travel justification | At least one travel justification is required. |
 | A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a name: the document, by its kind and file name. |
 
 **Save the report** is offered when there is no finding. It writes the report

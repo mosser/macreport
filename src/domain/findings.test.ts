@@ -112,7 +112,7 @@ describe('findings of the Expenses step', () => {
 describe('findings of the Additional documents step', () => {
   it('asks a business travel for a travel justification, and another report for none', () => {
     expect(findingsOfAdditionalDocumentsStep(complete)).toEqual([
-      { step: 'Additional documents', wording: 'Travel justification is required.' },
+      { step: 'Additional documents', wording: 'At least one travel justification is required.' },
     ])
     const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
     const justified = complete.afterChanging({ travelJustifications: [invitation] })
