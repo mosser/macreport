@@ -114,7 +114,13 @@ document of that same kind, the document already there is chosen. Otherwise,
 already a document of another kind or added again as a travel justification
 or an additional document, it is refused, naming the document it already is,
 by its kind and its name: a document has one kind. Adding several files at
-once handles each on its own.
+once, dropped or chosen together, handles each on its own, in the order
+given; where a field takes one document, the first is added, and a document
+there already is replaced only once it is removed.
+
+Files are read in the browser, which may take a while for a large one. While
+a file is being added, Continue and the steps ahead are not offered: the
+report is not reviewed, nor saved, without it.
 
 ### Naming a document
 

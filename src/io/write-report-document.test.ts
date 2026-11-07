@@ -464,6 +464,32 @@ describe('writeReportDocument', () => {
     )
   })
 
+  it('starts an expense and the line of its documents on the same page, however tall the expense', async () => {
+    const report = await reportOf('Taxi 0 ride')
+    const expense = report.expenses[0]
+    if (expense === undefined) throw new TypeError('No expense')
+    const receipt = (number: number) =>
+      new Document(Kind.receipt, `receipt-${number}.png`, png, `receipt-${number}`)
+    const words = (count: number) => ' to the hotel and back'.repeat(count)
+    // One tall expense after more and more short ones walks down the page, in steps shorter
+    // than a page, so that at some step it ends near the page's foot.
+    for (let shorter = 4; shorter < 18; shorter += 1) {
+      const many = Array.from({ length: shorter + 1 }, (_, index) =>
+        expense.afterChanging({
+          description: `Taxi ${index + 1} ride${words(index === shorter ? 6 : 0)}`,
+          receipts: [receipt(index + 1)],
+        }),
+      )
+      const pdf = await written(many.reduce((each, other) => each.afterAdding(other), report))
+      const pageOf = (isWanted: (text: string) => boolean) =>
+        pdf.getPages().findIndex((page) => textsOf(pdf, page).some(isWanted))
+      const tall = shorter + 1
+      const description = pageOf((text) => text.startsWith(`Taxi ${tall} ride`))
+      expect(description).toBeGreaterThanOrEqual(0)
+      expect(pageOf((text) => text === `receipt-${tall}`)).toBe(description)
+    }
+  })
+
   it('heads the cover in its top right corner, level with the logo', async () => {
     const pdf = await written(await reportOf('Taxi'))
     const places = placesOf(pdf, pdf.getPage(0))

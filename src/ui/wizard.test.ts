@@ -474,6 +474,108 @@ describe('the wizard', () => {
     style.remove()
   })
 
+  /** Gives a file to a field, its reading finishing when the function it gives back is called. */
+  function giveSlowly(name: string, fileName: string): () => void {
+    let finish = () => {}
+    readings.set(
+      fileName,
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const input = root.querySelector<HTMLInputElement>(`input[name="${name}"]`)
+    Object.defineProperty(input, 'files', {
+      value: [new File(['%PDF-1.7'], fileName)],
+      configurable: true,
+    })
+    input?.dispatchEvent(new Event('change'))
+    return finish
+  }
+
+  it('holds Continue and the steps ahead while a file is being added', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    continueButton()?.click()
+    button('[data-step="2"]')?.click()
+    const finish = giveSlowly('additionalDocuments', 'late.pdf')
+    expect(continueButton()?.disabled).toBe(true)
+    expect(button('[data-step="3"]')?.disabled).toBe(true)
+    expect(button('[data-step="0"]')?.disabled).toBe(false)
+    finish()
+    await vi.waitFor(() => expect(root.textContent).toContain('late.pdf'))
+    expect(continueButton()?.disabled).toBe(false)
+    expect(button('[data-step="3"]')?.disabled).toBe(false)
+  })
+
+  it('adds one receipt to an expense, however many are given before the first is added', async () => {
+    fillReport()
+    continueButton()?.click()
+    const finishFirst = giveSlowly('receipts', 'first.pdf')
+    const finishSecond = giveSlowly('receipts', 'second.pdf')
+    finishSecond()
+    finishFirst()
+    await vi.waitFor(() => expect(root.textContent).toContain('first.pdf'))
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(kept.at(-1)?.expenses[0]?.receipts.map((document) => document.fileName)).toEqual([
+      'first.pdf',
+    ])
+  })
+
+  it('adds every file dropped where several are taken, and the first where one is', async () => {
+    fillReport()
+    continueButton()?.click()
+    const dropped = (field: string, fileNames: string[]) => {
+      const drop = new Event('drop', { cancelable: true })
+      Object.defineProperty(drop, 'dataTransfer', {
+        value: { files: fileNames.map((fileName) => new File(['%PDF-1.7'], fileName)) },
+      })
+      root.querySelector(`[data-drop="${field}"]`)?.dispatchEvent(drop)
+    }
+    expect(root.querySelector('input[name="receipts"]')?.hasAttribute('multiple')).toBe(false)
+    dropped('receipts', ['hotel.pdf', 'taxi.pdf'])
+    await vi.waitFor(() => expect(root.textContent).toContain('hotel.pdf'))
+    expect(root.textContent).not.toContain('taxi.pdf')
+    await add('bankStatements', 'statement.pdf')
+    type('date', '2026-10-03')
+    type('description', 'Hotel')
+    type('claimedAmount', '300')
+    continueButton()?.click()
+    expect(root.querySelector('input[name="additionalDocuments"]')?.hasAttribute('multiple')).toBe(
+      true,
+    )
+    dropped('additionalDocuments', ['itinerary.pdf', 'poster.pdf'])
+    await vi.waitFor(() => expect(root.textContent).toContain('poster.pdf'))
+    expect(kept.at(-1)?.additionalDocuments.map((document) => document.fileName)).toEqual([
+      'itinerary.pdf',
+      'poster.pdf',
+    ])
+  })
+
+  it('makes a new report wait for none of the files of the last, and forgets its links', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    continueButton()?.click()
+    expect(forgotten).toBe(1)
+    button('[data-step="2"]')?.click()
+    const finishOld = giveSlowly('additionalDocuments', 'old.pdf')
+    button('[data-action="new-report"]')?.click()
+    await vi.waitFor(() => expect(root.querySelector('h2')?.textContent).toBe('Report'))
+    expect(forgotten).toBe(2)
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    continueButton()?.click()
+    await add('additionalDocuments', 'new.pdf')
+    expect(continueButton()?.disabled).toBe(false)
+    finishOld()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(root.textContent).not.toContain('old.pdf')
+  })
+
   it('adds files in the order they were given, however long each takes to read', async () => {
     fillReport()
     continueButton()?.click()

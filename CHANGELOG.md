@@ -12,7 +12,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   travel needs at least one travel justification (an invitation letter, a
   conference programme); other additional documents (an itinerary, a poster,
   boarding passes) are optional. Each is dropped on its zone or chosen from
-  the computer, and can be removed.
+  the computer, several at once if need be, and can be removed.
 - A receipt or a bank statement can be removed from the expense, as any
   document can, with the trash can next to it. While the expense has its
   receipt, or its bank statement, the zone to add one is hidden.

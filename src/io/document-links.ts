@@ -14,20 +14,24 @@ export interface DocumentLinks {
 
 /** Links to documents, as the browser's object URLs. */
 export function documentLinks(): DocumentLinks {
-  const urls: string[] = []
+  /** One link per content, however many times a document is linked to. */
+  let urls = new Map<Uint8Array, string>()
   return {
     urlOf(document: Document): string {
+      const known = urls.get(document.content)
+      if (known !== undefined) return known
       const type = mediaTypes[formatOf(document.content)]
       const url = URL.createObjectURL(
         new Blob([document.content as Uint8Array<ArrayBuffer>], { type }),
       )
-      urls.push(url)
+      urls.set(document.content, url)
       return url
     },
     forgetAll(): void {
-      for (const url of urls.splice(0)) {
+      for (const url of urls.values()) {
         URL.revokeObjectURL(url)
       }
+      urls = new Map()
     },
   }
 }

@@ -61,6 +61,8 @@ const titleSize = 18
 /** The height of a capital of Noto Sans, as a share of its size. */
 const capHeight = 0.714
 const leading = 1.35
+/** The space between a cell's text and its edges. */
+const cellPadding = 4
 /** The side of an expense's Entered box. */
 const enteredSize = 10
 
@@ -404,8 +406,10 @@ class Writer {
         row.claimedAmount,
         '',
       ]
-      // An expense and the line of its documents start on the same page.
-      flow.ensure(2 * tableSize * leading + 12)
+      // An expense and the first line of its documents start on the same page, unless the
+      // expense alone is taller than a page.
+      const height = this.rowHeight(columns, cells, this.regular) + tableSize * leading + 4
+      flow.ensure(Math.min(height, flow.top - 2 * margin))
       const place = this.tableRow(flow, columns, cells, this.regular, false, false)
       if (place !== undefined) {
         this.expenseRows.set(row.number, place)
@@ -714,11 +718,9 @@ class Writer {
     isHeader = false,
     isClosed = true,
   ): Place | undefined {
-    const padding = 4
+    const padding = cellPadding
     const lineHeight = tableSize * leading
-    const wrapped = columns.map((column, index) =>
-      linesOf(cells[index] ?? '', font, column.width - padding * 2),
-    )
+    const wrapped = this.cellsOf(columns, cells, font)
     const lineCount = Math.max(...wrapped.map((lines) => lines.length))
     const colour = isHeader ? this.palette.maroon : this.palette.black
     flow.ensure(Math.min(lineCount * lineHeight + padding * 2, flow.top - 2 * margin))
@@ -739,6 +741,19 @@ class Writer {
       flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
     }
     return place
+  }
+
+  /** The lines each cell of a row wraps into, within its column. */
+  private cellsOf(columns: readonly Column[], cells: readonly Cell[], font: PDFFont): CellLine[][] {
+    return columns.map((column, index) =>
+      linesOf(cells[index] ?? '', font, column.width - cellPadding * 2),
+    )
+  }
+
+  /** The height of a row: its tallest cell, and the padding above and under it. */
+  private rowHeight(columns: readonly Column[], cells: readonly Cell[], font: PDFFont): number {
+    const lineCount = Math.max(...this.cellsOf(columns, cells, font).map((lines) => lines.length))
+    return lineCount * tableSize * leading + 2 * cellPadding
   }
 
   /** A line of a cell, drawn at x, and a link when it is one; an empty line draws nothing. */

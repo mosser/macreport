@@ -12,6 +12,11 @@ export interface Context {
   refresh(): void
   /** Re-evaluates the actions of the wizard, after a typed edit. */
   refreshActions(): void
+  /**
+   * Holds Continue and the steps ahead until a file being added to the report is, or has failed
+   * to be: the report is not reviewed, nor saved, without it.
+   */
+  adding(addition: Promise<unknown>): void
 }
 
 /** A screen of the wizard. */

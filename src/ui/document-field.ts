@@ -65,10 +65,11 @@ export function documentFieldOf(field: DocumentField, report: Report): Markup {
       ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, report, document, index))}</ul>`
       : ''
   const isFull = field.holdsOneDocument && documents.length > 0
+  const several = field.holdsOneDocument ? '' : html`multiple`
   const zone = isFull
     ? ''
     : html`<label class="drop-zone" data-drop="${name}">
-        <input name="${name}" type="file" accept="${accepted}"
+        <input name="${name}" type="file" accept="${accepted}" ${several}
           aria-labelledby="name-of-${name} content-of-${name}" />
         <span id="content-of-${name}">Drop a file here, or choose one</span>
       </label>
@@ -81,10 +82,14 @@ export function documentFieldOf(field: DocumentField, report: Report): Markup {
 }
 
 /**
- * The last file added to the report of each wizard: the next is added once it is, so that files
- * are added in the order the Claimant gave them, however long each takes to read.
+ * The last file added to the report of each wizard, and the report it is for: the next file for
+ * the same report is added once it is, so that files are added in the order the Claimant gave
+ * them, however long each takes to read. A new report waits for none of the files of the last.
  */
-const lastAdded = new WeakMap<Context, Promise<unknown>>()
+const lastAdded = new WeakMap<
+  Context,
+  { readonly session: number; readonly addition: Promise<unknown> }
+>()
 
 /**
  * Listens to the document fields of a panel: a file chosen or dropped is added, a name typed
@@ -113,28 +118,39 @@ export function listenToDocumentFields(
     }
   }
 
-  /** Chosen or dropped, a file goes through the same handler; files are read side by side. */
-  const add = async (name: string | undefined, file: File | undefined) => {
-    const field = fieldNamed(name)
-    if (field === undefined || file === undefined) return
+  /**
+   * A file is read at once, and added once the file given before it is: to a report that has not
+   * changed for another, and to a field of one document that does not have it yet.
+   */
+  const addOne = (field: DocumentField, file: File) => {
     const session = context.session
     const reading = readFile(file, field.kind)
-    const adding = (lastAdded.get(context) ?? Promise.resolve()).then(async () => {
+    const last = lastAdded.get(context)
+    const before = last?.session === session ? last.addition : Promise.resolve()
+    const addition = before.then(async () => {
       const document = await reading
       if (context.session !== session) return
+      if (field.holdsOneDocument && field.documentsIn(context.report).length > 0) return
       const named = document.afterNaming(context.report.freeNameLike(document.name))
       context.change(field.afterAdding(context.report, named))
       context.refresh()
     })
-    lastAdded.set(
-      context,
-      adding.catch(() => undefined),
-    )
-    await adding
+    lastAdded.set(context, { session, addition: addition.catch(() => undefined) })
+    context.adding(addition)
+  }
+
+  /** Chosen or dropped, files go through the same handler: each, or the first for one document. */
+  const add = (name: string | undefined, files: FileList | null | undefined) => {
+    const field = fieldNamed(name)
+    if (field === undefined) return
+    const given = Array.from(files ?? [])
+    for (const file of field.holdsOneDocument ? given.slice(0, 1) : given) {
+      addOne(field, file)
+    }
   }
   for (const element of panel.querySelectorAll<HTMLInputElement>('input[type="file"]')) {
     element.addEventListener('change', () => {
-      void add(element.name, element.files?.[0])
+      add(element.name, element.files)
     })
   }
   for (const zone of panel.querySelectorAll<HTMLElement>('[data-drop]')) {
@@ -147,7 +163,7 @@ export function listenToDocumentFields(
     zone.addEventListener('dragleave', isOver(false))
     zone.addEventListener('drop', (event) => {
       isOver(false)(event)
-      void add(zone.dataset.drop, (event as DragEvent).dataTransfer?.files[0])
+      add(zone.dataset.drop, (event as DragEvent).dataTransfer?.files)
     })
   }
   for (const element of panel.querySelectorAll<HTMLInputElement>('input[name="documentName"]')) {

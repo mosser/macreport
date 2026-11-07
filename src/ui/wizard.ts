@@ -46,6 +46,8 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   let session = 0
   let current = 0
   let reached = 0
+  /** The files being added to the report, which hold Continue and the steps ahead. */
+  let additions = new Set<Promise<unknown>>()
 
   const context: Context = {
     get report() {
@@ -63,6 +65,17 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     },
     refresh,
     refreshActions,
+    adding(addition: Promise<unknown>) {
+      const pending = additions
+      pending.add(addition)
+      refreshActions()
+      void addition
+        .catch(() => undefined)
+        .finally(() => {
+          pending.delete(addition)
+          refreshActions()
+        })
+    },
   }
 
   function stepAt(index: number): Step {
@@ -89,6 +102,9 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
       context.change(report.afterNewReport())
       session += 1
       reached = 0
+      // What is still being added belongs to the report discarded, and holds nothing up.
+      additions = new Set()
+      options.links.forgetAll()
     }
     go(isDiscardRefused ? current : 0)
   }
@@ -139,13 +155,15 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   }
 
   function refreshActions(): void {
-    const canContinue = stepAt(current).canContinue(report)
+    const isAdding = additions.size > 0
+    const canContinue = stepAt(current).canContinue(report) && !isAdding
     const continueButton = root.querySelector<HTMLButtonElement>('[data-action="continue"]')
     if (continueButton !== null) {
       continueButton.disabled = !canContinue
     }
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-step]')) {
-      button.disabled = Number(button.dataset.step) > reached
+      const step = Number(button.dataset.step)
+      button.disabled = step > reached || (isAdding && step > current)
     }
   }
 
