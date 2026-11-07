@@ -7,7 +7,7 @@
 ## Context
 
 The Claimant prepares a report in four steps (`docs/specs/prepare-an-expense-report.md`):
-Report, Documents, Expenses, Review. Each is a form, a list or a table, with a
+Report, Expenses, Additional documents, Review. Each is a form, a list or a table, with a
 handful of buttons. There is one user, no routing, no state shared between
 distant components and no real-time update. ADR 0001 leaves the framework
 open; every screen depends on the choice.

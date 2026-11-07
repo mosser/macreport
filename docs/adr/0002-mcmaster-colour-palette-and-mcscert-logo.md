@@ -85,12 +85,14 @@ The McSCert logo is used as supplied by McMaster, never redrawn or recoloured:
 
 | File | Use |
 |---|---|
-| `src/assets/mcscert-left-col.png` | Colour, horizontal: the cover of the report document, and the interface on a light background. |
+| `src/assets/mcscert-left-col.png` | Colour, horizontal: the generated pages of the report document (cover, section pages, missing receipt authorizations), and the interface on a light background. |
 | `src/assets/mcscert-left-rev.png` | Reversed, horizontal: the interface's maroon header bar. |
 | `src/assets/mcscert-stack-col.png` | Colour, stacked: the favicon. |
 
 They are imported from `src/` so the build inlines them (ADR 0001). As
-supplied images, they are exempt from the colour-literal rule.
+supplied images, they are exempt from the colour-literal rule. The McSCert
+logo carries McMaster's wordmark and crest, so it also heads the missing
+receipt authorizations the system writes in place of McMaster's form.
 
 ## Consequences
 

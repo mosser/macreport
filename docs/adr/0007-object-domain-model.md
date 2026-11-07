@@ -6,10 +6,11 @@
 
 ## Context
 
-The rules of a report (`docs/specs/`) are about its concepts: an expense refers
-to at least one receipt and one bank statement, a document is in the report
-once, a claimed amount is more than zero to the cent, a label is the letter of
-a kind and a rank. Those rules must hold in the interface, in the draft and in
+The rules of a report (`docs/specs/`) are about its concepts: an expense has a
+receipt or a missing receipt, and a bank statement unless it was paid in cash;
+a document is in the report once, and a receipt leaves it when no expense
+refers to it any more; a claimed amount is more than zero to the cent; a label
+is the letter of a kind and a rank. Those rules must hold in the interface, in the draft and in
 the report document alike, and they are read against the specification by
 someone who knows McSCert's reimbursement rules and not TypeScript.
 
@@ -25,9 +26,9 @@ Options considered:
 ## Decision
 
 - The report is an **object model** of immutable classes in `src/domain/`:
-  `Report`, `Expense`, `Document` and their values (`Amount` in cents of
-  Canadian dollars, `ForeignAmount` with its `Currency`, `CalendarDate`,
-  `Kind`). A class throws from its constructor on a broken invariant; a change
+  `Report`, `Expense`, `MissingReceipt`, `Document` and their values (`Amount`
+  in cents of Canadian dollars, `ForeignAmount` with its `Currency`,
+  `CalendarDate`, `Kind`). A class throws from its constructor on a broken invariant; a change
   returns a new object, named `after…` (`report.afterAdding(expense)`).
 - An expense refers to its documents **by reference**, not by identifier.
 - A `Document` carries its content as bytes, which the domain never

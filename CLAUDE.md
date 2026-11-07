@@ -6,10 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 `macreport` prepares one expense report at a time for the McMaster Centre for
 Software Certification (McSCert). The Claimant enters the report's fields and
-its expenses, adds receipts and bank statements (PDF, JPEG or PNG), and saves
-**one PDF**: a cover that takes the place of the McSCert Expense Report
-Template, then the documents, one section per kind, each opened by a section
-page.
+its expenses, adds each expense's receipts and bank statements and the
+report's additional documents (PDF, JPEG or PNG), and saves **one PDF**: a
+cover that takes the place of the McSCert Expense Report Template, then the
+documents, one section per kind, each opened by a section page. An expense
+without a receipt gets a pre-filled Missing Receipt Authorization Form for
+the Claimant to sign.
 
 It is a client-side web application in TypeScript, front-end only, delivered
 as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
@@ -47,8 +49,8 @@ Planned layout of the code (ADR 0005, ADR 0006, ADR 0007, ADR 0008):
 src/domain/   the object model of a report and its rules: pure, no DOM, no PDF library
 src/io/       reading documents, writing the report document (@cantoo/pdf-lib),
               the draft store (IndexedDB), saving a file
-src/ui/       the wizard and its four steps: Report, Documents, Expenses, Review
-src/assets/   McSCert logos, as supplied
+src/ui/       the wizard and its four steps: Report, Expenses, Additional documents, Review
+src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 src/style.css McMaster palette tokens and all styling
 scripts/      check-adr.sh: the scriptable ADR checks
@@ -113,8 +115,10 @@ first.
 
 ### ADR 0006: PDF
 
-- `@cantoo/pdf-lib` is the only PDF library, imported only under `src/io/`.
-  Standard fonts only, no embedded font. Password-protected PDFs are refused.
+- `@cantoo/pdf-lib` (with `@pdf-lib/fontkit`) is the only PDF library,
+  imported only under `src/io/`. The report document embeds Noto Sans Regular
+  and Bold from `src/assets/fonts/`, subset, and no other font.
+  Password-protected PDFs are refused.
 - The report document writer draws, copies and stamps; it never orders,
   numbers, labels or totals: the layout comes from the domain.
 
@@ -146,8 +150,10 @@ first.
 
 - `docs/specs/report-document.md` is the layout. A change to the layout
   changes that spec in the same commit, and tests read the written PDF back.
-- Text outside Windows-1252 is a finding, never replaced silently. The system
-  never redacts.
+- Text the embedded font cannot write is a finding, never replaced silently.
+  The system never redacts and never converts currencies.
+- The missing receipt authorization reproduces McMaster's wording as the spec
+  quotes it; a change of wording changes the spec in the same commit.
 
 ## Writing
 

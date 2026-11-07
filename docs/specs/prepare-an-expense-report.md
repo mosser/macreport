@@ -13,7 +13,7 @@ When the browser refuses to keep a draft, the system says so on every step:
 closing the page will lose the report. Everything else works.
 
 **New report** is offered on every step. It asks for confirmation, then
-discards the draft, its documents and its expenses, and opens the Report step
+discards the draft, its expenses and its documents, and opens the Report step
 on an empty report.
 
 ## The steps
@@ -28,41 +28,21 @@ kept in the draft as soon as it is made.
 |---|---|
 | Name of claimant | Required. |
 | Position or title | Required. |
+| Email | Optional. Written on missing receipt authorizations. |
+| Extension | Optional. Written on missing receipt authorizations. |
 | Event | Required. |
 | First day of the event | Required, a calendar date. |
 | Last day of the event | Required, a calendar date, not before the first day. |
-| Accounts | Optional, one per line. |
+| Account | Required, free text. |
 
 Continue is offered once every required field is valid.
 
-### 2. Documents
-
-The documents of the report, grouped by kind in the order of the kinds, each
-with its file name and its number of pages. The Claimant adds files of any
-kind, and removes documents. Removing a document that expenses refer to says
-which ones, asks for confirmation, and removes it from them.
-
-A file is added when it is a PDF, a JPEG image or a PNG image, whatever its
-name says. It is refused, with the reason, when it is:
-
-- of another format;
-- damaged, or a PDF without pages;
-- a PDF protected by a password;
-- already in the report, with the same content: the message names the
-  document it already is.
-
-A file is refused alone: adding several at once keeps the others.
-
-The step reminds the Claimant that bank statements are redacted before they
-are added: the system does not redact.
-
-Continue is always offered.
-
-### 3. Expenses
+### 2. Expenses
 
 The expenses, sorted by date, then in the order they were added. Each shows
-its date, its description, its foreign amount, its claimed amount and the
-documents it refers to. The Claimant adds, changes and removes expenses.
+its date, its description, its foreign amount, its claimed amount, its
+receipts or that its receipt is missing, and its bank statements or that it
+was paid in cash. The Claimant adds, changes and removes expenses.
 
 | Field | Rule |
 |---|---|
@@ -70,16 +50,43 @@ documents it refers to. The Claimant adds, changes and removes expenses.
 | Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. |
 | Claimed amount | Required, in Canadian dollars, more than zero, at most two decimals. |
 | Paid in another currency | Optional. When set: the amount, more than zero, at most two decimals, and its currency, a three-letter ISO 4217 code other than CAD. |
-| Receipts | At least one receipt or missing receipt authorization of the report. |
-| Bank statements | At least one bank statement of the report. |
+| Receipts | At least one, unless the receipt is missing. |
+| I don't have the receipt | When ticked: the expense has no receipt, and two more fields are required: **Paid to**, who was paid, and **Reason**, why the receipt is missing. |
+| Paid in cash | When ticked: the expense has no bank statement. |
+| Bank statements | At least one, unless the expense was paid in cash. |
 
-Receipts, missing receipt authorizations and bank statements are chosen among
-the documents of the report, or added from the expense, which adds them to the
-report as on the Documents step. The same document may be chosen by several
-expenses.
+Receipts and bank statements are added from the expense, or chosen among the
+receipts and bank statements already in the report. The same document may be
+chosen by several expenses. Removing an expense, or a document from an
+expense, takes out of the report any receipt or bank statement no expense
+refers to any more.
+
+The step reminds the Claimant that bank statements are redacted before they
+are added: the system does not redact.
 
 Continue is offered once there is at least one expense and every expense
 follows the rules above.
+
+### 3. Additional documents
+
+The additional documents, each with its file name and number of pages: an
+invitation letter, a conference confirmation, an itinerary, a poster,
+boarding passes, notes. The Claimant adds and removes them. Continue is always
+offered.
+
+### Adding a file
+
+On either step, a file is added when it is a PDF, a JPEG image or a PNG image,
+whatever its name says. It is refused, with the reason, when it is:
+
+- of another format;
+- damaged, or a PDF without pages;
+- a PDF protected by a password.
+
+A file already in the report, with the same content, is not added twice:
+added from an expense as a receipt or a bank statement, the document already
+there is chosen; added as an additional document, it is refused, naming the
+document it already is. Adding several files at once handles each on its own.
 
 ### 4. Review
 
@@ -92,14 +99,14 @@ pages. Then the findings, if any.
 | A required field of the Report step is missing or invalid | The field, and what it needs. |
 | No expense | No expense is claimed. |
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
-| A receipt, missing receipt authorization or bank statement supports no expense | The document, by its file name: it supports no expense. Choose it for an expense, or remove it. |
 | A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a file name: the document, and that it is renamed and added again. |
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as
 `expense-report-<first day of the event>-<claimant>.pdf`, the name of the
 claimant in lower case, without accents, words joined by hyphens. The step
-then says it is saved, with the file name, and that the draft, bank
+then says it is saved, with the file name; that each missing receipt
+authorization, when there is one, is to be signed; and that the draft, bank
 statements included, stays in this browser until New report.
 
 Saving does not discard the draft: the Claimant may change the report and

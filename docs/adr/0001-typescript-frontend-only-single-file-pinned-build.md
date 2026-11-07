@@ -99,8 +99,8 @@ A dependency bump is its own commit, touching `package.json` and
 - Dependency updates do not happen by themselves; security fixes arrive only
   with a deliberate bump.
 - Everything ships in one file: no lazy loading, and every inlined library,
-  font or image weighs on the page. The PDF library (ADR 0006) and the logo
-  are the largest parts and are kept to what is needed.
+  font or image weighs on the page. The PDF library, its fonts (ADR 0006) and
+  the logos are the largest parts and are kept to what is needed.
 - The report is prepared in one browser on one computer; there is no access
   from elsewhere (ADR 0008).
 

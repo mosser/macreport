@@ -14,23 +14,28 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name and position, the event, the dates of the event, the suggested accounts, the documents and the expenses. There is one report at a time. |
+| Report | What the Claimant prepares: the claimant's name, position, email and extension, the event, the dates of the event, the account, the expenses and the additional documents. There is one report at a time. |
 | Event | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit. |
 | Dates of the event | The first and the last day of the event. One day when they are the same. |
-| Account | An account the Claimant suggests the expenses be charged to, as free text. A report suggests none, one or several. |
-| Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, and the supporting documents it refers to. |
+| Account | The account the Claimant suggests the expenses be charged to, as free text. |
+| Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipts or the reason it has none, and its bank statements unless it was paid in cash. |
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |
-| Claimed amount | The amount in Canadian dollars asked back for an expense, as charged on the bank statement. Always more than zero, to the cent. |
-| Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt. No exchange rate is asked: the bank statement supports the claimed amount. |
+| Claimed amount | The amount in Canadian dollars asked back for an expense. Always more than zero, to the cent. |
+| Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt, shown for information. The system converts nothing and asks for no exchange rate. |
+| Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has at least one. |
+| Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind. A document is in the report once, whatever the number of expenses that refer to it. |
-| Kind | What a document is, among the six kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
-| Supporting document | A receipt, a missing receipt authorization or a bank statement: a document an expense refers to. |
-| Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. Labels are given when the report document is written, in the order of its sections. |
+| Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
+| Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense. |
+| Bank statement | A document an expense refers to: a bank or credit card statement showing the charge, redacted by the Claimant beforehand. Added from an expense, and often referred to by several. |
+| Additional document | A document of the report as a whole, which no expense refers to: an invitation letter, a conference confirmation, an itinerary, a poster, boarding passes, notes. |
+| Missing receipt authorization | McMaster's Missing Receipt Authorization Form, written by the system for one expense with a missing receipt, filled in with what the report knows, and left for the Claimant to sign. It is not a file the Claimant adds. |
+| Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
-| Remove | The Claimant takes a document or an expense out of the report. |
+| Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
-| New report | Discarding the draft, its documents and its expenses, to start another report. |
-| Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a receipt, a document no expense refers to. A draft with a finding cannot be saved as a report document. |
+| New report | Discarding the draft, its expenses and its documents, to start another report. |
+| Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
 | Report document | The single PDF the system writes from a report without findings: the cover, then one section per kind of document. It is the only thing that counts once the report is done. |
 | Save | The system hands the report document to the browser, which writes it on the Claimant's computer. The document is built in the browser: nothing is fetched or sent over a network. |
 | Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and their total. |
@@ -40,14 +45,12 @@ document.
 
 ### Kinds of document
 
-| Kind | Letter | What it holds | Referred to by expenses |
-|---|---|---|---|
-| Event document | E | Invitation, conference confirmation, itinerary, poster | No |
-| Receipt | R | An invoice or an official receipt; for air tickets, the booking information | Yes |
-| Missing receipt authorization | M | McMaster's Missing Receipt Authorization Form, filled in and signed by the Claimant, standing for a receipt or a boarding pass that is missing | Yes |
-| Boarding pass | B | Boarding passes, departure and return slips | No |
-| Bank statement | S | A bank or credit card statement showing the charge, redacted by the Claimant beforehand | Yes |
-| Note | N | Additional pages of notes or explanations | No |
+| Kind | Letter | Where it comes from |
+|---|---|---|
+| Receipt | R | Added by the Claimant from an expense |
+| Missing receipt authorization | M | Written by the system, one per expense with a missing receipt |
+| Bank statement | S | Added by the Claimant from an expense |
+| Additional document | A | Added by the Claimant to the report |
 
 The order of this table is the order of the sections in the report document.
 
@@ -55,17 +58,16 @@ The order of this table is the order of the sections in the report document.
 
 ```mermaid
 classDiagram
-  Report "1" *-- "*" Document : holds
   Report "1" *-- "*" Expense : claims
-  Expense "*" --> "1..*" Document : receipt or missing receipt authorization
-  Expense "*" --> "1..*" Document : bank statement
-  Document "*" --> "1" Kind
+  Report "1" *-- "*" Document : additional documents
+  Expense "*" --> "0..*" Document : receipts
+  Expense "*" --> "0..*" Document : bank statements
+  Expense "1" --> "0..1" MissingReceipt : states
 ```
 
-- A report holds its documents and its expenses; removing a document removes
-  it from every expense that refers to it.
-- An expense refers to at least one receipt or missing receipt authorization,
-  and to at least one bank statement. A document may support several
-  expenses: one bank statement often shows every charge of a trip.
-- Event documents, boarding passes and notes belong to the report, not to an
-  expense.
+- An expense has at least one receipt, or a missing receipt; never both.
+- An expense not paid in cash has at least one bank statement; an expense paid
+  in cash has none.
+- A receipt or a bank statement belongs to the report while an expense refers
+  to it. One bank statement often supports every expense of a trip.
+- Additional documents belong to the report, not to an expense.
