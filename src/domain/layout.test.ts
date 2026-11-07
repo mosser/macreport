@@ -93,15 +93,15 @@ describe('layoutOf', () => {
     expect(fields).toContainEqual({ name: 'Dates', value: '2026-10-03' })
   })
 
-  it('ticks the kinds the report holds', () => {
+  it('ticks the kinds the report holds, in alphabetical order', () => {
     expect(
-      layoutOf(report).attachedInformation.map(({ kind, isAttached }) => [kind.name, isAttached]),
+      layoutOf(report).attachedInformation.map(({ kind, isAttached }) => [kind.plural, isAttached]),
     ).toEqual([
-      ['Travel justification', true],
-      ['Receipt', true],
-      ['Missing receipt authorization', false],
-      ['Bank statement', true],
-      ['Additional document', false],
+      ['Additional documents', false],
+      ['Bank statements', true],
+      ['Missing receipt authorizations', false],
+      ['Receipts', true],
+      ['Travel justifications', true],
     ])
   })
 
@@ -222,7 +222,7 @@ describe('layoutOf', () => {
       ['A1', itinerary],
       ['A2', poster],
     ])
-    expect(layout.attachedInformation.at(-1)).toEqual({
+    expect(layout.attachedInformation[0]).toEqual({
       kind: Kind.additionalDocument,
       isAttached: true,
     })

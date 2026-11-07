@@ -31,6 +31,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - On the cover, an expense's supporting documents are listed by name, one per
   line, each a link to its document, rather than by label (R1, S1). Section
   pages have a Name column in place of File.
+- On the cover, the title and the date it was written sit in the top right
+  corner, level with the logo, and Attached information lists the kinds of
+  document in alphabetical order.
 - A business travel cannot be saved until it has a travel justification: a
   draft of a business travel kept by 0.1.0 asks for one at the Review step.
   Unticking Business travel takes the travel justifications out of the report.

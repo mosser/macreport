@@ -44,6 +44,9 @@ const logoWidth = 170
 const bodySize = 10
 const tableSize = 9
 const stampSize = 8
+const titleSize = 18
+/** The height of a capital of Noto Sans, as a share of its size. */
+const capHeight = 0.714
 const leading = 1.35
 /** The side of an expense's Entered box. */
 const enteredSize = 10
@@ -344,14 +347,14 @@ class Writer {
 
   writeCover(layout: Layout, writtenOn: CalendarDate): void {
     const flow = new Flow(this, false)
-    this.paragraph(flow, 'McSCert Expense Report', this.bold, 18, this.palette.maroon)
-    this.paragraph(flow, writtenOn.toString(), this.regular, bodySize, this.palette.grey)
-    flow.down(12)
+    if (flow.page !== undefined) {
+      this.heading(flow.page, writtenOn)
+    }
     for (const field of layout.coverFields) {
       this.fieldLine(flow, field.name, field.value)
     }
     flow.down(12)
-    this.heading(flow, 'Attached information')
+    this.sectionHeading(flow, 'Attached information')
     for (const information of layout.attachedInformation) {
       const height = bodySize * leading
       flow.ensure(height)
@@ -360,7 +363,7 @@ class Writer {
       flow.down(height)
     }
     flow.down(12)
-    this.heading(flow, 'Expenses')
+    this.sectionHeading(flow, 'Expenses')
     const columns: Column[] = [
       { title: '#', width: 20 },
       { title: 'Date', width: 58 },
@@ -578,7 +581,36 @@ class Writer {
     }
   }
 
-  private heading(flow: Flow, text: string): void {
+  /**
+   * The cover's heading, in the top right corner, beside the logo: the title, its capitals level
+   * with the logo's top, and the date it is written, on the logo's bottom.
+   */
+  private heading(page: PDFPage, writtenOn: CalendarDate): void {
+    const right = letterPortrait[0] - margin
+    const top = letterPortrait[1] - margin
+    const logoHeight = (logoWidth * this.logo.height) / this.logo.width
+    const lines = [
+      {
+        text: 'McSCert Expense Report',
+        font: this.bold,
+        size: titleSize,
+        colour: this.palette.maroon,
+      },
+      { text: writtenOn.toString(), font: this.regular, size: bodySize, colour: this.palette.grey },
+    ]
+    const baselines = [top - titleSize * capHeight, top - logoHeight]
+    lines.forEach(({ text, font, size, colour }, index) => {
+      page.drawText(text, {
+        x: right - font.widthOfTextAtSize(text, size),
+        y: baselines[index] ?? top,
+        size,
+        font,
+        color: colourOf(colour),
+      })
+    })
+  }
+
+  private sectionHeading(flow: Flow, text: string): void {
     flow.ensure(12 * leading + 3 * tableSize * leading)
     this.paragraph(flow, text, this.bold, 12, this.palette.maroon)
     flow.down(4)

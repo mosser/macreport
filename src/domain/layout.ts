@@ -70,6 +70,7 @@ export interface Layout {
   readonly author: string
   readonly fileName: string
   readonly coverFields: readonly CoverField[]
+  /** Every kind of document, in alphabetical order. */
   readonly attachedInformation: readonly AttachedInformation[]
   readonly expenses: readonly ExpenseRow[]
   readonly total: string
@@ -108,7 +109,9 @@ export function layoutOf(report: Report): Layout {
     author: complete.claimantName,
     fileName: fileNameOf(complete, report.isBusinessTravel ? report.firstDay : expenses[0]?.date),
     coverFields: coverFieldsOf(report, complete),
-    attachedInformation: Kind.all.map((kind) => attachedInformationOf(kind, sections)),
+    attachedInformation: [...Kind.all]
+      .sort((one, other) => one.plural.localeCompare(other.plural, 'en'))
+      .map((kind) => attachedInformationOf(kind, sections)),
     expenses: expenses.map((expense, index) => rowOf(expense, index + 1, labels)),
     total: totalOf(expenses),
     sections,

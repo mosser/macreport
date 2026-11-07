@@ -167,6 +167,24 @@ function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
   return texts
 }
 
+/** Where a page shows each text it writes: the text, read back, and where its baseline starts. */
+function placesOf(pdf: PDFDocument, page: PDFPage) {
+  const fonts = fontsOf(pdf, page)
+  const places: { text: string; x: number; y: number }[] = []
+  let glyphs: Map<number, string> | undefined
+  let at = { x: 0, y: 0 }
+  for (const stream of streamsOf(pdf, page)) {
+    for (const [, font, x, y, hex] of decoded(stream).matchAll(
+      /(\/[\w+-]+) [\d.]+ Tf|1 0 0 1 ([\d.-]+) ([\d.-]+) Tm|<([0-9A-Fa-f]*)> Tj/g,
+    )) {
+      if (font !== undefined) glyphs = fonts.get(font)
+      else if (x !== undefined) at = { x: Number(x), y: Number(y) }
+      else places.push({ text: textOf(hex ?? '', glyphs), ...at })
+    }
+  }
+  return places
+}
+
 /** The links of a page: the number of the page each goes to, how, and where it is clicked. */
 function linksOf(pdf: PDFDocument, page: PDFPage) {
   const references = pdf.getPages().map((each) => each.ref.toString())
@@ -350,6 +368,22 @@ describe('writeReportDocument', () => {
     }
     const acroForm = pdf.catalog.lookup(PDFName.of('AcroForm'), PDFDict)
     expect(acroForm.get(PDFName.of('DR'))).toBeUndefined()
+  })
+
+  it('heads the cover in its top right corner, level with the logo', async () => {
+    const pdf = await written(await reportOf('Taxi'))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const title = places.find((place) => place.text === 'McSCert Expense Report')
+    const date = places.find((place) => place.text === '2026-11-07')
+    const name = places.find((place) => place.text === 'Name of claimant')
+    const logoBottom = 792 - 54 - (170 * 179) / 1066
+    expect(title?.x).toBeGreaterThan(306)
+    expect(title?.y).toBeCloseTo(792 - 54 - 18 * 0.714, 1)
+    expect(date?.x).toBeGreaterThan(306)
+    expect(date?.y).toBeCloseTo(logoBottom, 1)
+    expect(name?.y).toBeLessThan(logoBottom)
+    // Both end at the right margin, so the wider title starts further left.
+    expect(title?.x ?? 0).toBeLessThan(date?.x ?? 0)
   })
 
   it('keeps the size of every page of a PDF document, and shows every page portrait', async () => {

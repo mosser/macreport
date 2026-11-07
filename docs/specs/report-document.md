@@ -44,13 +44,14 @@ R1, R2, and so on.
 The cover takes the place of the McSCert Expense Report Template: it carries
 the template's fields and its table, so that nothing else needs filling in.
 
-- **Heading.** The McSCert logo, then *McSCert Expense Report*, and the date
-  the document was written.
+- **Heading.** The McSCert logo on the left; in the top right corner, level
+  with it, *McSCert Expense Report*, and under it the date the document was
+  written.
 - **Report fields.** Name of claimant, position, email, then the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
   email for a visitor; purpose, the dates of a business travel, account.
-- **Attached information.** The five kinds of document, in their order, each
-  with a box ticked when its section exists.
+- **Attached information.** The five kinds of document, in alphabetical
+  order, each with a box ticked when its section exists.
 - **Expenses.** A table of every expense, sorted by date then in the order
   they were added, and numbered in that order:
 
