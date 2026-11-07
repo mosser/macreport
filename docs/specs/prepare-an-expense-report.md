@@ -28,8 +28,9 @@ kept in the draft as soon as it is made.
 |---|---|
 | Name of claimant | Required. |
 | Position or title | Required. |
-| Email | Optional. Written on missing receipt authorizations. |
+| Email | Required, an email address. |
 | Extension | Optional. Written on missing receipt authorizations. |
+| I am a student | When ticked, two more fields are required: **Supervisor**, the supervisor's name, and **Supervisor's email**, an email address. |
 | Event | Required. |
 | First day of the event | Required, a calendar date. |
 | Last day of the event | Required, a calendar date, not before the first day. |

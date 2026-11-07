@@ -40,7 +40,8 @@ Options considered for a missing receipt:
 The report document is written as `docs/specs/report-document.md` says:
 
 - **A cover** that carries every field of the template and its table, and so
-  replaces it. The foreign amount is shown for information; there is no
+  replaces it, with the claimant's email and, for a student, the
+  supervisor's name and email, so that the administration can reach both. The foreign amount is shown for information; there is no
   exchange-rate column and nothing is converted: the system does not deal
   with exchange rates.
 - **Four kinds of document**, each a section opened by a **section page** that

@@ -38,7 +38,8 @@ the template's fields and its table, so that nothing else needs filling in.
 
 - **Heading.** The McSCert logo, then *McSCert Expense Report*, and the date
   the document was written.
-- **Report fields.** Name of claimant, position or title, event, dates of the
+- **Report fields.** Name of claimant, position or title, email, then, for a
+  student, the supervisor and the supervisor's email; event, dates of the
   event, account.
 - **Attached information.** The four kinds of document, in their order, each
   with a box ticked when its section exists and the labels it holds (R1–R7).
@@ -103,8 +104,8 @@ Then the fields, each on its line:
 Then, in bold: *I certify that this expense has not and will not be claimed
 for reimbursement from other sources or institutions.* and the lines
 *Signature of Claimant* (left blank), *Printed Name* (the claimant), *Title*
-(the position), *Extension* and *Email* (from the report, blank when not
-given).
+(the position), *Extension* (from the report, blank when not given) and
+*Email* (the claimant's).
 
 ## Stamp
 
