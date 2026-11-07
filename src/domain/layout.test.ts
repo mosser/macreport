@@ -1,0 +1,134 @@
+import { describe, expect, it } from 'vitest'
+import { Amount } from './amount.ts'
+import { CalendarDate } from './calendar-date.ts'
+import { Document } from './document.ts'
+import { Expense } from './expense.ts'
+import { Kind } from './kind.ts'
+import { layoutOf } from './layout.ts'
+import { Report } from './report.ts'
+
+const receipt = new Document(Kind.receipt, 'air-canada.pdf', new Uint8Array([1]))
+const statement = new Document(Kind.bankStatement, 'statement-october.pdf', new Uint8Array([2]))
+
+const flight = new Expense({
+  date: new CalendarDate(2026, 10, 3),
+  description: 'Air Canada, YYZ–CDG return',
+  claimedAmount: new Amount(101235),
+  receipts: [receipt],
+  bankStatements: [statement],
+})
+
+const report = new Report({
+  claimantName: 'Zoë Lefèvre-Smith',
+  position: 'Student',
+  email: 'zoe@mcmaster.ca',
+  supervisorName: 'Ada Lovelace',
+  supervisorEmail: 'ada@mcmaster.ca',
+  event: 'ICSE 2026',
+  firstDay: new CalendarDate(2026, 10, 3),
+  lastDay: new CalendarDate(2026, 10, 7),
+  account: '20-123-456',
+}).afterAdding(flight)
+
+describe('layoutOf', () => {
+  it('is only for a report without findings', () => {
+    expect(() => layoutOf(new Report())).toThrow(TypeError)
+  })
+
+  it('names the report document and its properties', () => {
+    const layout = layoutOf(report)
+    expect(layout.title).toBe('McSCert Expense Report — ICSE 2026')
+    expect(layout.author).toBe('Zoë Lefèvre-Smith')
+    expect(layout.fileName).toBe('expense-report-2026-10-03-zoe-lefevre-smith.pdf')
+  })
+
+  it("carries the template's fields on the cover, the supervisor of a student included", () => {
+    expect(layoutOf(report).coverFields).toEqual([
+      { name: 'Name of claimant', value: 'Zoë Lefèvre-Smith' },
+      { name: 'Position', value: 'Student' },
+      { name: 'Email', value: 'zoe@mcmaster.ca' },
+      { name: 'Supervisor', value: 'Ada Lovelace' },
+      { name: "Supervisor's email", value: 'ada@mcmaster.ca' },
+      { name: 'Event', value: 'ICSE 2026' },
+      { name: 'Dates of the event', value: '2026-10-03 to 2026-10-07' },
+      { name: 'Account', value: '20-123-456' },
+    ])
+  })
+
+  it('names the host of a visitor, and gives one day for an event of one day', () => {
+    const visitor = report.afterChanging({
+      position: 'Visitor',
+      hostName: 'Bo',
+      hostEmail: 'bo@mcmaster.ca',
+      lastDay: new CalendarDate(2026, 10, 3),
+    })
+    const fields = layoutOf(visitor).coverFields
+    expect(fields).toContainEqual({ name: 'Host', value: 'Bo' })
+    expect(fields).toContainEqual({ name: "Host's email", value: 'bo@mcmaster.ca' })
+    expect(fields).toContainEqual({ name: 'Dates of the event', value: '2026-10-03' })
+  })
+
+  it('ticks the kinds the report holds, with their labels', () => {
+    expect(
+      layoutOf(report).attachedInformation.map(({ kind, isAttached, labels }) => [
+        kind.name,
+        isAttached,
+        labels,
+      ]),
+    ).toEqual([
+      ['Receipt', true, 'R1'],
+      ['Missing receipt authorization', false, ''],
+      ['Bank statement', true, 'S1'],
+      ['Additional document', false, ''],
+    ])
+  })
+
+  it('numbers the expenses, labels their supporting documents and totals them', () => {
+    const layout = layoutOf(report)
+    expect(layout.expenses).toEqual([
+      {
+        number: 1,
+        date: '2026-10-03',
+        description: 'Air Canada, YYZ–CDG return',
+        foreignAmount: '',
+        claimedAmount: '$1,012.35',
+        supportingDocuments: 'R1, S1',
+      },
+    ])
+    expect(layout.total).toBe('$1,012.35')
+  })
+
+  it('opens a section per kind held, receipts first, each document with the expenses it supports', () => {
+    const sections = layoutOf(report).sections
+    expect(sections.map((section) => section.title)).toEqual(['Receipts', 'Bank statements'])
+    expect(sections[0]?.documents).toEqual([
+      { label: 'R1', document: receipt, expenseNumbers: '1', expenses: 'Expense 1' },
+    ])
+    expect(sections[1]?.documents).toEqual([
+      { label: 'S1', document: statement, expenseNumbers: '1', expenses: 'Expense 1' },
+    ])
+  })
+
+  it('sorts expenses by date and lists a shared document once, with every expense it supports', () => {
+    const taxiReceipt = new Document(Kind.receipt, 'taxi.png', new Uint8Array([3]))
+    const taxi = new Expense({
+      date: new CalendarDate(2026, 10, 1),
+      description: 'Taxi',
+      claimedAmount: new Amount(8710),
+      receipts: [taxiReceipt],
+      bankStatements: [statement],
+    })
+    const layout = layoutOf(report.afterAdding(taxi))
+    expect(
+      layout.expenses.map((row) => [row.number, row.description, row.supportingDocuments]),
+    ).toEqual([
+      [1, 'Taxi', 'R1, S1'],
+      [2, 'Air Canada, YYZ–CDG return', 'R2, S1'],
+    ])
+    expect(layout.total).toBe('$1,099.45')
+    expect(layout.sections[1]?.documents).toEqual([
+      { label: 'S1', document: statement, expenseNumbers: '1, 2', expenses: 'Expenses 1, 2' },
+    ])
+    expect(layout.attachedInformation[0]?.labels).toBe('R1–R2')
+  })
+})
