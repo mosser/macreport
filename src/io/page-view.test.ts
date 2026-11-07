@@ -70,6 +70,12 @@ describe('fitOf', () => {
     expect(fit.box.y).toBeCloseTo(-54)
   })
 
+  it('keeps a page of the size of the sheet as it is, without margins', () => {
+    const fit = fitOf({ x: 0, y: 0, width: 612, height: 792 }, 0, sheet, 0)
+    expect(fit).toEqual({ scale: 1, box: { x: 0, y: 0, width: 612, height: 792 } })
+    expect(fitOf({ x: 0, y: 0, width: 595, height: 842 }, 0, sheet, 0).scale).toBeCloseTo(792 / 842)
+  })
+
   it('never enlarges a small page, and centres its crop box', () => {
     const fit = fitOf({ x: 20, y: 30, width: 180, height: 500 }, 0, sheet, 54)
     expect(fit).toEqual({ scale: 1, box: { x: 20 - 216, y: 30 - 146, width: 612, height: 792 } })

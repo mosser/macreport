@@ -561,8 +561,8 @@ class Writer {
       this.markFirstPage(entry, this.pages.length - source.pages.length)
       return
     }
-    // The image is placed as it is stored, on a page turned as its orientation says, which is
-    // then fitted to Letter as any page is.
+    // The image is placed as it is stored, on a page turned as its orientation says, within the
+    // margins of a Letter page, so that the stamp never covers it.
     const { image, turn } = source
     const box = { x: 0, y: 0, width: image.width, height: image.height }
     const fit = fitOf(box, turn, letter, margin)
@@ -727,13 +727,13 @@ function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
 }
 
 /**
- * A page of a PDF document on a Letter page, portrait or landscape as it shows: its content and
- * its annotations scaled down to fit the margins, never enlarged, and centred. What its crop box
- * hid stays hidden.
+ * A page of a PDF document on a Letter page, portrait or landscape as it shows, as close to its
+ * size as it can be: its content and annotations scaled down to fit the page when it is larger,
+ * never enlarged, and centred; a Letter page stays as it is. What its crop box hid stays hidden.
  */
 function fittedToLetter(page: PDFPage): PDFPage {
   const crop = page.getCropBox()
-  const fit = fitOf(crop, page.getRotation().angle, letter, margin)
+  const fit = fitOf(crop, page.getRotation().angle, letter, 0)
   const context = page.doc.context
   const stream = (...operators: Parameters<typeof PDFContentStream.of>[1]) =>
     context.register(PDFContentStream.of(context.obj({}), operators))

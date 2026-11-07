@@ -33,11 +33,14 @@ R1, R2, and so on.
   have three-quarter-inch margins. A text wraps within its column or its
   line, never clipped; what does not fit a page continues on the next one, as
   each part below says.
-- Each page of a PDF document, and each image document, is placed on a Letter
-  page of its own, across the page when it shows wider than tall: scaled down
-  to fit the three-quarter-inch margins when it is larger, never enlarged,
-  and centred. A PDF page keeps its text, its links and its form fields; what
-  its crop box hid stays hidden.
+- Each page of a PDF document is placed on a Letter page, across the page
+  when it shows wider than tall, as close to its own size as it can be:
+  scaled down to fit the page when it is larger, never enlarged, and centred.
+  A Letter page stays as it is; an A4 page is shown at 94 %. It keeps its
+  text, its links and its form fields; what its crop box hid stays hidden.
+- An image document is placed on a Letter page of its own, across the page
+  when it is wider than tall: scaled down to fit the three-quarter-inch
+  margins when it is larger, never enlarged, and centred.
 - A JPEG image is first turned as its Exif orientation says, so that a photo
   taken with a phone shows upright.
 

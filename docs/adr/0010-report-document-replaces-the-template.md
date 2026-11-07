@@ -40,6 +40,9 @@ size (A4 invoices, Letter statements, narrow till receipts, phone photos):
 - **Scale each page in place onto a Letter box**: its content and
   annotations scaled down, the page's boxes set to Letter around them,
   clipped to what its crop box showed. Uniform, and the page stays a page.
+  Fitted within margins, the stamp never covers it, but every page shrinks,
+  a Letter page to 82 %; fitted to the whole page, a Letter page stays as it
+  is and an A4 page is shown at 94 %.
 
 Options considered for a missing receipt:
 
@@ -84,10 +87,12 @@ The report document is written as `docs/specs/report-document.md` says:
   gives each expense an **Entered** box, a form field the administration
   ticks on screen or by hand on paper as it enters the expense in McMaster's
   system: it shows at a glance what is left to enter.
-- **Every page is US Letter.** A page of a PDF document, or an image, is
-  scaled down in place to fit the margins of a Letter page when it is
-  larger, never enlarged, and centred, so that the report document prints
-  evenly and the stamp falls in the margin. A JPEG photo is turned as its
+- **Every page is US Letter.** A page of a PDF document is scaled down in
+  place to fit a Letter page when it is larger, never enlarged, and centred,
+  so that the report document prints evenly and each page stays as close to
+  its own size as it can: a document is read at the size it was written. An
+  image, whose size in pixels says nothing of its size on paper, is fitted
+  within the margins, so that the stamp never covers it. A JPEG photo is turned as its
   Exif orientation says first: phones store a photo as the camera held it
   and note how to turn it, which the PDF library does not read.
 - **A label per document** (R3), used on section pages and in the **stamp**
@@ -122,8 +127,10 @@ The report document is written as `docs/specs/report-document.md` says:
 
 **Negative / accepted trade-offs**
 
-- A page larger than Letter is shown smaller: an A4 invoice at about 81 % of
-  its size. A small receipt sits in the middle of a Letter page, mostly white.
+- A page larger than Letter is shown smaller: an A4 invoice at 94 % of its
+  size. A small receipt sits in the middle of a Letter page, mostly white.
+- The stamp is written in the bottom margin of a PDF page, over its content
+  when the content reaches that far.
 - A photo is embedded as it was added: a report of many phone photos is
   large.
 

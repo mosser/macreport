@@ -32,10 +32,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - On the cover, an expense's supporting documents are listed by name, one per
   line, each a link to its document, rather than by label (R1, S1). Section
   pages have a Name column in place of File.
-- Every page of the report document is US Letter. A page of a PDF document
-  larger than Letter, an A4 invoice say, is scaled down to fit the margins;
-  a smaller one, a till receipt, keeps its size and is centred, as images
-  already were. The stamp is always in the margin, never over the content.
+- Every page of the report document is US Letter. A Letter page of a PDF
+  document stays as it is; a larger one, an A4 invoice say, is scaled down
+  just enough to fit the page (to 94 %); a smaller one, a till receipt, keeps
+  its size and is centred.
 - On the cover, the title and the date it was written sit in the top right
   corner, level with the logo, and Attached information lists the kinds of
   document in alphabetical order.

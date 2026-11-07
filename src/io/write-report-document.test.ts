@@ -407,7 +407,7 @@ describe('writeReportDocument', () => {
     expect(title?.x ?? 0).toBeLessThan(date?.x ?? 0)
   })
 
-  it('puts every page on a Letter page, a larger one scaled down to fit its margins, and shows it portrait', async () => {
+  it('puts every page on a Letter page, a larger one scaled down to fit it, and shows it portrait', async () => {
     const pdf = await written(await reportOf('Taxi'))
     const sizes = pdf.getPages().map((page) => [page.getWidth(), page.getHeight()])
     expect(sizes).toEqual([...Array(5).fill([612, 792]), [792, 612]])
@@ -415,13 +415,14 @@ describe('writeReportDocument', () => {
     expect(pdf.getPage(5).getRotation().angle).toBe(270)
     const a4 = decoded(streamsOf(pdf, pdf.getPage(2))[0])
     const factor = Number(/^(\S+) 0 0 \1 0 0 cm$/m.exec(a4)?.[1])
-    expect(factor).toBeCloseTo(684 / 842)
+    expect(factor).toBeCloseTo(792 / 842)
     expect(a4).toContain(`0 0 ${595 * factor} ${842 * factor} re`)
   })
 
-  it('never enlarges a small page, centres it, and keeps hidden what its crop box hid', async () => {
+  it('keeps a Letter page as it is, never enlarges a small one, and keeps hidden what its crop box hid', async () => {
     const source = await PDFDocument.create()
     const font = await source.embedFont(StandardFonts.Helvetica)
+    source.addPage([612, 792]).drawText('Letter', { x: 50, y: 50, size: 12, font })
     const till = source.addPage([226, 600])
     till.drawText('Till', { x: 50, y: 50, size: 12, font })
     till.setCropBox(20, 30, 180, 500)
@@ -432,12 +433,15 @@ describe('writeReportDocument', () => {
     const pdf = await written(
       report.afterReplacing(expense, expense.afterChanging({ receipts: [receipt] })),
     )
-    const page = pdf.getPage(2)
+    const letter = pdf.getPage(2)
+    expect(letter.getCropBox()).toEqual({ x: 0, y: 0, width: 612, height: 792 })
+    expect(decoded(streamsOf(pdf, letter)[0])).toMatch(/0 0 612 792 re\s+W\s+n\s+1 0 0 1 0 0 cm/)
+    const page = pdf.getPage(3)
     expect(page.getCropBox()).toEqual({ x: 20 - 216, y: 30 - 146, width: 612, height: 792 })
     expect(page.getMediaBox()).toEqual(page.getCropBox())
     const wrapper = decoded(streamsOf(pdf, page)[0])
     expect(wrapper).toMatch(/20 30 180 500 re\s+W\s+n\s+1 0 0 1 0 0 cm/)
-    expect(textsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 3 / 5'])
+    expect(textsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 4 / 6'])
   })
 
   it('shows a photo upright, turned as its Exif orientation says', async () => {
