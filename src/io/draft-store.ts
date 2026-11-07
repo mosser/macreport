@@ -48,7 +48,7 @@ function opened(factory: IDBFactory): Promise<IDBDatabase> {
     const request = factory.open(databaseName, databaseVersion)
     request.onupgradeneeded = () => {
       const database = request.result
-      for (const name of Array.from(database.objectStoreNames)) {
+      for (const name of database.objectStoreNames) {
         database.deleteObjectStore(name)
       }
       database.createObjectStore(draftStore)

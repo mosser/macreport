@@ -78,10 +78,10 @@ interface Place {
   readonly top: number
 }
 
-/** A document read for its pages: a PDF to copy, or an image to place on a page of its own. */
+/** A document ready for its pages: a PDF's pages copied, or an image to place on a page of its own. */
 type Source =
-  | { readonly format: 'pdf'; readonly pdf: PDFDocument; readonly pageCount: number }
-  | { readonly format: 'jpeg' | 'png'; readonly pageCount: 1 }
+  | { readonly pages: readonly PDFPage[]; readonly pageCount: number }
+  | { readonly image: PDFImage; readonly pageCount: 1 }
 
 /**
  * Writes the report document of a layout: the cover, then each section, its section pages and
@@ -98,10 +98,17 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
     bold: await pdf.embedFont(bytesOf(boldFont), { subset: true }),
     logo: await pdf.embedPng(bytesOf(logoImage)),
   })
+  // Every document is read, its pages copied and its image embedded first, all at once; the
+  // pages are then added in the order of the report document.
+  const sources = await Promise.all(
+    writing.layout.sections.map((section) =>
+      Promise.all(section.documents.map((entry) => sourceOf(pdf, entry.document))),
+    ),
+  )
   writer.writeCover(writing.layout, writing.writtenOn)
-  for (const section of writing.layout.sections) {
-    await writer.writeSection(section)
-  }
+  writing.layout.sections.forEach((section, index) => {
+    writer.writeSection(section, sources[index] ?? [])
+  })
   writer.stampEveryPage()
   writer.link()
   pdf.setTitle(writing.layout.title)
@@ -119,13 +126,18 @@ function formatOf(content: Uint8Array): 'pdf' | 'jpeg' | 'png' {
   return 'pdf'
 }
 
-async function sourceOf(document: Document): Promise<Source> {
+/** A document ready to go into the report document: its pages copied, or its image embedded. */
+async function sourceOf(pdf: PDFDocument, document: Document): Promise<Source> {
   const format = formatOf(document.content)
-  if (format !== 'pdf') {
-    return { format, pageCount: 1 }
+  if (format === 'png') {
+    return { image: await pdf.embedPng(document.content), pageCount: 1 }
   }
-  const pdf = await PDFDocument.load(document.content)
-  return { format, pdf, pageCount: pdf.getPageCount() }
+  if (format === 'jpeg') {
+    return { image: await pdf.embedJpg(document.content), pageCount: 1 }
+  }
+  const source = await PDFDocument.load(document.content)
+  const pages = await pdf.copyPages(source, source.getPageIndices())
+  return { pages, pageCount: pages.length }
 }
 
 /** The lines a text wraps into within a width, breaking a word longer than the width. */
@@ -355,8 +367,7 @@ class Writer {
     flow.stopContinuing()
   }
 
-  async writeSection(section: Section): Promise<void> {
-    const sources = await Promise.all(section.documents.map((entry) => sourceOf(entry.document)))
+  writeSection(section: Section, sources: readonly Source[]): void {
     const counting = new Flow(this, true)
     this.sectionPage(counting, section, sources, 0)
     const firstPage = this.pages.length + counting.pageCount + 1
@@ -364,7 +375,7 @@ class Writer {
     for (const [index, entry] of section.documents.entries()) {
       const source = sources[index]
       if (source !== undefined) {
-        await this.copy(entry, source)
+        this.copy(entry, source)
       }
     }
   }
@@ -460,7 +471,12 @@ class Writer {
     }
   }
 
-  private sectionPage(flow: Flow, section: Section, sources: Source[], firstPage: number): void {
+  private sectionPage(
+    flow: Flow,
+    section: Section,
+    sources: readonly Source[],
+    firstPage: number,
+  ): void {
     this.paragraph(flow, section.title, this.bold, 16, this.palette.maroon)
     flow.down(6)
     const columns: Column[] = [
@@ -480,19 +496,15 @@ class Writer {
     flow.stopContinuing()
   }
 
-  private async copy(entry: LabelledDocument, source: Source): Promise<void> {
-    if (source.format === 'pdf') {
-      const copied = await this.pdf.copyPages(source.pdf, source.pdf.getPageIndices())
-      for (const page of copied) {
+  private copy(entry: LabelledDocument, source: Source): void {
+    if ('pages' in source) {
+      for (const page of source.pages) {
         this.pages.push({ page: turnedPortrait(this.pdf.addPage(page)), entry })
       }
-      this.markFirstPage(entry, this.pages.length - copied.length)
+      this.markFirstPage(entry, this.pages.length - source.pages.length)
       return
     }
-    const image =
-      source.format === 'png'
-        ? await this.pdf.embedPng(entry.document.content)
-        : await this.pdf.embedJpg(entry.document.content)
+    const image = source.image
     const size = image.width > image.height ? letterLandscape : letterPortrait
     const scale = Math.min(
       1,
