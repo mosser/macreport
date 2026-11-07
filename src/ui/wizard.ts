@@ -90,7 +90,10 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
             ${current === steps.length - 1 ? html`hidden` : ''}>Continue</button>
         </div>
       </main>
-      <footer>McSCert · McMaster University · v${options.version}</footer>`.text
+      <footer>
+        <p>McSCert Expense Report v${options.version} · McSCert · McMaster University</p>
+        <p class="privacy">Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.</p>
+      </footer>`.text
 
     const panel = root.querySelector<HTMLElement>('.panel')
     if (panel !== null) {

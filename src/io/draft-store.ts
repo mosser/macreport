@@ -56,6 +56,8 @@ function opened(factory: IDBFactory): Promise<IDBDatabase> {
     }
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
+    // Another page holds an older draft open: rather than wait for it, keep nothing this time.
+    request.onblocked = () => reject(new Error('The draft is held open by another page'))
   })
 }
 

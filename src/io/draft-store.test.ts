@@ -175,3 +175,16 @@ describe('the draft store', () => {
     expect((await openDraftStore()).isKept).toBe(false)
   })
 })
+
+describe('the draft store, when another page holds an older draft open', () => {
+  it('keeps nothing rather than wait', async () => {
+    const factory = new IDBFactory()
+    const older = await new Promise<IDBDatabase>((resolve) => {
+      const request = factory.open('macreport', 1)
+      request.onsuccess = () => resolve(request.result)
+    })
+    const store = await openDraftStore(factory)
+    expect(store.isKept).toBe(false)
+    older.close()
+  })
+})

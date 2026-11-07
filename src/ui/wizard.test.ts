@@ -99,7 +99,11 @@ describe('the wizard', () => {
   it('opens on the Report step, with the notice that no draft is kept, and the version', () => {
     expect(root.querySelector('h2')?.textContent).toBe('Report')
     expect(root.textContent).toContain('closing the page will lose the report')
-    expect(root.querySelector('footer')?.textContent).toContain('v0.1.0')
+    const footer = root.querySelector('footer')?.textContent?.replace(/\s+/g, ' ')
+    expect(footer).toContain('McSCert Expense Report v0.1.0 · McSCert · McMaster University')
+    expect(footer).toContain(
+      'Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.',
+    )
     expect(button('[data-action="back"]')?.hidden).toBe(true)
     expect(continueButton()?.disabled).toBe(true)
     expect(button('[data-step="1"]')?.disabled).toBe(true)

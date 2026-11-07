@@ -281,3 +281,7 @@ footer {
 .checkbox input {
   width: auto;
 }
+
+footer p {
+  margin: 0.25rem 0;
+}

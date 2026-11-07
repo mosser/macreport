@@ -12,6 +12,10 @@ Report step; otherwise it opens on an empty report.
 When the browser refuses to keep a draft, the system says so on every step:
 closing the page will lose the report. Everything else works.
 
+Under every step, the footer names the system and its version, McSCert and
+McMaster University, and states: *Everything you enter and add stays in this
+browser, on this computer. Nothing is collected, sent or shared.*
+
 **New report** is offered on every step. It asks for confirmation, then
 discards the draft, its expenses and its documents, and opens the Report step
 on an empty report.

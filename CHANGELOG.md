@@ -38,6 +38,9 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   expense in a stamp goes back to its row on the cover.
   Text is written in Noto Sans, so names in the Latin, Greek and Cyrillic
   alphabets keep their accents.
+- A footer on every step with the version of the system, and the statement
+  that everything entered and added stays in the browser, on the computer:
+  nothing is collected, sent or shared.
 - **New report**, which deletes the draft and its documents after
   confirmation, and empties the form.
 
