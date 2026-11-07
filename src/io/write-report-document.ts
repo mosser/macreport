@@ -184,7 +184,10 @@ async function sourceOf(pdf: PDFDocument, document: Document): Promise<Source> {
   return { pages, pageCount: pages.length }
 }
 
-/** The lines a text wraps into within a width, breaking a word longer than the width. */
+/**
+ * The lines a text wraps into within a width, breaking a word longer than the width; each of its
+ * own line breaks starts a line.
+ */
 export function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const fits = (candidate: string) => font.widthOfTextAtSize(candidate, size) <= width
   return text.split('\n').flatMap((paragraph) => wrapParagraph(paragraph, fits))

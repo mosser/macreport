@@ -253,6 +253,16 @@ describe('layoutOf', () => {
     expect(layout.sections.at(-1)?.title).toBe('Bank statements')
   })
 
+  it('names an expense on one line in a stamp, its line breaks as spaces, and keeps them on the cover', () => {
+    const meal = report.afterReplacing(
+      flight,
+      flight.afterChanging({ description: 'Dinner with\n  Ada\nAlan' }),
+    )
+    const layout = layoutOf(meal)
+    expect(layout.expenses[0]?.description).toBe('Dinner with\n  Ada\nAlan')
+    expect(layout.sections[1]?.documents[0]?.expenses[0]?.description).toBe('Dinner with Ada Alan')
+  })
+
   it('stamps an additional document with its name, its first 30 characters', () => {
     const programme = invitation.afterNaming('Programme of the 48th International Conference')
     const first = layoutOf(report.afterRenaming(invitation, programme.name)).sections[0]

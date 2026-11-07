@@ -67,9 +67,9 @@ the template's fields and its table, so that nothing else needs filling in.
   | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | ☐ |
   | | | *Taxi, CDG–hotel · cash* | | | |
 
-  The foreign amount is the currency code then the amount, empty for an
-  expense paid in Canadian dollars; it is for information, nothing is
-  converted. The supporting documents are the names of the expense's
+  A description keeps its line breaks. The foreign amount is the currency
+  code then the amount, empty for an expense paid in Canadian dollars; it is
+  for information, nothing is converted. The supporting documents are the names of the expense's
   documents, in grey, separated by a middle dot, in the order of the report
   document, and *cash* for an expense paid in cash; a missing receipt
   authorization is named by the expense's description. They run from under
@@ -159,8 +159,9 @@ it reads upright on screen, whatever the page's size and rotation:
   number and the start of its description, then the page number out of the
   total, as in `R3 · Expense 2: Taxi, CDG–hotel · 12 / 30` or
   `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
-  programme comm… · 14 / 30`. A description longer than 30 characters is cut
-  to its first 30, followed by an ellipsis;
+  programme comm… · 14 / 30`. A description is written on one line, its line
+  breaks as spaces, and one longer than 30 characters is cut to its first 30,
+  followed by an ellipsis;
 - on a page of an additional document: its label, its name, then the page
   number out of the total, as in `A1 · Invitation from ICSE · 3 / 30`; a
   name longer than 30 characters is cut as a description is;

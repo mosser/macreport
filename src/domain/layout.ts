@@ -272,12 +272,15 @@ function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
   return { number, description, name: `Expense ${number}: ${description}` }
 }
 
-/** A text as a stamp keeps it: its first 30 characters, an ellipsis when it is longer. */
+/**
+ * A text as a stamp keeps it, on one line: its line breaks as spaces, then its first 30
+ * characters, an ellipsis when it is longer.
+ */
 function cut(text: string): string {
-  const characters = [...text]
+  const characters = [...text.replace(/\s*\n\s*/g, ' ')]
   return characters.length > stampedDescriptionLength
     ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
-    : text
+    : characters.join('')
 }
 
 function attachedInformationOf(kind: Kind, sections: readonly Section[]): AttachedInformation {

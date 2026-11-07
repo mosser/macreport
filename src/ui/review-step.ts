@@ -34,7 +34,7 @@ function coverOf(layout: Layout, linkOf: LinkOf): Markup {
   const rows = layout.expenses.map((row) => {
     const documents = row.supportingDocuments.map((supporting) => supporting.document)
     return html`<tr class="expense">
-        <td>${row.number}</td><td>${row.date}</td><td>${row.description}</td>
+        <td>${row.number}</td><td>${row.date}</td><td class="description">${row.description}</td>
         <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
       </tr>
       <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`

@@ -425,6 +425,23 @@ describe('the wizard', () => {
     )
   })
 
+  it('keeps the line breaks of a description, from the Expenses step to the Review step', async () => {
+    fillReport()
+    continueButton()?.click()
+    await fillExpense()
+    type('description', 'Dinner with:\nAda Lovelace (McMaster)')
+    expect(kept.at(-1)?.expenses[0]?.description).toBe('Dinner with:\nAda Lovelace (McMaster)')
+    continueButton()?.click()
+    continueButton()?.click()
+    const style = document.createElement('style')
+    style.textContent = readFileSync('src/style.css', 'utf8')
+    document.head.append(style)
+    const cell = root.querySelector<HTMLElement>('table.expenses td.description')
+    expect(cell?.textContent).toBe('Dinner with:\nAda Lovelace (McMaster)')
+    expect(cell === null ? '' : getComputedStyle(cell).whiteSpace).toBe('pre-line')
+    style.remove()
+  })
+
   it('never gives two documents the same name', async () => {
     fillReport()
     continueButton()?.click()

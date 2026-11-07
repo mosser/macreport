@@ -277,6 +277,11 @@ tr.expense td {
   border-bottom: none;
 }
 
+/* A description keeps the line breaks the Claimant typed. */
+td.description {
+  white-space: pre-line;
+}
+
 tr.supporting td {
   padding-top: 0;
   color: var(--color-secondary-text);

@@ -451,6 +451,19 @@ describe('writeReportDocument', () => {
     expect(links[0]?.top).toBeGreaterThan(links[1]?.top ?? 0)
   })
 
+  it('keeps the line breaks of a description on the cover, and none in a stamp', async () => {
+    const pdf = await written(await reportOf('Dinner with:\nAda Lovelace (McMaster)'))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const [first, second] = ['Dinner with:', 'Ada Lovelace (McMaster)'].map((text) =>
+      places.find((place) => place.text === text),
+    )
+    expect(second?.x).toBe(first?.x)
+    expect(second?.y).toBeLessThan(first?.y ?? 0)
+    expect(textsOf(pdf, pdf.getPage(2)).at(-1)).toBe(
+      'R1 · Expense 1: Dinner with: Ada Lovelace (McM… · 3 / 6',
+    )
+  })
+
   it('heads the cover in its top right corner, level with the logo', async () => {
     const pdf = await written(await reportOf('Taxi'))
     const places = placesOf(pdf, pdf.getPage(0))

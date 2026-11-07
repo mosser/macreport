@@ -67,7 +67,7 @@ was paid in cash. The Claimant adds, changes and removes expenses.
 | Field | Rule |
 |---|---|
 | Date | Required, a calendar date. It may fall outside the dates of the report. |
-| Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. |
+| Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. It may run over several lines: its line breaks are kept on the Review step and in the report document. |
 | Claimed amount | Required, in Canadian dollars, more than zero, at most two decimals. |
 | Paid in another currency | Optional. When set: the amount, more than zero, at most two decimals, and its currency, a three-letter ISO 4217 code other than CAD. |
 | Receipts | At least one, unless the receipt is missing. |

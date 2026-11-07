@@ -61,6 +61,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A description written on several lines keeps its line breaks on the Review
+  step, as on the cover, and is written on one line in the stamps, where it
+  could run over several.
 - A photo taken with a phone shows upright: a JPEG image is turned, and
   mirrored, as its Exif orientation says, where it could show on its side.
 - A receipt or a bank statement could be missing from the draft when the page
