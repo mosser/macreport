@@ -9,8 +9,9 @@
 The system reads the PDF documents the Claimant adds (is it a PDF, how many
 pages, is it protected) and writes the report document: generated pages
 (cover, section pages, missing receipt authorizations), every page of every
-PDF document copied as it is, images placed on pages of their own, and a stamp
-on every page (`docs/specs/report-document.md`). All of it runs in the
+PDF document copied as it is, images placed on pages of their own, a stamp
+on every page, and links from labels and expense numbers to the pages they
+name (`docs/specs/report-document.md`). All of it runs in the
 browser, from one file, with no network (ADR 0001): the library and its fonts
 are inlined into the page and cannot load a worker or a font from elsewhere.
 
@@ -56,7 +57,8 @@ Options considered for the fonts:
   whatever its file name says, and that the library can embed it.
 - **Writing** the report document is one function of `src/io/` that takes the
   report's layout from the domain (ADR 0007) and returns the bytes of the PDF.
-  It draws, copies and stamps; it never orders, numbers, labels or totals.
+  It draws, copies, stamps and links; it never orders, numbers, labels or
+  totals, and the target of every link comes from the layout.
 - **Fonts.** Noto Sans Regular and Bold (SIL Open Font License 1.1), cut down
   to the Latin, Greek and Cyrillic alphabets and common punctuation, are kept
   in `src/assets/fonts/` with their licence and a note of how they were cut
@@ -65,8 +67,8 @@ Options considered for the fonts:
   same font, so the domain's finding and the writer cannot disagree.
 - **Stamping a copied page** first wraps its own content in a saved graphics
   state, so that the stamp is drawn in the page's coordinates whatever the
-  content left behind, and places the stamp according to the page's crop box
-  and rotation.
+  content left behind, and places the stamp and its links according to the
+  page's crop box and rotation.
 
 ## Consequences
 
@@ -94,7 +96,7 @@ A change is compliant with this ADR when:
 - `@cantoo/pdf-lib` and `@pdf-lib/fontkit` are the only PDF libraries in
   `package.json`, exact-pinned;
 - only files under `src/io/` import them;
-- the report document writer takes its order, labels, numbers and totals from
-  the domain and computes none of them;
+- the report document writer takes its order, labels, numbers, totals and
+  link targets from the domain and computes none of them;
 - the only fonts embedded in the report document are those of
   `src/assets/fonts/`, subset, and that folder holds their licence.

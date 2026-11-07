@@ -111,12 +111,38 @@ given).
 Every page carries a stamp in its bottom margin, on the right, written so that
 it reads upright on screen, whatever the page's size and rotation:
 
-- on a page of a document, missing receipt authorizations included: its
-  label, then the page number out of the total, as in `R3 · 12 / 30`;
+- on a page of a receipt, a bank statement or a missing receipt
+  authorization: its label, the numbers of the expenses the document
+  supports, then the page number out of the total, as in
+  `R3 · Expense 2 · 12 / 30` or `S1 · Expenses 1, 3, 4 · 14 / 30`;
+- on a page of an additional document: its label, then the page number out
+  of the total, as in `A1 · 28 / 30`;
 - on the cover and on section pages: the page number out of the total.
+
+Every page of a document carries the expenses, not only its first. When the
+stamp is wider than the page less its margins, the expenses go on lines of
+their own above it, as many as they need.
 
 The stamp is what lets a reader of a printed copy go from the cover to a
 receipt and back.
+
+## Links
+
+Labels and expense numbers are links: clicked in a PDF reader, they go to
+what they name.
+
+| Where | Link | Goes to |
+|---|---|---|
+| Cover, attached information | A label | The first page of its document |
+| Cover, expenses | A label among the supporting documents | The first page of its document |
+| Section page | A label, or its pages | The first page of its document |
+| Section page | An expense number | The expense's row on the cover |
+| Stamp | An expense number | The expense's row on the cover |
+| Stamp | The label | The document's row on its section page |
+
+Going to a row opens the page that holds it, with the row at the top of the
+window. *cash* and page numbers in the stamp are not links. A link changes
+nothing on a printed copy, where the stamp does its work.
 
 ## Text
 

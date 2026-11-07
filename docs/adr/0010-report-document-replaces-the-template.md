@@ -56,8 +56,13 @@ The report document is written as `docs/specs/report-document.md` says:
 - **An expense paid in cash** has no bank statement; the cover says *cash*
   where its statement's label would be.
 - **A label per document** (R3), used in the cover's table, on section pages,
-  and in the **stamp** on every page with the page number out of the total, so
-  that a printed copy can be followed from a row to its pages and back.
+  and in the **stamp** on every page with the numbers of the expenses the
+  document supports and the page number out of the total, so that a printed
+  copy can be followed from a row to its pages and back, and every page says
+  which expenses it is for.
+- **Labels and expense numbers are links**, so that on screen a click goes
+  from a row of the cover to its document, and from a page of a document back
+  to the rows of the expenses it supports.
 - **A document is in the report document once**, however many expenses it
   supports.
 - **Text the embedded font cannot write is a finding**, never replaced: the
@@ -77,6 +82,8 @@ The report document is written as `docs/specs/report-document.md` says:
   follow, with nothing to fill in by hand but a signature on each missing
   receipt authorization.
 - A report has as many expenses as it needs.
+- On screen, a reader goes from a row to its receipt and back in one click;
+  on paper, the stamp of each page names the expenses it supports.
 
 **Negative / accepted trade-offs**
 
@@ -95,4 +102,5 @@ A change is compliant with this ADR when:
   its layout or to the wording of the missing receipt authorization changes
   that spec in the same commit;
 - tests read the written report document back and check its order, its pages,
-  its labels, its stamps and the fields of each missing receipt authorization.
+  its labels, its stamps, the target of each link and the fields of each
+  missing receipt authorization.

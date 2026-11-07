@@ -1,6 +1,6 @@
 # Domain Model
 
-The concepts an expense report is made of, and how they are linked. The
+The concepts an expense report is made of, and how they relate. The
 Claimant fills them in step by step, the draft keeps them between two
 sessions, and the report document is written from them. A PDF or an image is
 a format at the edge of the system, never the thing the system reasons about.
@@ -41,7 +41,8 @@ document.
 | Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and their total. |
 | Section | The part of the report document holding the documents of one kind, opened by its section page. |
 | Section page | The page that opens a section: its title and the list of its documents, each with its label, its pages and the expenses it supports. |
-| Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, and the page number out of the total. |
+| Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the numbers of the expenses that document supports, and the page number out of the total. |
+| Link | A label or an expense number in the report document that a reader clicks, on screen, to go to the document's first page or to the expense's row on the cover. |
 
 ### Kinds of document
 
@@ -54,7 +55,7 @@ document.
 
 The order of this table is the order of the sections in the report document.
 
-## Links
+## Relations
 
 ```mermaid
 classDiagram
