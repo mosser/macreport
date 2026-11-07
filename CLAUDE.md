@@ -56,7 +56,8 @@ src/ui/       the wizard and its four steps: Report, Expenses, Additional docume
 src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 src/style.css McMaster palette tokens and all styling
-scripts/      check-adr.sh: the scriptable ADR checks
+scripts/      check-adr.sh: the scriptable ADR checks; release.sh and
+              release-notes.sh: cutting a release (ADR 0003)
 ```
 
 ## Ground rules
@@ -88,10 +89,13 @@ first.
 
 ### ADR 0003: releases
 
-- A release is a `vX.Y.Z` tag equal to the `version` of `package.json`; the
-  workflow attaches `macreport-vX.Y.Z.html`. Never push a tag unless asked for
-  a release. Actions are pinned to a full commit SHA with the version in a
-  comment.
+- A release is a `vX.Y.Z` tag equal to the `version` of `package.json`, cut
+  only by `scripts/release.sh vX.Y.Z` from a clean, up-to-date `main`. The
+  workflow attaches `macreport-vX.Y.Z.html`, takes the release notes from the
+  `## [X.Y.Z]` section of `CHANGELOG.md` (`scripts/release-notes.sh`), and
+  deploys the same file as `index.html` to `https://mosser.github.io/macreport/`.
+  Never cut a release unless asked. Actions are pinned to a full commit SHA
+  with the version in a comment.
 
 ### ADR 0004: quality
 
@@ -197,4 +201,5 @@ npm run test        # Vitest once, with coverage and its 80 % floor
 npm run coverage    # the same, for SonarQube (lcov in coverage/)
 npm run build       # tsc -b, then the single file dist/macreport-vX.Y.Z.html
 npm run check       # scripts/check-adr.sh (needs a build first)
+scripts/release.sh vX.Y.Z  # cut a release from main (only when asked)
 ```

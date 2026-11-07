@@ -60,6 +60,12 @@ Options considered:
   file its own origin does not show the draft of `macreport-v1.0.0.html` to
   `macreport-v1.1.0.html`, or to the same file once moved. A report is finished
   with the file it was started with.
+- On the GitHub Pages site (ADR 0003), the origin is the same for every
+  version, so a new version restores the draft an earlier one kept. A version
+  that changes how the draft is kept raises the database version, which
+  discards the earlier draft; a draft the system cannot read is restored as an
+  empty report. The site's origin is shared with the owner's other GitHub
+  Pages sites, whose scripts can read the draft.
 - Which browsers keep a draft under `file://`, and for how long, is checked by
   hand on Chrome, Firefox, Edge and Safari for each release; the result is
   written in the README.

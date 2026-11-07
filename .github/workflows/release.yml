@@ -5,12 +5,13 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -24,9 +25,43 @@ jobs:
             echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${version}" >&2
             exit 1
           fi
+      - name: Take the release notes from the CHANGELOG
+        run: bash scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > "${RUNNER_TEMP}/notes.md"
       - run: npm ci
       - run: npm run verify
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" "dist/macreport-${GITHUB_REF_NAME}.html" --generate-notes --verify-tag
+        run: >
+          gh release create "${GITHUB_REF_NAME}" "dist/macreport-${GITHUB_REF_NAME}.html"
+          --title "${GITHUB_REF_NAME}" --notes-file "${RUNNER_TEMP}/notes.md" --verify-tag
+
+  pages:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # One deployment at a time; a newer one waiting replaces an older one waiting.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Serve the file of the latest release as index.html
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          echo "Deploying ${latest}"
+          mkdir site
+          gh release download "${latest}" --repo "${GITHUB_REPOSITORY}" \
+            --pattern "macreport-${latest}.html" --output site/index.html
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -33,6 +33,13 @@ grep -q '^engine-strict=true$' .npmrc || fail ".npmrc must set engine-strict=tru
 grep -nEi '#[0-9a-f]{3,8}\b|rgba?\( *[0-9]|hsla?\( *[0-9]' $(find src -name '*.ts') && fail "colour literal outside src/style.css"
 awk '/palette:start/{inside=1} /palette:end/{inside=0} !inside && /#[0-9A-Fa-f]{3,8}\b|rgba?\(/' src/style.css | grep . && fail "colour literal outside the palette block of src/style.css"
 
+# ADR 0003: actions pinned to a commit SHA; release notes from the CHANGELOG; Pages after the release.
+grep -nE '^\s*-?\s*uses:' .github/workflows/*.yml | grep -vE 'uses: [^@ ]+@[0-9a-f]{40} # v[0-9]' && fail "an action is not pinned to a full commit SHA with its version in a comment"
+grep -q 'scripts/release-notes.sh' .github/workflows/release.yml || fail "release.yml must take the release notes from CHANGELOG.md"
+grep -q -- '--generate-notes' .github/workflows/release.yml && fail "release.yml must not generate the release notes"
+grep -qE '^\s+needs: release$' .github/workflows/release.yml || fail "release.yml must deploy GitHub Pages after the release"
+grep -q '^## \[Unreleased\]$' CHANGELOG.md || fail "CHANGELOG.md must keep an [Unreleased] section"
+
 # ADR 0004: business code imports no test, vitest or node: module; no TODO; sonar keys from CI.
 grep -nE "from '(vitest|node:[^']*)'|from '[^']*\.test(\.ts)?'" $business && fail "business code imports a test, vitest or node: module"
 grep -rn 'TODO' src scripts --exclude=check-adr.sh && fail "TODO in the code"

@@ -44,6 +44,9 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   nothing is collected, sent or shared.
 - **New report**, which deletes the draft and its documents after
   confirmation, and empties the form.
+- The latest version, served at <https://mosser.github.io/macreport/>, next
+  to the file attached to each release. There, the draft carries over from
+  one version to the next.
 
 ### Known limitations
 
