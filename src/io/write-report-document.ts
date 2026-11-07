@@ -1,12 +1,19 @@
 import fontkit from '@cantoo/fontkit'
 import {
+  clip,
   degrees,
+  endPath,
   type PDFArray,
+  PDFContentStream,
   PDFDocument,
   type PDFFont,
   type PDFImage,
   type PDFPage,
+  popGraphicsState,
+  pushGraphicsState,
+  rectangle,
   rgb,
+  scale,
 } from '@cantoo/pdf-lib'
 import boldFont from '../assets/fonts/NotoSans-Bold.ttf?inline'
 import regularFont from '../assets/fonts/NotoSans-Regular.ttf?inline'
@@ -22,7 +29,8 @@ import type {
   SupportingDocument,
 } from '../domain/layout.ts'
 import { bytesOf } from './inlined.ts'
-import { type PageView, portraitRotationOf, viewOf } from './page-view.ts'
+import { orientationOf } from './orientation.ts'
+import { fitOf, type PageView, portraitRotationOf, type Rotation, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
 
 /** What the report document is written from. */
@@ -36,7 +44,7 @@ export interface Writing {
 }
 
 const letterPortrait: [number, number] = [612, 792]
-const letterLandscape: [number, number] = [792, 612]
+const letter = { width: letterPortrait[0], height: letterPortrait[1] }
 /** Three-quarter-inch margins. */
 const margin = 54
 const stampBaseline = 24
@@ -105,7 +113,7 @@ interface Place {
 /** A document ready for its pages: a PDF's pages copied, or an image to place on a page of its own. */
 type Source =
   | { readonly pages: readonly PDFPage[]; readonly pageCount: number }
-  | { readonly image: PDFImage; readonly pageCount: 1 }
+  | { readonly image: PDFImage; readonly turn: Rotation; readonly pageCount: 1 }
 
 /**
  * Writes the report document of a layout: the cover, then each section, its section pages and
@@ -155,10 +163,11 @@ function formatOf(content: Uint8Array): 'pdf' | 'jpeg' | 'png' {
 async function sourceOf(pdf: PDFDocument, document: Document): Promise<Source> {
   const format = formatOf(document.content)
   if (format === 'png') {
-    return { image: await pdf.embedPng(document.content), pageCount: 1 }
+    return { image: await pdf.embedPng(document.content), turn: 0, pageCount: 1 }
   }
   if (format === 'jpeg') {
-    return { image: await pdf.embedJpg(document.content), pageCount: 1 }
+    const turn = orientationOf(document.content)
+    return { image: await pdf.embedJpg(document.content), turn, pageCount: 1 }
   }
   const source = await PDFDocument.load(document.content)
   const pages = await pdf.copyPages(source, source.getPageIndices())
@@ -547,21 +556,24 @@ class Writer {
   private copy(entry: LabelledDocument, source: Source): void {
     if ('pages' in source) {
       for (const page of source.pages) {
-        this.pages.push({ page: turnedPortrait(this.pdf.addPage(page)), entry })
+        this.pages.push({ page: turnedPortrait(fittedToLetter(this.pdf.addPage(page))), entry })
       }
       this.markFirstPage(entry, this.pages.length - source.pages.length)
       return
     }
-    const image = source.image
-    const size = image.width > image.height ? letterLandscape : letterPortrait
-    const scale = Math.min(
-      1,
-      (size[0] - 2 * margin) / image.width,
-      (size[1] - 2 * margin) / image.height,
-    )
-    const [width, height] = [image.width * scale, image.height * scale]
-    const page = this.pdf.addPage(size)
-    page.drawImage(image, { x: (size[0] - width) / 2, y: (size[1] - height) / 2, width, height })
+    // The image is placed as it is stored, on a page turned as its orientation says, which is
+    // then fitted to Letter as any page is.
+    const { image, turn } = source
+    const box = { x: 0, y: 0, width: image.width, height: image.height }
+    const fit = fitOf(box, turn, letter, margin)
+    const page = this.pdf.addPage([fit.box.width, fit.box.height])
+    page.drawImage(image, {
+      x: -fit.box.x,
+      y: -fit.box.y,
+      width: image.width * fit.scale,
+      height: image.height * fit.scale,
+    })
+    page.setRotation(degrees(turn))
     this.pages.push({ page: turnedPortrait(page), entry })
     this.markFirstPage(entry, this.pages.length - 1)
   }
@@ -712,6 +724,47 @@ function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
     wrap(name, font, tableSize, width).map((text) => ({ text, label })),
   )
   return lines.length > 0 ? lines : [{ text: '' }]
+}
+
+/**
+ * A page of a PDF document on a Letter page, portrait or landscape as it shows: its content and
+ * its annotations scaled down to fit the margins, never enlarged, and centred. What its crop box
+ * hid stays hidden.
+ */
+function fittedToLetter(page: PDFPage): PDFPage {
+  const crop = page.getCropBox()
+  const fit = fitOf(crop, page.getRotation().angle, letter, margin)
+  const context = page.doc.context
+  const stream = (...operators: Parameters<typeof PDFContentStream.of>[1]) =>
+    context.register(PDFContentStream.of(context.obj({}), operators))
+  page.node.normalize()
+  page.node.wrapContentStreams(
+    stream(
+      pushGraphicsState(),
+      rectangle(
+        crop.x * fit.scale,
+        crop.y * fit.scale,
+        crop.width * fit.scale,
+        crop.height * fit.scale,
+      ),
+      clip(),
+      endPath(),
+      scale(fit.scale, fit.scale),
+    ),
+    stream(popGraphicsState()),
+  )
+  page.scaleAnnotations(fit.scale, fit.scale)
+  const { x, y, width, height } = fit.box
+  for (const setBox of [
+    page.setMediaBox,
+    page.setCropBox,
+    page.setBleedBox,
+    page.setTrimBox,
+    page.setArtBox,
+  ]) {
+    setBox.call(page, x, y, width, height)
+  }
+  return page
 }
 
 /** The page, turned a quarter when it would show landscape: every page shows portrait. */

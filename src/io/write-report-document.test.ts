@@ -43,6 +43,26 @@ async function pdfOf(pageSizes: [number, number][], text: string): Promise<Uint8
 
 const png = new Uint8Array(readFileSync('src/assets/mcscert-left-col.png'))
 
+/** A JPEG header of a width and a height, with an Exif orientation when given: enough to embed. */
+function jpegOf(width: number, height: number, orientation?: number): Uint8Array {
+  const bytes = [0xff, 0xd8]
+  if (orientation !== undefined) {
+    const tiff = [0x4d, 0x4d, 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1]
+    const exif = [0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff, 0, orientation, 0, 0, 0, 0, 0, 0]
+    bytes.push(0xff, 0xe1, 0, exif.length + 2, ...exif)
+  }
+  bytes.push(
+    0xff,
+    0xc0,
+    0,
+    11,
+    8,
+    ...[height, width].flatMap((value) => [value >> 8, value & 0xff]),
+  )
+  bytes.push(1, 1, 0x11, 0, 0xff, 0xd9)
+  return new Uint8Array(bytes)
+}
+
 async function reportOf(description: string): Promise<Report> {
   const receipt = new Document(
     Kind.receipt,
@@ -241,25 +261,26 @@ describe('writeReportDocument', () => {
     expect(boarding?.[0]?.width).toBeGreaterThan(120)
   })
 
-  it('puts the expenses of a stamp too wide for its page on a line of their own, above it', async () => {
-    const narrow = new Document(Kind.receipt, 'till.pdf', await pdfOf([[226, 600]], 'Till'))
-    const report = await reportOf('Air Canada, YYZ–CDG return')
+  it('puts the expenses of a stamp too wide for its page on lines of their own, above it', async () => {
+    const report = await reportOf('Taxi 1')
     const expense = report.expenses[0]
     if (expense === undefined) throw new TypeError('No expense')
-    const pdf = await written(
-      report.afterReplacing(expense, expense.afterChanging({ receipts: [narrow] })),
+    const others = Array.from({ length: 7 }, (_, index) =>
+      expense.afterChanging({ description: `Taxi ${index + 2}` }),
     )
-    const till = pdf.getPage(2)
-    expect(till.getWidth()).toBe(226)
-    const [content, base, ...expenseLines] = textsOf(pdf, till)
-    expect([content, base]).toEqual(['Till', 'R1 · 3 / 5'])
-    expect(expenseLines.length).toBeGreaterThan(1)
-    expect(expenseLines.toReversed().join(' ')).toBe('Expense 1: Air Canada, YYZ–CDG return')
-    const links = linksOf(pdf, till)
+    const pdf = await written(others.reduce((each, other) => each.afterAdding(other), report))
+    const boarding = pdf.getPage(2)
+    const [content, base, ...expenseLines] = textsOf(pdf, boarding)
+    expect([content, base]).toEqual(['Boarding', 'R1 · 3 / 6'])
+    expect(expenseLines.toReversed()).toEqual(
+      Array.from({ length: 8 }, (_, index) => `Expense ${index + 1}: Taxi ${index + 1}`),
+    )
+    const links = linksOf(pdf, boarding)
     expect(links.map(({ to, how }) => [to, how])).toEqual(expenseLines.map(() => [1, '/XYZ']))
+    const crop = boarding.getCropBox()
     for (const link of links) {
-      expect(link.left).toBeGreaterThanOrEqual(0)
-      expect(link.left + link.width).toBeLessThanOrEqual(226)
+      expect(link.left).toBeGreaterThanOrEqual(crop.x)
+      expect(link.left + link.width).toBeLessThanOrEqual(crop.x + crop.width)
     }
   })
 
@@ -386,26 +407,60 @@ describe('writeReportDocument', () => {
     expect(title?.x ?? 0).toBeLessThan(date?.x ?? 0)
   })
 
-  it('keeps the size of every page of a PDF document, and shows every page portrait', async () => {
+  it('puts every page on a Letter page, a larger one scaled down to fit its margins, and shows it portrait', async () => {
     const pdf = await written(await reportOf('Taxi'))
     const sizes = pdf.getPages().map((page) => [page.getWidth(), page.getHeight()])
-    expect(sizes).toEqual([
-      [612, 792],
-      [612, 792],
-      [595, 842],
-      [595, 842],
-      [612, 792],
-      [792, 612],
-    ])
-    expect(pdf.getPages().map(shown)).toEqual([
-      [612, 792],
-      [612, 792],
-      [595, 842],
-      [595, 842],
-      [612, 792],
-      [612, 792],
-    ])
+    expect(sizes).toEqual([...Array(5).fill([612, 792]), [792, 612]])
+    expect(pdf.getPages().map(shown)).toEqual(Array(6).fill([612, 792]))
     expect(pdf.getPage(5).getRotation().angle).toBe(270)
+    const a4 = decoded(streamsOf(pdf, pdf.getPage(2))[0])
+    const factor = Number(/^(\S+) 0 0 \1 0 0 cm$/m.exec(a4)?.[1])
+    expect(factor).toBeCloseTo(684 / 842)
+    expect(a4).toContain(`0 0 ${595 * factor} ${842 * factor} re`)
+  })
+
+  it('never enlarges a small page, centres it, and keeps hidden what its crop box hid', async () => {
+    const source = await PDFDocument.create()
+    const font = await source.embedFont(StandardFonts.Helvetica)
+    const till = source.addPage([226, 600])
+    till.drawText('Till', { x: 50, y: 50, size: 12, font })
+    till.setCropBox(20, 30, 180, 500)
+    const receipt = new Document(Kind.receipt, 'till.pdf', await source.save())
+    const report = await reportOf('Taxi')
+    const expense = report.expenses[0]
+    if (expense === undefined) throw new TypeError('No expense')
+    const pdf = await written(
+      report.afterReplacing(expense, expense.afterChanging({ receipts: [receipt] })),
+    )
+    const page = pdf.getPage(2)
+    expect(page.getCropBox()).toEqual({ x: 20 - 216, y: 30 - 146, width: 612, height: 792 })
+    expect(page.getMediaBox()).toEqual(page.getCropBox())
+    const wrapper = decoded(streamsOf(pdf, page)[0])
+    expect(wrapper).toMatch(/20 30 180 500 re\s+W\s+n\s+1 0 0 1 0 0 cm/)
+    expect(textsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 3 / 5'])
+  })
+
+  it('shows a photo upright, turned as its Exif orientation says', async () => {
+    const report = await reportOf('Taxi')
+    const expense = report.expenses[0]
+    if (expense === undefined) throw new TypeError('No expense')
+    const pages = await Promise.all(
+      [undefined, 6].map(async (orientation) => {
+        const photo = new Document(Kind.receipt, 'photo.jpg', jpegOf(400, 300, orientation))
+        const pdf = await written(
+          report.afterReplacing(expense, expense.afterChanging({ receipts: [photo] })),
+        )
+        return pdf.getPage(2)
+      }),
+    )
+    const [stored, turned] = pages
+    expect(stored?.getRotation().angle).toBe(270)
+    expect(turned?.getRotation().angle).toBe(90)
+    for (const page of pages) {
+      if (page === undefined) throw new TypeError('No page')
+      expect([page.getWidth(), page.getHeight()]).toEqual([792, 612])
+      expect(shown(page)).toEqual([612, 792])
+    }
   })
 
   it('turns a landscape page portrait, and stamps a page turned already upright on screen', async () => {
@@ -438,7 +493,8 @@ describe('writeReportDocument', () => {
       )
     }
     const link = linksOf(pdf, turned as PDFPage)[0]
-    expect(link?.left).toBeGreaterThan(800)
+    const crop = (turned as PDFPage).getCropBox()
+    expect(link?.left).toBeGreaterThan(crop.x + crop.width - 60)
     expect(link?.width).toBeLessThan(15)
   })
 

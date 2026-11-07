@@ -26,18 +26,20 @@ R1, R2, and so on.
 
 ## Pages
 
-- Generated pages (cover, section pages, missing receipt authorizations) are
-  US Letter, portrait, with three-quarter-inch margins. A text wraps within
-  its column or its line, never clipped; what does not fit a page continues
-  on the next one, as each part below says.
-- Every page of the report document is portrait. A page that would show
-  wider than tall is turned a quarter, the top of its content to the left, as
-  a landscape page is printed.
-- A PDF document keeps every page's size and content, turned when it is
-  landscape.
-- An image document is placed on a Letter page of its own, scaled down to
-  fit the margins and never enlarged; an image wider than tall is placed
-  across the page, turned as a landscape page is.
+- Every page of the report document is US Letter, and shows portrait. A page
+  that would show wider than tall is turned a quarter, the top of its content
+  to the left, as a landscape page is printed.
+- Generated pages (cover, section pages, missing receipt authorizations)
+  have three-quarter-inch margins. A text wraps within its column or its
+  line, never clipped; what does not fit a page continues on the next one, as
+  each part below says.
+- Each page of a PDF document, and each image document, is placed on a Letter
+  page of its own, across the page when it shows wider than tall: scaled down
+  to fit the three-quarter-inch margins when it is larger, never enlarged,
+  and centred. A PDF page keeps its text, its links and its form fields; what
+  its crop box hid stays hidden.
+- A JPEG image is first turned as its Exif orientation says, so that a photo
+  taken with a phone shows upright.
 
 ## Cover
 

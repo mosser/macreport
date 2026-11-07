@@ -32,6 +32,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - On the cover, an expense's supporting documents are listed by name, one per
   line, each a link to its document, rather than by label (R1, S1). Section
   pages have a Name column in place of File.
+- Every page of the report document is US Letter. A page of a PDF document
+  larger than Letter, an A4 invoice say, is scaled down to fit the margins;
+  a smaller one, a till receipt, keeps its size and is centred, as images
+  already were. The stamp is always in the margin, never over the content.
 - On the cover, the title and the date it was written sit in the top right
   corner, level with the logo, and Attached information lists the kinds of
   document in alphabetical order.
@@ -41,6 +45,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **New report** keeps the claimant's name, position and email, and starts
   the new report with them; the supervisor or host, the purpose, the dates,
   the account, the expenses and every document are still deleted.
+
+### Fixed
+
+- A photo taken with a phone shows upright: a JPEG image is turned as its
+  Exif orientation says, where it could show on its side.
 
 ### Known limitations
 
@@ -52,6 +61,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   found only when the report is saved, and the Review step then says so.
 - On section pages, labels and expense numbers are not links yet, nor is the
   label in a stamp.
+- Photos are embedded as they are added: a report of many phone photos is
+  large, and a HEIC photo is not accepted.
 
 ## [0.1.0] - 2026-11-07
 
