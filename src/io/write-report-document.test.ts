@@ -369,7 +369,7 @@ describe('writeReportDocument', () => {
     )
     expect(additional).not.toContain('Expenses')
     const at = (text: string, from = 0) => additional?.indexOf(text, from) ?? -1
-    const others = at('Additional documents', 1)
+    const others = at('Other documents')
     expect(at('Travel justifications')).toBeGreaterThan(at('Additional documents'))
     expect(at('A1')).toBeGreaterThan(at('Travel justifications'))
     expect(others).toBeGreaterThan(at('A1'))

@@ -73,8 +73,8 @@ export interface Section {
   readonly subsections: readonly Subsection[]
 }
 
-/** The subheading of the travel justifications, in the section of additional documents. */
-const travelJustificationsTitle = 'Travel justifications'
+/** The subheadings of the section of additional documents of a business travel. */
+const subheadings = { travelJustifications: 'Travel justifications', others: 'Other documents' }
 
 /** What the report document holds, worked out from a report without findings. */
 export interface Layout {
@@ -231,7 +231,7 @@ function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
 /**
  * The section of the documents of the report as a whole: the travel justifications, then the
  * other additional documents, each in the order they were added. Of a business travel, its
- * section page lists them in two subsections, Travel justifications then Additional documents,
+ * section page lists them in two subsections, Travel justifications then Other documents,
  * a subsection without documents left out.
  */
 function sectionOfAdditionalDocuments(report: Report): Section {
@@ -247,8 +247,8 @@ function sectionOfAdditionalDocuments(report: Report): Section {
   const count = report.travelJustifications.length
   const subsections = report.isBusinessTravel
     ? [
-        { title: travelJustificationsTitle, documents: documents.slice(0, count) },
-        { title: kind.plural, documents: documents.slice(count) },
+        { title: subheadings.travelJustifications, documents: documents.slice(0, count) },
+        { title: subheadings.others, documents: documents.slice(count) },
       ].filter((subsection) => subsection.documents.length > 0)
     : []
   return { kind, title: kind.plural, listsExpenses: false, documents, subsections }

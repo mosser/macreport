@@ -235,7 +235,7 @@ describe('layoutOf', () => {
       ]),
     ).toEqual([
       ['Travel justifications', ['A1']],
-      ['Additional documents', ['A2']],
+      ['Other documents', ['A2']],
     ])
     const justified = layoutOf(report).sections[0]
     expect(justified?.subsections.map((subsection) => subsection.title)).toEqual([

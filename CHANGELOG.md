@@ -19,7 +19,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - In the report document, the additional documents come first, right after
   the cover, labelled A1, A2…: the travel justifications, then the others.
   Of a business travel, their section page lists them under two subheadings,
-  Travel justifications and Additional documents. It lists no expenses.
+  Travel justifications and Other documents. It lists no expenses.
 - A name for every document, receipts and bank statements included: its file
   name without its extension (`scan-0042.pdf` is named `scan-0042`), unless
   the Claimant types another next to it. The Review step and the
