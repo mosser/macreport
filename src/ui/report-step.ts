@@ -78,7 +78,7 @@ function supervisorOrHost(report: Report): Markup | undefined {
   return undefined
 }
 
-/** Step 1: the claimant, their supervisor or host, the purpose and its dates, the account. */
+/** Step 1: the claimant, their supervisor or host, the purpose, the dates of a business travel, the account. */
 export const reportStep: Step = {
   title: 'Report',
 
@@ -93,20 +93,39 @@ export const reportStep: Step = {
       ${supervisorOrHost(report)}
       ${section('Purpose', [
         input('purpose', report.purpose ?? '', 'text'),
-        html`<div class="dates">
-          ${input('firstDay', report.firstDay?.toString() ?? '', 'date')}
-          ${input('lastDay', report.lastDay?.toString() ?? '', 'date')}
-        </div>`,
+        html`<label class="field checkbox">
+          <input type="checkbox" name="businessTravel" ${report.isBusinessTravel ? html`checked` : ''} />
+          ${fieldName('businessTravel')}
+        </label>`,
+        report.isBusinessTravel
+          ? html`<div class="dates">
+              ${input('firstDay', report.firstDay?.toString() ?? '', 'date')}
+              ${input('lastDay', report.lastDay?.toString() ?? '', 'date')}
+            </div>`
+          : html``,
       ])}
       ${section('Account', [input('account', report.account ?? '', 'text')])}`.text
 
-    panel.querySelector('select')?.addEventListener('change', (event) => {
+    const select = panel.querySelector('select')
+    if (select !== null) {
+      select.value = report.position ?? ''
+    }
+    select?.addEventListener('change', (event) => {
       const value = (event.target as HTMLSelectElement).value
       const position = positions.find((choice) => choice === value)
       context.change(context.report.afterChanging({ position }))
       context.refresh()
     })
-    for (const element of panel.querySelectorAll('input')) {
+    panel
+      .querySelector<HTMLInputElement>('[name="businessTravel"]')
+      ?.addEventListener('change', (event) => {
+        const isBusinessTravel = (event.target as HTMLInputElement).checked
+        context.change(context.report.afterChanging({ isBusinessTravel }))
+        context.refresh()
+      })
+    for (const element of panel.querySelectorAll<HTMLInputElement>(
+      'input:not([type="checkbox"])',
+    )) {
       element.addEventListener('input', () => {
         const { changes, isBroken } = typed(context.report, element.name, element.value)
         context.change(context.report.afterChanging(changes))

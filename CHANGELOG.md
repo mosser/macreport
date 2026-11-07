@@ -14,9 +14,12 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   and sends nothing over a network.
 - The Report step, in sections: the claimant (name, position, email), the
   supervisor of a student or a postdoctoral fellow or the host of a visitor,
-  the purpose with its first and last day, both optional, and the account.
-  Required fields are marked with an asterisk, and Continue is offered once
-  every one is valid.
+  the purpose, ticked as a business travel when it has dates, then its first
+  and last day, and the account. Required fields are marked with an asterisk,
+  and Continue is offered once every one is valid.
+- The claimant is remembered by the browser from one report to the next:
+  their name, position and email, as last entered. **New report** keeps them;
+  clearing a field forgets it.
 - The Expenses step, for exactly one expense: its date, description and
   claimed amount in Canadian dollars, with one receipt and one bank statement,
   each a PDF, a JPEG image or a PNG image, dropped on its zone or chosen from
@@ -24,7 +27,7 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
 - The Review step: the cover and the sections as they will be written, or the
   findings that stand in the way, and **Save the report**.
 - The report document, saved as `expense-report-<date>-<claimant>.pdf`,
-  dated by the report's first day or else its earliest expense: a cover in
+  dated by the first day of a business travel or else the earliest expense: a cover in
   place of the McSCert Expense Report Template (fields, attached information,
   table of expenses and total), then a section of receipts and a section of bank
   statements, each opened by a section page listing its documents with their
@@ -35,11 +38,13 @@ The first version, `0.1.0`: a minimal report, from one expense to one PDF.
   expense in a stamp goes back to its row on the cover.
   Text is written in Noto Sans, so names in the Latin, Greek and Cyrillic
   alphabets keep their accents.
-- **New report**, which discards the report after confirmation.
+- **New report**, which discards the report after confirmation and keeps the
+  claimant.
 
 ### Known limitations
 
-- No draft is kept: closing the page loses the report, and the system says so.
+- No draft is kept: closing the page loses the report, but for the claimant
+  remembered, and the system says so.
 - One expense per report; no missing receipt, payment in cash, foreign amount
   or additional document.
 - Files are not checked when added: a damaged or password-protected PDF fails

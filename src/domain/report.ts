@@ -14,6 +14,13 @@ export const positions: readonly Position[] = [
   'Visitor',
 ]
 
+/** The claimant remembered from one report to the next: their name, position and email. */
+export interface Claimant {
+  readonly claimantName?: string | undefined
+  readonly position?: Position | undefined
+  readonly email?: string | undefined
+}
+
 /** What a report is made of; a field the Claimant has not filled in is absent. */
 export interface ReportFields {
   readonly claimantName?: string | undefined
@@ -24,6 +31,7 @@ export interface ReportFields {
   readonly hostName?: string | undefined
   readonly hostEmail?: string | undefined
   readonly purpose?: string | undefined
+  readonly isBusinessTravel?: boolean | undefined
   readonly firstDay?: CalendarDate | undefined
   readonly lastDay?: CalendarDate | undefined
   readonly account?: string | undefined
@@ -44,6 +52,8 @@ export class Report {
   readonly hostName: string | undefined
   readonly hostEmail: string | undefined
   readonly purpose: string | undefined
+  /** Whether the purpose took the claimant away; only a business travel has dates. */
+  readonly isBusinessTravel: boolean
   readonly firstDay: CalendarDate | undefined
   readonly lastDay: CalendarDate | undefined
   readonly account: string | undefined
@@ -64,6 +74,7 @@ export class Report {
     this.hostName = fields.hostName
     this.hostEmail = fields.hostEmail
     this.purpose = fields.purpose
+    this.isBusinessTravel = fields.isBusinessTravel ?? false
     this.firstDay = fields.firstDay
     this.lastDay = fields.lastDay
     this.account = fields.account
@@ -80,22 +91,31 @@ export class Report {
     return this.position === 'Visitor'
   }
 
+  /** The claimant of the report, remembered for the next one. */
+  get claimant(): Claimant {
+    return { claimantName: this.claimantName, position: this.position, email: this.email }
+  }
+
   /**
    * The same report, with the fields given changed. Choosing another position takes the
-   * supervisor or the host out of the report.
+   * supervisor or the host out of the report; unticking business travel takes the dates out.
    */
   afterChanging(changes: ReportFields): Report {
     const changed = new Report({ ...this.fields(), ...changes })
-    if (changes.position === undefined || changes.position === this.position) {
-      return changed
-    }
     return new Report({
       ...changed.fields(),
       supervisorName: changed.asksForSupervisor ? changed.supervisorName : undefined,
       supervisorEmail: changed.asksForSupervisor ? changed.supervisorEmail : undefined,
       hostName: changed.asksForHost ? changed.hostName : undefined,
       hostEmail: changed.asksForHost ? changed.hostEmail : undefined,
+      firstDay: changed.isBusinessTravel ? changed.firstDay : undefined,
+      lastDay: changed.isBusinessTravel ? changed.lastDay : undefined,
     })
+  }
+
+  /** A new report, empty but for its claimant: their name, position and email. */
+  newReport(): Report {
+    return new Report(this.claimant)
   }
 
   /** The same report, claiming one more expense. */
@@ -119,6 +139,7 @@ export class Report {
       hostName: this.hostName,
       hostEmail: this.hostEmail,
       purpose: this.purpose,
+      isBusinessTravel: this.isBusinessTravel,
       firstDay: this.firstDay,
       lastDay: this.lastDay,
       account: this.account,

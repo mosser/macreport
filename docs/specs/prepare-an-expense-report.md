@@ -9,12 +9,17 @@ The system is one HTML file the Claimant opens in their browser, from their
 computer. When the browser kept a draft, the system opens on it, at the
 Report step; otherwise it opens on an empty report.
 
+The browser also remembers the claimant: their name, position and email, as
+last entered, from one report to the next. An empty report starts with them,
+and clearing a field forgets it. Remembering them is best effort, as keeping
+the draft is.
+
 When the browser refuses to keep a draft, the system says so on every step:
 closing the page will lose the report. Everything else works.
 
 **New report** is offered on every step. It asks for confirmation, then
 discards the draft, its expenses and its documents, and opens the Report step
-on an empty report.
+on an empty report, for the claimant remembered.
 
 ## The steps
 
@@ -30,7 +35,8 @@ field's rule is shown with that rule, and kept once it does.
 
 The fields are grouped in sections: **Claimant** (name of claimant, position,
 email), **Supervisor** or **Host** when the position asks for one,
-**Purpose** (purpose, first day, last day) and **Account**.
+**Purpose** (purpose, business travel, and its first and last day) and
+**Account**.
 
 | Field | Rule |
 |---|---|
@@ -41,12 +47,13 @@ email), **Supervisor** or **Host** when the position asks for one,
 | Supervisor, supervisor's email | Asked of a Student or a Postdoctoral fellow, and then required: the supervisor's name, and an email address. |
 | Host, host's email | Asked of a Visitor, and then required: the host's name, and an email address. |
 | Purpose | Required. |
-| First day | Optional, a calendar date. |
-| Last day | Optional, a calendar date, not before the first day when both are given. |
+| Business travel | Ticked for a report whose purpose took the claimant away. Unticked, the report has no dates. |
+| First day | Asked of a business travel, and then required: a calendar date. |
+| Last day | Asked of a business travel, and then required: a calendar date, not before the first day. |
 | Account | Required, free text. |
 
 Choosing another position takes the supervisor or the host out of the
-report. Continue is offered once every required field is valid.
+report; unticking business travel takes the dates out. Continue is offered once every required field is valid.
 
 ### 2. Expenses
 
@@ -115,8 +122,8 @@ pages. Then the findings, if any.
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as
-`expense-report-<date>-<claimant>.pdf`: the date is the first day of the
-report, or the date of its earliest expense when it has no first day; the
+`expense-report-<date>-<claimant>.pdf`: the date is the first day of a
+business travel, or the date of the earliest expense of another report; the
 name of the claimant in lower case, without accents, words joined by
 hyphens. The browser
 does not tell the system whether it wrote the file or the Claimant cancelled,

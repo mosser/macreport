@@ -95,7 +95,7 @@ export function layoutOf(report: Report): Layout {
   return {
     title: `McSCert Expense Report — ${complete.purpose}`,
     author: complete.claimantName,
-    fileName: fileNameOf(complete, report.firstDay ?? expenses[0]?.date),
+    fileName: fileNameOf(complete, report.isBusinessTravel ? report.firstDay : expenses[0]?.date),
     coverFields: coverFieldsOf(report, complete),
     attachedInformation: Kind.all.map((kind) => attachedInformationOf(kind, sections)),
     expenses: expenses.map((expense, index) => rowOf(expense, index + 1, labels)),
@@ -129,8 +129,9 @@ function byDate(one: Expense, other: Expense): number {
 }
 
 /**
- * expense-report-<date>-<claimant>.pdf: the first day of the report, or the date of its earliest
- * expense; the claimant in lower case, without accents, words joined by hyphens.
+ * expense-report-<date>-<claimant>.pdf: the first day of a business travel, or the date of the
+ * earliest expense of another report; the claimant in lower case, without accents, words joined
+ * by hyphens.
  */
 function fileNameOf(complete: Complete, date: CalendarDate | undefined): string {
   const claimant = complete.claimantName
@@ -157,7 +158,7 @@ function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
     fields.push({ name: fieldNames.hostEmail, value: report.hostEmail ?? '' })
   }
   fields.push({ name: fieldNames.purpose, value: complete.purpose })
-  const dates = datesOf(report.firstDay, report.lastDay)
+  const dates = report.isBusinessTravel ? datesOf(report.firstDay, report.lastDay) : undefined
   if (dates !== undefined) {
     fields.push({ name: 'Dates', value: dates })
   }
@@ -165,7 +166,7 @@ function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
   return fields
 }
 
-/** The dates of the report: both days, one day when they are the same or only one is given. */
+/** The dates of a business travel: both days, or one day when they are the same. */
 function datesOf(
   firstDay: CalendarDate | undefined,
   lastDay: CalendarDate | undefined,

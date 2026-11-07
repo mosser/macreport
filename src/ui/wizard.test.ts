@@ -2,15 +2,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Document } from '../domain/document.ts'
 import type { Kind } from '../domain/kind.ts'
-import type { Report } from '../domain/report.ts'
+import type { Claimant, Report } from '../domain/report.ts'
 import { mountWizard, type WizardOptions } from './wizard.ts'
 
 let root: HTMLElement
 let saved: Report[]
 let confirmation: boolean
+let remembered: Claimant[]
 
-function options(): WizardOptions {
+function options(claimant: Claimant = {}): WizardOptions {
   return {
+    claimant,
+    remember: (changed) => {
+      remembered.push(changed)
+    },
     version: '0.1.0',
     logo: 'logo.png',
     confirm: () => confirmation,
@@ -53,9 +58,14 @@ function fillReport(): void {
   choose('position', 'Faculty')
   type('email', 'zoe@mcmaster.ca')
   type('purpose', 'ICSE 2026')
-  type('firstDay', '2026-10-03')
-  type('lastDay', '2026-10-07')
   type('account', '20-123-456')
+}
+
+function tick(name: string, isTicked: boolean): void {
+  const box = root.querySelector<HTMLInputElement>(`input[type="checkbox"][name="${name}"]`)
+  if (box === null) throw new TypeError(`No checkbox ${name}`)
+  box.checked = isTicked
+  box.dispatchEvent(new Event('change'))
 }
 
 async function fillExpense(): Promise<void> {
@@ -71,6 +81,7 @@ beforeEach(() => {
   root = document.body.firstElementChild as HTMLElement
   saved = []
   confirmation = true
+  remembered = []
   mountWizard(root, options())
 })
 
@@ -90,7 +101,8 @@ describe('the wizard', () => {
     const name = (field: string) =>
       root.querySelector(`[name="${field}"]`)?.closest('label')?.querySelector('.field-name')
     expect(name('purpose')?.textContent?.trim()).toBe('Purpose *')
-    expect(name('firstDay')?.textContent?.trim()).toBe('First day')
+    expect(name('businessTravel')?.textContent?.trim()).toBe('Business travel')
+    expect(root.querySelector('[name="firstDay"]')).toBeNull()
     expect(
       root.querySelector('[name="claimantName"]')?.closest('label')?.querySelector('.rule'),
     ).toBeNull()
@@ -100,11 +112,33 @@ describe('the wizard', () => {
     )
   })
 
-  it('offers Continue without dates, which are optional', () => {
+  it('asks the dates of a business travel only, and then requires them', () => {
     fillReport()
-    type('firstDay', '')
-    type('lastDay', '')
     expect(continueButton()?.disabled).toBe(false)
+    tick('businessTravel', true)
+    expect(root.querySelector('[name="firstDay"]')).not.toBeNull()
+    expect(continueButton()?.disabled).toBe(true)
+    type('firstDay', '2026-10-03')
+    type('lastDay', '2026-10-07')
+    expect(continueButton()?.disabled).toBe(false)
+    tick('businessTravel', false)
+    expect(root.querySelector('[name="firstDay"]')).toBeNull()
+    tick('businessTravel', true)
+    expect(root.querySelector<HTMLInputElement>('[name="firstDay"]')?.value).toBe('')
+  })
+
+  it('opens on the claimant remembered, and remembers them each time they change', () => {
+    document.body.innerHTML = '<div></div>'
+    root = document.body.firstElementChild as HTMLElement
+    mountWizard(root, options({ claimantName: 'Zoë Lefèvre', position: 'Staff' }))
+    expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe('Zoë Lefèvre')
+    expect(root.querySelector<HTMLSelectElement>('select[name="position"]')?.value).toBe('Staff')
+    type('purpose', 'ICSE 2026')
+    expect(remembered).toEqual([])
+    type('email', 'zoe@mcmaster.ca')
+    expect(remembered).toEqual([
+      { claimantName: 'Zoë Lefèvre', position: 'Staff', email: 'zoe@mcmaster.ca' },
+    ])
   })
 
   it('offers Continue once every required field of the Report step is valid', () => {
@@ -123,6 +157,8 @@ describe('the wizard', () => {
     expect(root.querySelector('[data-rule-of="email"]')?.classList.contains('is-broken')).toBe(
       false,
     )
+    tick('businessTravel', true)
+    type('firstDay', '2026-10-03')
     type('lastDay', '2026-10-01')
     expect(root.querySelector('[data-rule-of="lastDay"]')?.classList.contains('is-broken')).toBe(
       true,
@@ -228,13 +264,15 @@ describe('the wizard', () => {
     expect(button('[data-action="save"]')).toBeNull()
   })
 
-  it('starts a new report once the Claimant confirms', () => {
+  it('starts a new report for the same claimant once the Claimant confirms', () => {
     fillReport()
     confirmation = false
     button('[data-action="new-report"]')?.click()
-    expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe('Zoë Lefèvre')
+    expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('ICSE 2026')
     confirmation = true
     button('[data-action="new-report"]')?.click()
-    expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe('')
+    expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('')
+    expect(root.querySelector<HTMLInputElement>('[name="claimantName"]')?.value).toBe('Zoë Lefèvre')
+    expect(root.querySelector<HTMLInputElement>('[name="email"]')?.value).toBe('zoe@mcmaster.ca')
   })
 })

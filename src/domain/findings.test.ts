@@ -14,13 +14,14 @@ const complete = new Report({
   position: 'Faculty',
   email: 'zoe@mcmaster.ca',
   purpose: 'ICSE 2026',
+  isBusinessTravel: true,
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   account: '20-123-456',
 })
 
 describe('findings of the Report step', () => {
-  it('names each required field missing; the dates are optional', () => {
+  it('names each required field missing; only a business travel has dates', () => {
     expect(wordings(findingsOfReportStep(new Report()))).toEqual([
       'Name of claimant is required.',
       'Position is required.',
@@ -28,8 +29,12 @@ describe('findings of the Report step', () => {
       'Purpose is required.',
       'Account is required.',
     ])
-    const withoutDates = complete.afterChanging({ firstDay: undefined, lastDay: undefined })
-    expect(findingsOfReportStep(withoutDates)).toEqual([])
+    expect(findingsOfReportStep(complete.afterChanging({ isBusinessTravel: false }))).toEqual([])
+    const undated = complete.afterChanging({ firstDay: undefined, lastDay: undefined })
+    expect(wordings(findingsOfReportStep(undated))).toEqual([
+      'First day is required.',
+      'Last day is required.',
+    ])
   })
 
   it("asks a student or a postdoctoral fellow for their supervisor's name and email", () => {
@@ -52,7 +57,9 @@ describe('findings of the Report step', () => {
   it('refuses a last day before the first', () => {
     const backwards = complete.afterChanging({ lastDay: new CalendarDate(2026, 10, 2) })
     expect(wordings(findingsOfReportStep(backwards))).toEqual(['Last day is before the first day.'])
-    expect(findingsOfReportStep(backwards.afterChanging({ firstDay: undefined }))).toEqual([])
+    expect(
+      wordings(findingsOfReportStep(backwards.afterChanging({ firstDay: undefined }))),
+    ).toEqual(['First day is required.'])
     const oneDay = complete.afterChanging({ lastDay: new CalendarDate(2026, 10, 3) })
     expect(findingsOfReportStep(oneDay)).toEqual([])
   })

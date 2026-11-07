@@ -43,7 +43,7 @@ the template's fields and its table, so that nothing else needs filling in.
   the document was written.
 - **Report fields.** Name of claimant, position, email, then the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
-  email for a visitor; purpose, its dates when it has some, account.
+  email for a visitor; purpose, the dates of a business travel, account.
 - **Attached information.** The four kinds of document, in their order, each
   with a box ticked when its section exists. The labels are in the table of
   expenses, not here.

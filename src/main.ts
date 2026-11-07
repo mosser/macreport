@@ -5,6 +5,7 @@ import { CalendarDate } from './domain/calendar-date.ts'
 import { layoutOf } from './domain/layout.ts'
 import type { Report } from './domain/report.ts'
 import { documentOf } from './io/add-file.ts'
+import { claimantMemory } from './io/draft-store.ts'
 import { paletteFrom } from './io/palette.ts'
 import { save } from './io/save.ts'
 import { writeReportDocument } from './io/write-report-document.ts'
@@ -37,7 +38,12 @@ const root = document.getElementById('app')
 if (root === null) {
   throw new TypeError('The page has no element to mount the wizard on')
 }
+const memory = claimantMemory()
 mountWizard(root, {
+  claimant: await memory.recall(),
+  remember: (claimant) => {
+    memory.remember(claimant)
+  },
   version: __VERSION__,
   logo,
   confirm: (question) => window.confirm(question),

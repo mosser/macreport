@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { CalendarDate } from './calendar-date.ts'
 import { Expense } from './expense.ts'
 import { positions, Report } from './report.ts'
 
@@ -49,6 +50,42 @@ describe('Report', () => {
     const student = visitor.afterChanging({ position: 'Student' })
     expect(student.hostName).toBeUndefined()
     expect(student.hostEmail).toBeUndefined()
+  })
+
+  it('takes the supervisor out when no position is chosen', () => {
+    const student = new Report({ position: 'Student' }).afterChanging({ supervisorName: 'Ada' })
+    expect(student.afterChanging({ position: undefined }).supervisorName).toBeUndefined()
+  })
+
+  it('dates only a business travel, and takes the dates out when it is unticked', () => {
+    const first = new CalendarDate(2026, 10, 3)
+    expect(new Report().isBusinessTravel).toBe(false)
+    const travel = new Report().afterChanging({ isBusinessTravel: true, firstDay: first })
+    expect(travel.firstDay).toBe(first)
+    const unticked = travel.afterChanging({ isBusinessTravel: false })
+    expect(unticked.firstDay).toBeUndefined()
+    expect(unticked.lastDay).toBeUndefined()
+    expect(new Report().afterChanging({ firstDay: first }).firstDay).toBeUndefined()
+  })
+
+  it('starts a new report for the same claimant: their name, position and email', () => {
+    const report = new Report({
+      claimantName: 'Zoë',
+      position: 'Student',
+      email: 'zoe@mcmaster.ca',
+      supervisorName: 'Ada',
+      purpose: 'ICSE',
+    }).afterAdding(new Expense())
+    expect(report.claimant).toEqual({
+      claimantName: 'Zoë',
+      position: 'Student',
+      email: 'zoe@mcmaster.ca',
+    })
+    const next = report.newReport()
+    expect(next.claimant).toEqual(report.claimant)
+    expect(next.supervisorName).toBeUndefined()
+    expect(next.purpose).toBeUndefined()
+    expect(next.expenses).toEqual([])
   })
 
   it('adds and replaces an expense', () => {

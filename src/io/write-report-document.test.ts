@@ -59,6 +59,7 @@ async function reportOf(description: string): Promise<Report> {
     position: 'Faculty',
     email: 'zoe@mcmaster.ca',
     purpose: 'ICSE 2026',
+    isBusinessTravel: true,
     firstDay: new CalendarDate(2026, 10, 3),
     lastDay: new CalendarDate(2026, 10, 7),
     account: '20-123-456',

@@ -20,6 +20,7 @@ export const fieldNames = {
   hostName: 'Host',
   hostEmail: "Host's email",
   purpose: 'Purpose',
+  businessTravel: 'Business travel',
   firstDay: 'First day',
   lastDay: 'Last day',
   account: 'Account',
@@ -46,7 +47,7 @@ export const fieldRules: Partial<Record<Field, string>> = {
 }
 
 /** The fields that are optional; every other field, when asked, is required. */
-const optionalFields: ReadonlySet<Field> = new Set<Field>(['firstDay', 'lastDay'])
+const optionalFields: ReadonlySet<Field> = new Set<Field>(['businessTravel'])
 
 /** Whether a field must be filled in, marked with an asterisk next to its name. */
 export function isRequired(field: Field): boolean {
@@ -65,7 +66,10 @@ function missing(step: FindingStep, field: Field, expense?: Expense): Finding {
   return { step, wording: `${subject}${fieldNames[field]} is required.` }
 }
 
-/** The required fields of the Report step that are missing, and a last day before the first. */
+/**
+ * The required fields of the Report step that are missing, the dates of a business travel among
+ * them, and a last day before the first.
+ */
 export function findingsOfReportStep(report: Report): readonly Finding[] {
   const required: [Field, unknown][] = [
     ['claimantName', report.claimantName],
@@ -80,7 +84,11 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
     required.push(['hostName', report.hostName])
     required.push(['hostEmail', report.hostEmail])
   }
-  required.push(['purpose', report.purpose], ['account', report.account])
+  required.push(['purpose', report.purpose])
+  if (report.isBusinessTravel) {
+    required.push(['firstDay', report.firstDay], ['lastDay', report.lastDay])
+  }
+  required.push(['account', report.account])
   const findings = required
     .filter(([, value]) => value === undefined)
     .map(([field]) => missing('Report', field))

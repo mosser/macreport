@@ -271,3 +271,13 @@ footer {
   background: var(--color-tint);
   color: var(--color-text);
 }
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox input {
+  width: auto;
+}

@@ -25,6 +25,7 @@ const report = new Report({
   supervisorName: 'Ada Lovelace',
   supervisorEmail: 'ada@mcmaster.ca',
   purpose: 'ICSE 2026',
+  isBusinessTravel: true,
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   account: '20-123-456',
@@ -64,13 +65,17 @@ describe('layoutOf', () => {
     expect(faculty.map((field) => field.name)).not.toContain('Host')
   })
 
-  it('leaves the dates out of a report without, and names its file after its earliest expense', () => {
-    const undated = report.afterChanging({ firstDay: undefined, lastDay: undefined })
-    const layout = layoutOf(undated)
+  it('dates a business travel, and names its file after its first day', () => {
+    const travel = layoutOf(report.afterChanging({ firstDay: new CalendarDate(2026, 10, 1) }))
+    expect(travel.coverFields).toContainEqual({ name: 'Dates', value: '2026-10-01 to 2026-10-07' })
+    expect(travel.fileName).toBe('expense-report-2026-10-01-zoe-lefevre-smith.pdf')
+  })
+
+  it('gives no dates to another report, and names its file after its earliest expense', () => {
+    const elsewhere = report.afterChanging({ firstDay: new CalendarDate(2026, 10, 1) })
+    const layout = layoutOf(elsewhere.afterChanging({ isBusinessTravel: false }))
     expect(layout.coverFields.map((field) => field.name)).not.toContain('Dates')
     expect(layout.fileName).toBe('expense-report-2026-10-03-zoe-lefevre-smith.pdf')
-    const onlyLast = layoutOf(report.afterChanging({ firstDay: undefined }))
-    expect(onlyLast.coverFields).toContainEqual({ name: 'Dates', value: '2026-10-07' })
   })
 
   it('names the host of a visitor, and gives one day for a purpose of one day', () => {

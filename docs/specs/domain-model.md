@@ -19,7 +19,8 @@ document.
 | Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
 | Purpose | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit, equipment. A report is not necessarily for an event. |
-| Dates | The first and the last day of the purpose, when it has some. Optional: a report may have both, one, or none. One day when they are the same. |
+| Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates. |
+| Dates | The first and the last day of a business travel. One day when they are the same. |
 | Account | The account the Claimant suggests the expenses be charged to, as free text. |
 | Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipts or the reason it has none, and its bank statements unless it was paid in cash. |
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |
@@ -37,7 +38,8 @@ document.
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
-| New report | Discarding the draft, its expenses and its documents, to start another report. |
+| New report | Discarding the draft, its expenses and its documents, to start another report for the claimant remembered. |
+| Claimant remembered | The claimant's name, position and email, as last entered, kept by the browser from one report to the next. Keeping them is best effort. |
 | Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
 | Report document | The single PDF the system writes from a report without findings: the cover, then one section per kind of document. It is the only thing that counts once the report is done. |
 | Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
