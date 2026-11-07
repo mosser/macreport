@@ -25,9 +25,10 @@ import { paletteFrom } from './palette.ts'
 import { wrap, writeReportDocument } from './write-report-document.ts'
 
 const tokens = new Map(
-  [...readFileSync('src/style.css', 'utf8').matchAll(/(--mac-[a-z-]+):\s*([^;]+);/g)].map(
-    (match) => [match[1] ?? '', match[2] ?? ''],
-  ),
+  [...readFileSync('src/style.css', 'utf8').matchAll(/(--mac-[a-z-]+):([^;]*);/g)].map((match) => [
+    match[1] ?? '',
+    (match[2] ?? '').trim(),
+  ]),
 )
 const palette = paletteFrom((token) => tokens.get(token) ?? '')
 
@@ -85,56 +86,84 @@ async function written(report: Report): Promise<PDFDocument> {
   return PDFDocument.load(bytes, { updateMetadata: false })
 }
 
-/** The texts a page shows, read back through each font's ToUnicode map. */
-function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
-  const context = pdf.context
-  const decode = (object: unknown) =>
-    object instanceof PDFRawStream
-      ? new TextDecoder('latin1').decode(decodePDFRawStream(object).decode())
-      : ''
+/** The text of a stream, its bytes read one character each. */
+function decoded(object: unknown): string {
+  return object instanceof PDFRawStream
+    ? new TextDecoder('latin1').decode(decodePDFRawStream(object).decode())
+    : ''
+}
+
+/** The characters a hexadecimal string of four digits a character writes. */
+function unicode(hex: string): string {
+  return String.fromCharCode(...(hex.match(/.{4}/g) ?? []).map((part) => Number.parseInt(part, 16)))
+}
+
+/** The character of each glyph of a font, from its ToUnicode map. */
+function glyphsOf(cmap: string): Map<number, string> {
+  const glyphs = new Map<number, string>()
+  for (const [, glyph, text] of cmap.matchAll(/^<([0-9A-Fa-f]+)> ?<([0-9A-Fa-f]+)>$/gm)) {
+    glyphs.set(Number.parseInt(glyph ?? '', 16), unicode(text ?? ''))
+  }
+  for (const [, from, to, text] of cmap.matchAll(
+    /^<([0-9A-Fa-f]+)> ?<([0-9A-Fa-f]+)> ?<([0-9A-Fa-f]+)>$/gm,
+  )) {
+    const start = Number.parseInt(from ?? '', 16)
+    const base = Number.parseInt(text ?? '', 16)
+    for (let glyph = start; glyph <= Number.parseInt(to ?? '', 16); glyph += 1) {
+      glyphs.set(glyph, String.fromCharCode(base + glyph - start))
+    }
+  }
+  return glyphs
+}
+
+/** The glyphs of each font of a page, by the font's name in its content. */
+function fontsOf(pdf: PDFDocument, page: PDFPage): Map<string, Map<number, string>> {
   const fonts = new Map<string, Map<number, string>>()
   const fontDict = page.node.Resources()?.lookupMaybe(PDFName.of('Font'), PDFDict)
   for (const [name, reference] of fontDict?.entries() ?? []) {
-    const font = context.lookup(reference, PDFDict)
-    const cmap = decode(font.lookup(PDFName.of('ToUnicode')))
-    const glyphs = new Map<number, string>()
-    const unicode = (hex: string) =>
-      String.fromCharCode(...(hex.match(/.{4}/g) ?? []).map((part) => Number.parseInt(part, 16)))
-    for (const [, glyph, text] of cmap.matchAll(/^<([0-9A-Fa-f]+)> *<([0-9A-Fa-f]+)>$/gm)) {
-      glyphs.set(Number.parseInt(glyph ?? '', 16), unicode(text ?? ''))
-    }
-    for (const [, from, to, text] of cmap.matchAll(
-      /^<([0-9A-Fa-f]+)> *<([0-9A-Fa-f]+)> *<([0-9A-Fa-f]+)>$/gm,
-    )) {
-      const start = Number.parseInt(from ?? '', 16)
-      const base = Number.parseInt(text ?? '', 16)
-      for (let glyph = start; glyph <= Number.parseInt(to ?? '', 16); glyph += 1) {
-        glyphs.set(glyph, String.fromCharCode(base + glyph - start))
-      }
-    }
-    fonts.set(name.asString(), glyphs)
+    const font = pdf.context.lookup(reference, PDFDict)
+    fonts.set(name.asString(), glyphsOf(decoded(font.lookup(PDFName.of('ToUnicode')))))
   }
+  return fonts
+}
+
+/** The content streams of a page, in order. */
+function streamsOf(pdf: PDFDocument, page: PDFPage): unknown[] {
+  const context = pdf.context
   const contents = page.node.get(PDFName.of('Contents'))
   const references =
     contents instanceof PDFRef ? [contents] : (context.lookup(contents, PDFArray)?.asArray() ?? [])
-  const streams = references.flatMap((reference) => {
+  return references.flatMap((reference) => {
     const object = context.lookup(reference)
     return object instanceof PDFArray
       ? object.asArray().map((ref) => context.lookup(ref))
       : [object]
   })
+}
+
+/** A string a page shows: glyphs read through the font's map, or bytes of a standard font. */
+function textOf(hex: string, glyphs: Map<number, string> | undefined): string {
+  if (glyphs !== undefined && glyphs.size > 0) {
+    const codes = hex.match(/.{4}/g) ?? []
+    return codes.map((code) => glyphs.get(Number.parseInt(code, 16)) ?? '?').join('')
+  }
+  const codes = hex.match(/.{2}/g) ?? []
+  return codes.map((code) => String.fromCharCode(Number.parseInt(code, 16))).join('')
+}
+
+/** The texts a page shows, read back through each font's ToUnicode map. */
+function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
+  const fonts = fontsOf(pdf, page)
   const texts: string[] = []
   let glyphs: Map<number, string> | undefined
-  for (const stream of streams) {
-    for (const [, font, hex] of decode(stream).matchAll(/(\/\S+) [\d.]+ Tf|<([0-9A-Fa-f]*)> Tj/g)) {
-      if (font !== undefined) {
-        glyphs = fonts.get(font)
-      } else if (glyphs !== undefined && glyphs.size > 0) {
-        const codes = (hex ?? '').match(/.{4}/g) ?? []
-        texts.push(codes.map((code) => glyphs?.get(Number.parseInt(code, 16)) ?? '?').join(''))
+  for (const stream of streamsOf(pdf, page)) {
+    for (const [, font, hex] of decoded(stream).matchAll(
+      /(\/[\w+-]+) [\d.]+ Tf|<([0-9A-Fa-f]*)> Tj/g,
+    )) {
+      if (font === undefined) {
+        texts.push(textOf(hex ?? '', glyphs))
       } else {
-        const codes = (hex ?? '').match(/.{2}/g) ?? []
-        texts.push(codes.map((code) => String.fromCharCode(Number.parseInt(code, 16))).join(''))
+        glyphs = fonts.get(font)
       }
     }
   }

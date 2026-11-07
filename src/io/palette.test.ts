@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest'
 import { paletteFrom } from './palette.ts'
 
 const tokens = new Map(
-  [...readFileSync('src/style.css', 'utf8').matchAll(/(--mac-[a-z-]+):\s*([^;]+);/g)].map(
-    (match) => [match[1] ?? '', match[2] ?? ''],
-  ),
+  [...readFileSync('src/style.css', 'utf8').matchAll(/(--mac-[a-z-]+):([^;]*);/g)].map((match) => [
+    match[1] ?? '',
+    (match[2] ?? '').trim(),
+  ]),
 )
 
 describe('paletteFrom', () => {
