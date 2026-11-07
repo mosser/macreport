@@ -9,7 +9,7 @@ import { Report } from './report.ts'
 
 const receipt = new Document(Kind.receipt, 'air-canada.pdf', new Uint8Array([1]))
 const statement = new Document(Kind.bankStatement, 'statement-october.pdf', new Uint8Array([2]))
-const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array([4]))
+const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array([4]))
 
 const flight = new Expense({
   date: new CalendarDate(2026, 10, 3),
@@ -97,11 +97,10 @@ describe('layoutOf', () => {
     expect(
       layoutOf(report).attachedInformation.map(({ kind, isAttached }) => [kind.plural, isAttached]),
     ).toEqual([
-      ['Additional documents', false],
+      ['Additional documents', true],
       ['Bank statements', true],
       ['Missing receipt authorizations', false],
       ['Receipts', true],
-      ['Travel justifications', true],
     ])
   })
 
@@ -131,16 +130,16 @@ describe('layoutOf', () => {
     ])
   })
 
-  it('opens a section per kind held, travel justifications first, receipts next, each document with the expenses it supports', () => {
+  it('opens a section per kind held, additional documents first, bank statements last, each document with the expenses it supports', () => {
     const sections = layoutOf(report).sections
     expect(sections.map((section) => section.title)).toEqual([
-      'Travel justifications',
+      'Additional documents',
       'Receipts',
       'Bank statements',
     ])
     expect(sections.map((section) => section.listsExpenses)).toEqual([false, true, true])
     expect(sections[0]?.documents).toEqual([
-      { label: 'J1', document: invitation, expenseNumbers: [], expenses: [] },
+      { label: 'A1', document: invitation, expenseNumbers: [], expenses: [] },
     ])
     expect(sections[1]?.documents).toEqual([
       {
@@ -211,20 +210,18 @@ describe('layoutOf', () => {
     ])
   })
 
-  it('closes with the additional documents, in the order they were added, labelled A', () => {
+  it('lists the travel justifications first among the additional documents, each in the order they were added', () => {
     const itinerary = new Document(Kind.additionalDocument, 'itinerary.pdf', new Uint8Array([5]))
     const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([6]))
     const layout = layoutOf(report.afterChanging({ additionalDocuments: [itinerary, poster] }))
-    const last = layout.sections.at(-1)
-    expect(last?.title).toBe('Additional documents')
-    expect(last?.listsExpenses).toBe(false)
-    expect(last?.documents.map((entry) => [entry.label, entry.document])).toEqual([
-      ['A1', itinerary],
-      ['A2', poster],
+    const first = layout.sections[0]
+    expect(first?.title).toBe('Additional documents')
+    expect(first?.listsExpenses).toBe(false)
+    expect(first?.documents.map((entry) => [entry.label, entry.document])).toEqual([
+      ['A1', invitation],
+      ['A2', itinerary],
+      ['A3', poster],
     ])
-    expect(layout.attachedInformation[0]).toEqual({
-      kind: Kind.additionalDocument,
-      isAttached: true,
-    })
+    expect(layout.sections.at(-1)?.title).toBe('Bank statements')
   })
 })

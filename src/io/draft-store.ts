@@ -325,7 +325,7 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
     lastDay: isBusinessTravel ? date(fields.lastDay) : undefined,
     account: text(fields.account),
     expenses,
-    travelJustifications: documentsAmong(fields.travelJustifications, Kind.travelJustification),
+    travelJustifications: documentsAmong(fields.travelJustifications, Kind.additionalDocument),
     additionalDocuments: documentsAmong(fields.additionalDocuments, Kind.additionalDocument),
   }).afterChanging({})
 }

@@ -3,12 +3,6 @@
  * label; the order of `Kind.all` is the order of the sections in the report document.
  */
 export class Kind {
-  /** A document justifying a business travel, added by the Claimant to the report. */
-  static readonly travelJustification = new Kind(
-    'Travel justification',
-    'Travel justifications',
-    'J',
-  )
   /** An invoice or an official receipt, added by the Claimant from an expense. */
   static readonly receipt = new Kind('Receipt', 'Receipts', 'R')
   /** McMaster's form, written by the system for an expense with a missing receipt. */
@@ -19,16 +13,18 @@ export class Kind {
   )
   /** A bank or credit card statement showing the charge, added from an expense. */
   static readonly bankStatement = new Kind('Bank statement', 'Bank statements', 'S')
-  /** A document of the report as a whole, which no expense refers to. */
+  /**
+   * A document of the report as a whole, which no expense refers to: a travel justification
+   * among them.
+   */
   static readonly additionalDocument = new Kind('Additional document', 'Additional documents', 'A')
 
   /** Every kind, in the order of the sections of the report document. */
   static readonly all: readonly Kind[] = [
-    Kind.travelJustification,
+    Kind.additionalDocument,
     Kind.receipt,
     Kind.missingReceiptAuthorization,
     Kind.bankStatement,
-    Kind.additionalDocument,
   ]
 
   readonly name: string

@@ -64,19 +64,21 @@ The report document is written as `docs/specs/report-document.md` says:
   every report is for an event. The foreign amount is shown for information; there is no
   exchange-rate column and nothing is converted: the system does not deal
   with exchange rates.
-- **Five kinds of document**, each a section opened by a **section page** that
+- **Four kinds of document**, each a section opened by a **section page** that
   lists its documents with their pages and the expenses they support:
-  travel justifications, receipts, missing receipt authorizations, bank
-  statements, additional documents. Travel justifications come first: a
-  business travel is reimbursed only once it is justified, so the
-  administration reads why the claimant travelled before what it cost.
+  additional documents, receipts, missing receipt authorizations, bank
+  statements. Additional documents come first, the travel justifications of
+  a business travel first among them: a business travel is reimbursed only
+  once it is justified, so the administration reads why the claimant
+  travelled before what it cost. Bank statements come last: one often
+  supports every expense, and it is read against the receipts before it.
   Receipts and bank statements are added from the expenses they support;
-  travel justifications (invitation, conference programme) and additional
-  documents (itinerary, boarding passes, notes) from the report.
+  additional documents (invitation, conference programme, itinerary,
+  boarding passes, notes) from the report.
 - **A document has a name**, its file name without its extension unless the
-  Claimant gives it another, so that the cover and the section pages call it what a reader
-  recognizes (*Visa, October*) rather than what a bank or a browser called
-  the file.
+  Claimant gives it another, so that the cover and the section pages call it
+  what a reader recognizes (*Visa, October*) rather than what a bank or a
+  browser called the file.
 - **A missing receipt authorization per expense without a receipt**, written
   by the system in McMaster's wording, filled in from the expense and the
   report, its signature line left blank. The Claimant signs the saved report

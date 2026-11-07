@@ -94,10 +94,12 @@ export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
   const expenses = [...report.expenses].sort(byDate)
   const sections = [
-    sectionOfReport(Kind.travelJustification, report.travelJustifications),
+    sectionOfReport(Kind.additionalDocument, [
+      ...report.travelJustifications,
+      ...report.additionalDocuments,
+    ]),
     sectionOf(Kind.receipt, expenses),
     sectionOf(Kind.bankStatement, expenses),
-    sectionOfReport(Kind.additionalDocument, report.additionalDocuments),
   ].filter((section) => section.documents.length > 0)
   const labels = new Map(
     sections.flatMap((section) =>
@@ -217,7 +219,10 @@ function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
   return { kind, title: kind.plural, listsExpenses: true, documents }
 }
 
-/** The section of a kind of document of the report as a whole: in the order they were added. */
+/**
+ * The section of the documents of the report as a whole: the travel justifications, then the
+ * other additional documents, each in the order they were added.
+ */
 function sectionOfReport(kind: Kind, documents: readonly Document[]): Section {
   return {
     kind,

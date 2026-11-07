@@ -75,7 +75,7 @@ describe('the draft store', () => {
 
   it('keeps the travel justifications, the additional documents and the name of each document', async () => {
     const factory = new IDBFactory()
-    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array([3]))
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array([3]))
     const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([4]))
     const justified = report
       .afterChanging({ travelJustifications: [invitation], additionalDocuments: [poster] })

@@ -79,7 +79,7 @@ describe('Report', () => {
   })
 
   it('keeps only the claimant for a new report', () => {
-    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
     const report = new Report({
       claimantName: 'Zoë Lefèvre',
       position: 'Student',
@@ -106,7 +106,7 @@ describe('Report', () => {
   })
 
   it('justifies only a business travel, and takes the travel justifications out when it is unticked', () => {
-    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
     const travel = new Report({ isBusinessTravel: true }).afterChanging({
       travelJustifications: [invitation],
     })
@@ -119,7 +119,7 @@ describe('Report', () => {
 
   it('names a document otherwise wherever it is, and removes it from wherever it is', () => {
     const statement = new Document(Kind.bankStatement, 'scan.pdf', new Uint8Array())
-    const invitation = new Document(Kind.travelJustification, 'invitation.pdf', new Uint8Array())
+    const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
     const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array())
     const report = new Report({
       isBusinessTravel: true,

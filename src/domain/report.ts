@@ -39,8 +39,8 @@ export interface ReportFields {
  * What the Claimant prepares: the claimant's name, position and email, the supervisor of a
  * student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the
  * account, the expenses, the travel justifications and the additional documents. An email, when
- * given, is an email address; a travel justification is a document of the travel justification
- * kind, an additional document of the additional document kind.
+ * given, is an email address; a travel justification is an additional document that justifies
+ * the travel, of the additional document kind as any other.
  */
 export class Report {
   readonly claimantName: string | undefined
@@ -74,10 +74,11 @@ export class Report {
     }
     const travelJustifications = fields.travelJustifications ?? []
     const additionalDocuments = fields.additionalDocuments ?? []
-    if (travelJustifications.some((document) => document.kind !== Kind.travelJustification)) {
-      throw new TypeError('A travel justification is a document of the travel justification kind')
-    }
-    if (additionalDocuments.some((document) => document.kind !== Kind.additionalDocument)) {
+    if (
+      [...travelJustifications, ...additionalDocuments].some(
+        (document) => document.kind !== Kind.additionalDocument,
+      )
+    ) {
       throw new TypeError('An additional document is a document of the additional document kind')
     }
     this.claimantName = fields.claimantName

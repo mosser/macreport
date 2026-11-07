@@ -33,8 +33,8 @@ document.
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
 | Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense. |
 | Bank statement | A document an expense refers to: a bank or credit card statement showing the charge. Added from an expense, and often referred to by several. The Claimant redacts it, before adding it or in the saved report document; the system does not redact. |
-| Travel justification | A document of a business travel as a whole that justifies the travel: an invitation letter, a conference programme, an acceptance notification. A business travel has at least one. |
-| Additional document | Any other document of the report as a whole, which no expense refers to: an itinerary, a poster, boarding passes, notes. |
+| Additional document | A document of the report as a whole, which no expense refers to: a travel justification, an itinerary, a poster, boarding passes, notes. |
+| Travel justification | An additional document of a business travel that justifies the travel: an invitation letter, a conference programme, an acceptance notification. A business travel has at least one. |
 | Missing receipt authorization | McMaster's Missing Receipt Authorization Form, written by the system for one expense with a missing receipt, filled in with what the report knows, and left for the Claimant to sign. It is not a file the Claimant adds. |
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
@@ -56,11 +56,10 @@ document.
 
 | Kind | Letter | Where it comes from |
 |---|---|---|
-| Travel justification | J | Added by the Claimant to a business travel |
+| Additional document | A | Added by the Claimant to the report, travel justifications among them |
 | Receipt | R | Added by the Claimant from an expense |
 | Missing receipt authorization | M | Written by the system, one per expense with a missing receipt |
 | Bank statement | S | Added by the Claimant from an expense |
-| Additional document | A | Added by the Claimant to the report |
 
 The order of this table is the order of the sections in the report document.
 

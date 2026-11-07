@@ -297,7 +297,6 @@ describe('writeReportDocument', () => {
         '2026-11-07',
         'Name of claimant',
         'Zoë Łukasiewicz',
-        'Travel justifications',
         'Receipts',
         'Bank statements',
         'Missing receipt authorizations',
@@ -331,8 +330,8 @@ describe('writeReportDocument', () => {
     expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
   })
 
-  it('opens with the travel justifications, closes with the additional documents, and calls each document by its name', async () => {
-    const invitation = new Document(Kind.travelJustification, 'invitation.png', png)
+  it('opens with the additional documents, travel justifications first, closes with the bank statements, and calls each document by its name', async () => {
+    const invitation = new Document(Kind.additionalDocument, 'invitation.png', png)
     const itinerary = new Document(
       Kind.additionalDocument,
       'itinerary.pdf',
@@ -353,20 +352,27 @@ describe('writeReportDocument', () => {
       .afterRenaming(invitation, 'Invitation from ICSE')
     const pdf = await written(travel)
     const texts = pdf.getPages().map((page) => textsOf(pdf, page))
-    expect(texts).toHaveLength(10)
-    const [cover, justifications, justification, , , , statements, , additional, last] = texts
-    expect(cover).toEqual(expect.arrayContaining(['air-canada', 'Visa, October', '1 / 10']))
-    expect(justifications).toEqual(
-      expect.arrayContaining(['Travel justifications', 'Name', 'J1', 'Invitation from ICSE', '3']),
-    )
-    expect(justifications).not.toContain('Expenses')
-    expect(justification).toEqual(['J1 · 3 / 10'])
-    expect(statements).toEqual(expect.arrayContaining(['S1', 'Visa, October', '1']))
+    expect(texts).toHaveLength(9)
+    const [cover, additional, justification, itineraryPage, receipts, , , statements, last] = texts
+    expect(cover).toEqual(expect.arrayContaining(['air-canada', 'Visa, October', '1 / 9']))
     expect(additional).toEqual(
-      expect.arrayContaining(['Additional documents', 'A1', 'itinerary', '10']),
+      expect.arrayContaining([
+        'Additional documents',
+        'Name',
+        'A1',
+        'Invitation from ICSE',
+        '3',
+        'A2',
+        'itinerary',
+        '4',
+      ]),
     )
     expect(additional).not.toContain('Expenses')
-    expect(last).toEqual(['Itinerary', 'A1 · 10 / 10'])
+    expect(justification).toEqual(['A1 · 3 / 9'])
+    expect(itineraryPage).toEqual(['Itinerary', 'A2 · 4 / 9'])
+    expect(receipts).toEqual(expect.arrayContaining(['Receipts', 'R1']))
+    expect(statements).toEqual(expect.arrayContaining(['Bank statements', 'S1', 'Visa, October']))
+    expect(last).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 9 / 9'])
   })
 
   it('gives each expense an Entered box on the cover, empty, which needs no font of its own', async () => {

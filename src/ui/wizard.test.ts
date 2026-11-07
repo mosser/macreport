@@ -252,7 +252,10 @@ describe('the wizard', () => {
     ]) {
       expect(text).toContain(expected)
     }
-    expect(text).not.toContain('Travel justifications')
+    expect([...root.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Receipts',
+      'Bank statements',
+    ])
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status')).not.toBeNull())
     expect(saved).toHaveLength(1)
@@ -484,8 +487,8 @@ describe('the wizard', () => {
     expect(root.textContent).not.toContain('poster')
     continueButton()?.click()
     const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
-    expect(sections).toEqual(['Receipts', 'Bank statements', 'Additional documents'])
-    const additional = root.querySelectorAll('table.section')[2]
+    expect(sections).toEqual(['Additional documents', 'Receipts', 'Bank statements'])
+    const additional = root.querySelectorAll('table.section')[0]
     expect(additional?.textContent).toContain('Itinerary')
     expect(additional?.textContent).not.toContain('Expenses')
   })
@@ -508,7 +511,7 @@ describe('the wizard', () => {
     await add('travelJustifications', 'invitation.pdf')
     expect(continueButton()?.disabled).toBe(false)
     continueButton()?.click()
-    expect(root.querySelector('h3')?.textContent).toBe('Travel justifications')
+    expect(root.querySelector('h3')?.textContent).toBe('Additional documents')
     button('[data-step="0"]')?.click()
     tick('businessTravel', false)
     expect(kept.at(-1)?.travelJustifications).toEqual([])

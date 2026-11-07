@@ -8,9 +8,8 @@ once the report is done: it stands alone, read with any PDF reader.
 
 1. The **cover**, on one page or more.
 2. One **section** per kind of document the report holds, in the order of the
-   kinds: travel justifications, receipts, missing receipt authorizations,
-   bank statements, additional documents. A kind without documents has no
-   section.
+   kinds: additional documents, receipts, missing receipt authorizations,
+   bank statements. A kind without documents has no section.
 
 Each section is its section page, on one page or more, then its documents,
 one after the other.
@@ -19,7 +18,7 @@ one after the other.
 |---|---|
 | Receipts, bank statements | By the number of the first expense they support, then in the order they were added. |
 | Missing receipt authorizations | By the number of their expense. |
-| Travel justifications, additional documents | In the order they were added. |
+| Additional documents | The travel justifications, then the others, each in the order they were added. |
 
 A document's label is the letter of its kind and its rank in its section:
 R1, R2, and so on.
@@ -55,7 +54,7 @@ the template's fields and its table, so that nothing else needs filling in.
 - **Report fields.** Name of claimant, position, email, then the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
   email for a visitor; purpose, the dates of a business travel, account.
-- **Attached information.** The five kinds of document, in alphabetical
+- **Attached information.** The four kinds of document, in alphabetical
   order, each with a box ticked when its section exists.
 - **Expenses.** A table of every expense, sorted by date then in the order
   they were added, and numbered in that order:
@@ -89,8 +88,7 @@ The title of the section, then a table of its documents:
 
 Pages are the pages of the report document. Missing receipt authorizations
 have no name: the column shows the expense's description. The Expenses column
-is left out of the sections of travel justifications and of additional
-documents.
+is left out of the section of additional documents.
 
 The table continues on the next page when it does not fit, its header
 repeated, as the cover's does. Those pages are all section pages: each is
@@ -150,8 +148,8 @@ it reads upright on screen, whatever the page's size and rotation:
   `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
   programme comm… · 14 / 30`. A description longer than 30 characters is cut
   to its first 30, followed by an ellipsis;
-- on a page of a travel justification or an additional document: its
-  label, then the page number out of the total, as in `A1 · 28 / 30`;
+- on a page of an additional document: its label, then the page number out
+  of the total, as in `A1 · 3 / 30`;
 - on the cover and on section pages: the page number out of the total.
 
 Every page of a document carries the expenses, not only its first. When the

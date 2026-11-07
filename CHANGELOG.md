@@ -16,9 +16,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - A receipt or a bank statement can be removed from the expense, as any
   document can, with the trash can next to it. While the expense has its
   receipt, or its bank statement, the zone to add one is hidden.
-- In the report document, the travel justifications come first, in a section
-  of their own labelled J1, J2…, before the receipts; the additional
-  documents come last, labelled A1, A2…. Neither section lists expenses.
+- In the report document, the additional documents come first, right after
+  the cover, labelled A1, A2…: the travel justifications, then the others.
+  Their section lists no expenses.
 - A name for every document, receipts and bank statements included: its file
   name without its extension (`scan-0042.pdf` is named `scan-0042`), unless
   the Claimant types another next to it. The Review step and the

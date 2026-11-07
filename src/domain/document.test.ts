@@ -39,8 +39,7 @@ describe('Document', () => {
 })
 
 describe('Kind', () => {
-  it('orders the sections: travel justifications first, additional documents last', () => {
-    expect(Kind.all.map((kind) => kind.letter)).toEqual(['J', 'R', 'M', 'S', 'A'])
-    expect(Kind.travelJustification.plural).toBe('Travel justifications')
+  it('orders the sections: additional documents first, bank statements last', () => {
+    expect(Kind.all.map((kind) => kind.letter)).toEqual(['A', 'R', 'M', 'S'])
   })
 })

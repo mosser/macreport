@@ -14,7 +14,7 @@ import type { Context, Step } from './step.ts'
 /** The travel justifications of a business travel, as many as needed. */
 const travelJustifications: DocumentField = {
   field: 'travelJustifications',
-  kind: Kind.travelJustification,
+  kind: Kind.additionalDocument,
   holdsOneDocument: false,
   documentsIn: (report: Report) => report.travelJustifications,
   afterAdding: (report: Report, document: Document) =>
