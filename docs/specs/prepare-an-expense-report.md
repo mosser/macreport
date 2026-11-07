@@ -16,7 +16,8 @@ Under every step, the footer names the system and its version, McSCert and
 McMaster University, and states: *Everything you enter and add stays in this
 browser, on this computer. Nothing is collected, sent or shared.*
 
-**New report** is offered on every step. It asks for confirmation, then
+**New report** is offered on every step. It asks for confirmation, in a
+dialog over the step as every confirmation is, then
 discards the draft, its expenses and its documents, and opens the Report step
 on a report holding only the name of claimant, position and email, kept as
 the new draft. When the browser does not delete the draft, the report
@@ -61,26 +62,36 @@ justifications out. Continue is offered once every required field is valid.
 
 The expenses, sorted by date, then in the order they were added. Each shows
 its date, its description, its foreign amount, its claimed amount, its
-receipts or that its receipt is missing, and its bank statements or that it
-was paid in cash. The Claimant adds, changes and removes expenses.
+receipt or that its receipt is missing, its bank statement or that it was
+paid in cash, and, in red, what it still lacks. Each has **Change** and
+**Remove**; under them, **Add an expense**.
+
+**Add an expense** adds an empty expense to the report and opens its fields;
+**Change** opens the fields of an expense, filled in. Every change is kept as
+it is typed, as on any step. **Done** closes the fields and shows the
+expenses. Leaving the step closes them too.
 
 | Field | Rule |
 |---|---|
 | Date | Required, a calendar date. It may fall outside the dates of the report. |
 | Description | Required. For a meal not only for the Claimant, it lists the attendees and their affiliations. It may run over several lines: its line breaks are kept on the Review step and in the report document. |
-| Claimed amount | Required, in Canadian dollars, more than zero, at most two decimals. |
-| Paid in another currency | Optional. When set: the amount, more than zero, at most two decimals, and its currency, a three-letter ISO 4217 code other than CAD. |
-| Receipts | At least one, unless the receipt is missing. |
+| Claimed amount (CAD) | Required, in Canadian dollars, more than zero, at most two decimals. Optional for an expense paid in another currency, McSCert then working it out. |
+| Paid in another currency | Optional. When ticked: **Foreign amount**, more than zero, at most two decimals, and **Currency**, a three-letter ISO 4217 code other than CAD, are required. Unticked, the expense has neither. |
+| Receipt | One, unless the receipt is missing. |
 | I don't have the receipt | When ticked: the expense has no receipt, and two more fields are required: **Paid to**, who was paid, and **Reason**, why the receipt is missing. |
 | Paid in cash | When ticked: the expense has no bank statement. |
-| Bank statements | At least one, unless the expense was paid in cash. |
+| Bank statement | One, unless the expense was paid in cash. |
 
-Receipts and bank statements are added from the expense, dropped on the zone
-of their kind or chosen from the computer, or chosen among the receipts and
-bank statements already in the report. The same document may be chosen by
-several expenses. Removing an expense, or a document from an
-expense, takes out of the report any receipt or bank statement no expense
-refers to any more.
+A receipt or a bank statement is added from the expense, dropped on the zone
+of its kind or chosen from the computer, or chosen among the receipts or bank
+statements already in the report. The same document may be chosen by
+several expenses. The trash can next to it takes it out of this expense
+only.
+
+**Remove** asks for confirmation, naming the receipt and the bank statement
+that leave the report with the expense. Removing an expense, or a document
+from an expense, takes out of the report any receipt or bank statement no
+expense refers to any more.
 
 Continue is offered once there is at least one expense and every expense
 follows the rules above.
@@ -110,7 +121,8 @@ PDF, a JPEG image or a PNG image, whatever its name says. It is refused, with th
 
 A file already in the report, with the same content, is not added twice. Added
 from an expense as a receipt or a bank statement when it is already a
-document of that same kind, the document already there is chosen. Otherwise,
+document of that same kind, the document already there is chosen, and the
+step says so under it: *Already in the report, as <name>: chosen.* Otherwise,
 already a document of another kind or added again as a travel justification
 or an additional document, it is refused, naming the document it already is,
 by its kind and its name: a document has one kind. Adding several files at

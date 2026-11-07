@@ -64,12 +64,14 @@ the template's fields and its table, so that nothing else needs filling in.
   |---|---|---|---|---|---|
   | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
   | | | *Air Canada booking · Visa, October* | | | |
-  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | $87.10 | ☐ |
+  | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | | ☐ |
   | | | *Taxi, CDG–hotel · cash* | | | |
+  | | | **Total** | | **$1,012.35**<br>**EUR 55.00** | |
 
   A description keeps its line breaks. The foreign amount is the currency
-  code then the amount, empty for an expense paid in Canadian dollars; it is
-  for information, nothing is converted. The supporting documents are the names of the expense's
+  code then the amount, empty for an expense paid in Canadian dollars;
+  nothing is converted. The claimed amount is empty for an expense that has
+  none, McSCert working it out from the foreign amount. The supporting documents are the names of the expense's
   documents, in grey, separated by a middle dot, in the order of the report
   document, and *cash* for an expense paid in cash; a missing receipt
   authorization is named by the expense's description. They run from under
@@ -78,8 +80,10 @@ the template's fields and its table, so that nothing else needs filling in.
   administrative staff tick on screen, or by hand on a printed copy, once
   they have entered the expense. The table continues on the next page when
   it does not fit, its header repeated, an expense starting on the page its
-  documents start on; a last row gives the total of the claimed amounts,
-  without a box.
+  documents start on; a last row gives the total, without a box: the sum
+  of the claimed amounts, when there is one, then, one per line and by
+  currency in alphabetical order, the sum of the foreign amounts of the
+  expenses without a claimed amount.
 
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.
@@ -133,7 +137,7 @@ Then the fields, each on its line:
 | Reason for missing original receipt or boarding pass(es) | The expense's reason |
 | Paid to | The expense's *paid to* |
 | Dated | The expense's date |
-| Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses |
+| Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses, or stands alone when the expense has no claimed amount |
 | Description of Expense(s) | The expense's description |
 
 Then, in bold: *I certify that this expense has not and will not be claimed
