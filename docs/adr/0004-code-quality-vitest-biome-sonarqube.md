@@ -73,8 +73,9 @@ verify, run by `npm run check` after a build.
 
 - `npm run verify` runs type-check, lint, tests, build and ADR checks, in that
   order: it is the definition of green.
-- CI (`.github/workflows/ci.yml`) runs the same steps on every push and every
-  pull request.
+- CI (`.github/workflows/ci.yml`) runs the same steps on every push to a
+  branch and every pull request. A release tag is not a branch: the release
+  workflow runs `npm run verify` on it (ADR 0003).
 
 ### SonarQube Cloud
 
