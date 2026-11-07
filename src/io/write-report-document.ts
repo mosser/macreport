@@ -724,21 +724,7 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const cellLine = wrapped[index]?.[line]
-        if (cellLine !== undefined && cellLine.text !== '') {
-          flow.text(cellLine.text, x + padding, font, tableSize, colour)
-          const page = flow.page
-          if (page !== undefined && cellLine.target !== undefined) {
-            this.links.push({
-              page,
-              x: x + padding,
-              y: flow.cursor - tableSize - 2,
-              width: font.widthOfTextAtSize(cellLine.text, tableSize),
-              height: tableSize + 3,
-              target: cellLine.target,
-            })
-          }
-        }
+        this.cellLine(flow, wrapped[index]?.[line], x + padding, { font, colour })
         x += column.width
       }
       flow.down(lineHeight)
@@ -748,6 +734,22 @@ class Writer {
       flow.rule(isHeader ? this.palette.maroon : this.palette.rule, isHeader ? 1 : 0.5)
     }
     return place
+  }
+
+  /** A line of a cell, drawn at x, and a link when it is one; an empty line draws nothing. */
+  private cellLine(
+    flow: Flow,
+    line: CellLine | undefined,
+    x: number,
+    { font, colour }: { readonly font: PDFFont; readonly colour: Colour },
+  ): void {
+    if (line === undefined || line.text === '') return
+    flow.text(line.text, x, font, tableSize, colour)
+    const page = flow.page
+    if (page === undefined || line.target === undefined) return
+    const width = font.widthOfTextAtSize(line.text, tableSize)
+    const y = flow.cursor - tableSize - 2
+    this.links.push({ page, x, y, width, height: tableSize + 3, target: line.target })
   }
 
   /**
