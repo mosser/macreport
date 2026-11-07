@@ -141,7 +141,13 @@ describe('layoutOf', () => {
     ])
     expect(sections.map((section) => section.listsExpenses)).toEqual([false, true, true])
     expect(sections[0]?.documents).toEqual([
-      { label: 'A1', document: invitation, expenseNumbers: [], expenses: [] },
+      {
+        label: 'A1',
+        document: invitation,
+        expenseNumbers: [],
+        expenses: [],
+        stampedName: 'invitation',
+      },
     ])
     expect(sections[1]?.documents).toEqual([
       {
@@ -245,6 +251,13 @@ describe('layoutOf', () => {
       ['A3', poster],
     ])
     expect(layout.sections.at(-1)?.title).toBe('Bank statements')
+  })
+
+  it('stamps an additional document with its name, its first 30 characters', () => {
+    const programme = invitation.afterNaming('Programme of the 48th International Conference')
+    const first = layoutOf(report.afterRenaming(invitation, programme.name)).sections[0]
+    expect(first?.documents[0]?.stampedName).toBe('Programme of the 48th Internat…')
+    expect(layoutOf(report).sections[1]?.documents[0]?.stampedName).toBeUndefined()
   })
 
   it('splits the additional documents of a business travel in two subsections, and of another report in none', () => {

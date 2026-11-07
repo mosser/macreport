@@ -19,7 +19,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - In the report document, the additional documents come first, right after
   the cover, labelled A1, A2…: the travel justifications, then the others.
   Of a business travel, their section page lists them under two subheadings,
-  Travel justifications and Other documents. It lists no expenses.
+  Travel justifications and Other documents. It lists no expenses, and the
+  stamp of their pages gives their name: `A1 · Invitation from ICSE · 3 / 9`.
 - A name for every document, receipts and bank statements included: its file
   name without its extension (`scan-0042.pdf` is named `scan-0042`), unless
   the Claimant types another next to it. No two documents have the same

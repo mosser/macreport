@@ -161,8 +161,9 @@ it reads upright on screen, whatever the page's size and rotation:
   `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
   programme comm… · 14 / 30`. A description longer than 30 characters is cut
   to its first 30, followed by an ellipsis;
-- on a page of an additional document: its label, then the page number out
-  of the total, as in `A1 · 3 / 30`;
+- on a page of an additional document: its label, its name, then the page
+  number out of the total, as in `A1 · Invitation from ICSE · 3 / 30`; a
+  name longer than 30 characters is cut as a description is;
 - on the cover and on section pages: the page number out of the total.
 
 Every page of a document carries the expenses, not only its first. When the

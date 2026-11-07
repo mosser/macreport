@@ -49,7 +49,7 @@ document.
 | Entered | The box of an expense on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense. |
 | Section | The part of the report document holding the documents of one kind, opened by its section pages. |
 | Section page | A page that opens a section: its title and the list of its documents, each with its label, its name, its pages and the expenses it supports, by their description. The list continues on as many section pages as it needs. |
-| Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |
+| Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the name of an additional document, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |
 | Link | A label, a document's name or an expense number in the report document that a reader clicks, on screen, to go to the document's first page or to the expense's row on the cover. |
 
 ### Kinds of document

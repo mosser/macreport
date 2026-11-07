@@ -448,9 +448,9 @@ class Writer {
   }
 
   /**
-   * Stamps every page: the label of its document and each expense it supports, by its number and
-   * the start of its description, a link to the expense's row on the cover; then the page number
-   * out of the total. When the stamp is wider than the page less its margins, the expenses go on
+   * Stamps every page: the label of its document, the name of an additional document, and each
+   * expense a document supports, by its number and the start of its description, a link to the
+   * expense's row on the cover; then the page number out of the total. When the stamp is wider than the page less its margins, the expenses go on
    * lines of their own above it.
    */
   stampEveryPage(): void {
@@ -459,9 +459,11 @@ class Writer {
       const view = viewOf(page.getCropBox(), page.getRotation().angle)
       const room = view.width - 2 * margin
       const label: StampPiece[] = entry === undefined ? [] : [{ text: entry.label }]
+      const name: StampPiece[] =
+        entry?.stampedName === undefined ? [] : [{ text: entry.stampedName }]
       const expenses = (entry?.expenses ?? []).map((expense) => ({ text: expense.name, expense }))
       const pageNumber = { text: `${index + 1} / ${total}` }
-      const oneLine = [...label, ...expenses, pageNumber]
+      const oneLine = [...label, ...name, ...expenses, pageNumber]
       const lines =
         this.widthOf(oneLine) <= room
           ? [oneLine]
@@ -469,7 +471,7 @@ class Writer {
               ...expenses.flatMap(({ text, expense }) =>
                 wrap(text, this.regular, stampSize, room).map((part) => [{ text: part, expense }]),
               ),
-              [...label, pageNumber],
+              [...label, ...name, pageNumber],
             ]
       lines.toReversed().forEach((line, height) => {
         this.stampLine(page, view, line, stampBaseline + height * stampSize * leading)

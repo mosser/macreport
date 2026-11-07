@@ -59,6 +59,11 @@ export interface LabelledDocument {
   readonly expenseNumbers: readonly number[]
   /** The expenses it supports, as its stamp names them. */
   readonly expenses: readonly StampedExpense[]
+  /**
+   * The name of an additional document, as its stamp names it: over 30 characters cut, with an
+   * ellipsis. A document that supports expenses is stamped with them instead.
+   */
+  readonly stampedName?: string
 }
 
 /** A part of a section page, its documents under a subheading of their own. */
@@ -248,6 +253,7 @@ function sectionOfAdditionalDocuments(report: Report): Section {
       document,
       expenseNumbers: [],
       expenses: [],
+      stampedName: cut(document.name),
     }),
   )
   const count = report.travelJustifications.length
@@ -262,12 +268,16 @@ function sectionOfAdditionalDocuments(report: Report): Section {
 
 /** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */
 function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
-  const characters = [...(expense.description ?? '')]
-  const description =
-    characters.length > stampedDescriptionLength
-      ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
-      : characters.join('')
+  const description = cut(expense.description ?? '')
   return { number, description, name: `Expense ${number}: ${description}` }
+}
+
+/** A text as a stamp keeps it: its first 30 characters, an ellipsis when it is longer. */
+function cut(text: string): string {
+  const characters = [...text]
+  return characters.length > stampedDescriptionLength
+    ? `${characters.slice(0, stampedDescriptionLength).join('').trimEnd()}…`
+    : text
 }
 
 function attachedInformationOf(kind: Kind, sections: readonly Section[]): AttachedInformation {
