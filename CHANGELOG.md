@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-07
+
 The first version, `0.1.0`: a minimal report, from one expense to one PDF.
 
 ### Added
