@@ -241,7 +241,7 @@ describe('Report', () => {
       expect(first?.date).toEqual(october(3))
       expect(first?.hasMealClaimed).toBe(false)
       expect(second).toBe(dinner)
-      expect(third?.isInternational).toBe(false)
+      expect(third?.isEveryMealDomestic).toBe(true)
       expect(changed.claimedPerDiems).toEqual([dinner])
       const again = changed.afterChangingPerDiem(dinner.afterClaiming(Meal.lunch, true))
       expect(again.perDiems.map((perDiem) => perDiem.mealsClaimed)).toEqual([
@@ -252,15 +252,13 @@ describe('Report', () => {
     it('are set all international, or all domestic, at once', () => {
       const international = travel
         .afterChangingPerDiem(dinner)
-        .afterChangingEveryPerDiem({ isInternational: true })
-      expect(international.perDiemsByDay.map((perDiem) => perDiem.isInternational)).toEqual([
-        true,
-        true,
-        true,
-      ])
+        .afterChangingEveryPerDiem({ internationalMeals: Meal.all })
+      expect(
+        international.perDiemsByDay.map((perDiem) => perDiem.isEveryMealInternational),
+      ).toEqual([true, true, true])
       expect(international.perDiemOn(october(4)).mealsClaimed).toEqual([Meal.dinner])
-      const domestic = international.afterChangingEveryPerDiem({ isInternational: false })
-      expect(domestic.perDiems.some((perDiem) => perDiem.isInternational)).toBe(false)
+      const domestic = international.afterChangingEveryPerDiem({ internationalMeals: [] })
+      expect(domestic.perDiems.every((perDiem) => perDiem.isEveryMealDomestic)).toBe(true)
     })
 
     it('leave with the days no longer between the dates, and all of them with the business travel', () => {

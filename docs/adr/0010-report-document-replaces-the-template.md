@@ -53,14 +53,21 @@ Options considered for a missing receipt:
   its wording and layout.
 
 A business travel claims its meals as per diems, at a rate per meal, in
-Canadian dollars for a domestic day and in US dollars for an international
-one, without receipts. Options considered for the per diems on the cover:
+Canadian dollars for a domestic meal and in US dollars for an international
+one, without receipts. A day's meals, and a travel's, are most often all
+domestic or all international, but a day of travel can be both. Options
+considered for the per diems on the cover:
 
 - **One row for the whole travel**, its total by currency. Short, but the
   administration cannot see which meals of which day were claimed, nor enter
   them day by day.
 - **One row per day**, as an expense: its meals claimed and its amount, the
-  meals not claimed and their reasons under it, an Entered box of its own.
+  meals not claimed and their reasons under it, an Entered box of its own. A
+  day of domestic and international meals has an amount in each currency on
+  one row.
+- **One row per day and currency**: as one row per day, a day of domestic
+  and international meals taking two rows, each in one currency as every
+  expense's row is.
 
 ## Decision
 
@@ -93,12 +100,13 @@ The report document is written as `docs/specs/report-document.md` says:
   by the system in McMaster's wording, filled in from the expense and the
   report, its signature line left blank. The Claimant signs the saved report
   document, on paper or with a PDF reader.
-- **A per diem is one row of the cover per day with a meal claimed**, among
-  the expenses by date and numbered with them, its meals not claimed and
-  their reasons on the line where an expense's documents would be, so that
-  the administration sees what was claimed and what was not. An
-  international per diem's amount is in US dollars, in the foreign amount
-  column, and stays unconverted. A day with no meal claimed claims nothing
+- **A per diem is one row of the cover per day and currency with a meal
+  claimed**, among the expenses by date and numbered with them, its meals
+  not claimed and their reasons on the line where an expense's documents
+  would be, so that the administration sees what was claimed and what was
+  not. Each meal is domestic or international, set for the whole travel or
+  a day at once; the amount of international meals is in US dollars, in the
+  foreign amount column, and stays unconverted. A day with no meal claimed claims nothing
   and has no row. The rates are the system's, as the specification states
   them.
 - **An expense paid in cash** has no bank statement; the cover says *cash*

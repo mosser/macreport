@@ -73,9 +73,9 @@ document in a new tab of the browser. Each has **Change**, a pen, and
 business travel whose dates are valid, **Manage per diems**, next to it.
 When a meal is claimed, the per diems stand above the expenses: on one line,
 the number of days with a meal claimed and their total, in Canadian dollars
-then in US dollars; then each of those days, by date, on two lines as on the
-cover of the report document: its meals claimed, then its meals not claimed
-and their reasons, without their amounts.
+then in US dollars; then each of those days, by date, as on the cover of the
+report document: its meals claimed, domestic then international, then its
+meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
 **Change** opens the fields of an expense, filled in. Every change is kept as
@@ -114,13 +114,16 @@ expense refers to any more.
 **Manage per diems** opens the per diems of the business travel, one card
 per day, from its first day to its last, each under its day of the week and
 its date: domestic or international, then its three meals, each a toggle
-pressed when claimed, then the reasons of its meals not claimed. As with an expense's fields, Continue is
+pressed when claimed, then the reasons of its meals not claimed.
+**Domestic or international per meal**, on a card, shows domestic or
+international under each of its meals; a card whose meals differ shows them
+already. As with an expense's fields, Continue is
 not offered while they are open, and **Done** closes them.
 
 | Field | Rule |
 |---|---|
-| Domestic, international | One of them, for each day. A per diem starts domestic. **All domestic** and **All international**, above the days, set every day at once. |
-| Breakfast, lunch, dinner | Each ticked when claimed, at its rate: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic per diem, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
+| Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows neither. **All domestic** and **All international**, above the days, set every meal at once. |
+| Breakfast, lunch, dinner | Each ticked when claimed, at its rate: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
 | Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
 
 Continue is offered once there is at least one expense or a meal claimed,
@@ -185,9 +188,10 @@ Continue is not offered.
 
 The report as it will be written: the cover, with the table of the
 expenses, each on two lines as in the report document; the per diems, under
-their own heading, one row per day with a meal claimed, with its date,
-domestic or international, each meal claimed with its rate or not claimed
-with its reason, and the day's total; then the total of the report, as on the
+their own heading, one row per day with a meal claimed, with its numbers on
+the cover, its date, domestic, international or both, each meal claimed with
+its rate in its currency or not claimed with its reason, and the day's
+total, one amount per currency; then the total of the report, as on the
 cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added. The Entered boxes are

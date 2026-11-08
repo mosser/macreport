@@ -61,7 +61,9 @@ the template's fields and its table, so that nothing else needs filling in.
   claimed, sorted by date, the expenses of a day in the order they were
   added and its per diem after them, and numbered in that order, each on two
   lines: its fields, then, under its description, its supporting documents,
-  or the meals of a per diem not claimed.
+  or the meals of a per diem not claimed. A per diem whose meals claimed are
+  domestic and international takes two rows, its domestic meals then its
+  international ones.
 
   | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
   |---|---|---|---|---|---|
@@ -71,8 +73,10 @@ the template's fields and its table, so that nothing else needs filling in.
   | | | *Taxi, CDG–hotel · cash* | | | |
   | 3 | 2026-10-05 | Per diem, international: breakfast, dinner | USD 86.10 | | ☐ |
   | | | *Not claimed: lunch (provided by the conference)* | | | |
-  | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch, dinner | | $113.50 | ☐ |
-  | | | **Total** | | **$1,125.85**<br>**EUR 55.00**<br>**USD 86.10** | |
+  | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch | | $55.80 | ☐ |
+  | | | | | | |
+  | 5 | 2026-10-06 | Per diem, international: dinner | USD 57.70 | | ☐ |
+  | | | **Total** | | **$1,068.15**<br>**EUR 55.00**<br>**USD 143.80** | |
 
   A description keeps its line breaks. The foreign amount is the currency
   code then the amount, empty for an expense paid in Canadian dollars;
@@ -87,18 +91,18 @@ the template's fields and its table, so that nothing else needs filling in.
   they have entered the expense. The table continues on the next page when
   it does not fit, its header repeated, an expense starting on the page its
   documents start on; a last row gives the total, without a box: the sum
-  of the claimed amounts and of the domestic per diems, when there is one,
-  then, one per line and by currency in alphabetical order, the sum of the
-  foreign amounts of the expenses without a claimed amount, US dollars
-  including the international per diems.
+  of the claimed amounts and of the domestic meals claimed, when there is
+  one, then, one per line and by currency in alphabetical order, the sum of
+  the foreign amounts of the expenses without a claimed amount, US dollars
+  including the international meals claimed.
 
-  A per diem's description is *Per diem*, *domestic* or *international*,
+  A per diem row's description is *Per diem*, *domestic* or *international*,
   then its meals claimed, in the order breakfast, lunch, dinner. Its amount
-  is the sum of their rates: a domestic per diem's is its claimed amount, an
-  international one's its foreign amount, in US dollars, without a claimed
-  amount. Under it, in grey, *Not claimed:* and its other meals, each
-  followed by its reason in parentheses when it has one; nothing when every
-  meal is claimed. A per diem is supported by no document: no section page
+  is the sum of their rates: of domestic meals, its claimed amount; of
+  international ones, its foreign amount, in US dollars, without a claimed
+  amount. Under the day's last row, in grey, *Not claimed:* and its other
+  meals, each followed by its reason in parentheses when it has one; nothing
+  when every meal is claimed. A per diem is supported by no document: no section page
   and no stamp names it, and its number is never a link.
 
 The template's exchange-rate column has no counterpart: the system does not

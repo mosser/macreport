@@ -92,7 +92,9 @@ describe('findings of the Expenses step', () => {
       { step: 'Expenses', wording: 'No expense or per diem is claimed.' },
     ])
     const day = new CalendarDate(2026, 10, 4)
-    const nothing = complete.afterChangingPerDiem(new PerDiem(day, { isInternational: true }))
+    const nothing = complete.afterChangingPerDiem(
+      new PerDiem(day, { internationalMeals: Meal.all }),
+    )
     expect(wordings(findingsOfExpensesStep(nothing))).toEqual([
       'No expense or per diem is claimed.',
     ])

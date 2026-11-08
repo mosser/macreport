@@ -1,6 +1,6 @@
 import type { Amount } from './amount.ts'
 import type { CalendarDate } from './calendar-date.ts'
-import type { Currency } from './currency.ts'
+import { Currency } from './currency.ts'
 import type { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
@@ -164,16 +164,43 @@ export function layoutOf(report: Report): Layout {
   }
 }
 
-/** An expense or a per diem, as the cover numbers them. */
-type Entry = Expense | PerDiem
+/** The meals of a per diem claimed in one currency, as a row of the cover. */
+interface PerDiemEntry {
+  readonly perDiem: PerDiem
+  readonly date: CalendarDate
+  /** Whether the row is of the international meals of its day; of its domestic ones otherwise. */
+  readonly areInternational: boolean
+  /** Whether the row is the last of its day, under which its meals not claimed are named. */
+  readonly isLastOfDay: boolean
+}
+
+/** An expense or a per diem's meals in one currency, as the cover numbers them. */
+type Entry = Expense | PerDiemEntry
+
+/**
+ * A per diem as rows of the cover: one for its domestic meals claimed, then one for its
+ * international ones, each when there is one.
+ */
+function entriesOfPerDiem(perDiem: PerDiem): PerDiemEntry[] {
+  const scopes = [false, true].filter(
+    (areInternational) => perDiem.mealsClaimedThat(areInternational).length > 0,
+  )
+  return scopes.map((areInternational, index) => ({
+    perDiem,
+    date: perDiem.date,
+    areInternational,
+    isLastOfDay: index === scopes.length - 1,
+  }))
+}
 
 /**
  * The expenses and the per diems, sorted by date, the expenses of a day in the order they were
- * added and its per diem after them; an expense without a date last.
+ * added and its per diem after them, its domestic meals then its international ones; an expense
+ * without a date last.
  */
 function entriesOf(expenses: readonly Expense[], perDiems: readonly PerDiem[]): readonly Entry[] {
   const dateOf = (entry: Entry) => entry.date
-  return [...expenses, ...perDiems].sort((one, other) => {
+  return [...expenses, ...perDiems.flatMap(entriesOfPerDiem)].sort((one, other) => {
     const oneDate = dateOf(one)
     const otherDate = dateOf(other)
     if (oneDate === undefined || otherDate === undefined) {
@@ -357,28 +384,44 @@ function rowOf(expense: Expense, number: number, labels: Map<Document, string>):
 }
 
 /**
- * The row of a per diem: Per diem, domestic or international, then its meals claimed; its amount
- * the claimed amount of a domestic per diem, the foreign amount, in US dollars, of an
- * international one; under it, its meals not claimed and their reasons. No document supports it.
+ * The row of a per diem's meals claimed in one currency: Per diem, domestic or international,
+ * then those meals; the sum of their rates the claimed amount of domestic meals, the foreign
+ * amount, in US dollars, of international ones; under the last row of the day, its meals not
+ * claimed and their reasons. No document supports it.
  */
-function perDiemRowOf(perDiem: PerDiem, number: number): ExpenseRow {
+function perDiemRowOf(entry: PerDiemEntry, number: number): ExpenseRow {
+  const { perDiem, areInternational } = entry
+  const amount = perDiem.amountOfMealsThat(areInternational)
   return {
     number,
     date: perDiem.date.toString(),
-    description: perDiemDescriptionOf(perDiem),
-    foreignAmount: perDiem.isInternational ? perDiem.amountText : '',
-    claimedAmount: perDiem.isInternational ? '' : perDiem.amountText,
+    description: perDiemDescriptionOf(perDiem, areInternational),
+    foreignAmount: areInternational ? (amount?.inCurrency(Currency.usDollar) ?? '') : '',
+    claimedAmount: areInternational ? '' : (amount?.toString() ?? ''),
     supportingDocuments: [],
     perDiem,
-    mealsNotClaimed: mealsNotClaimedOf(perDiem),
+    mealsNotClaimed: entry.isLastOfDay ? mealsNotClaimedOf(perDiem) : '',
   }
 }
 
-/** Per diem, domestic or international, then its meals claimed, in the order of a day. */
-export function perDiemDescriptionOf(perDiem: PerDiem): string {
-  const scope = perDiem.isInternational ? 'international' : 'domestic'
-  const meals = perDiem.mealsClaimed.map((meal) => meal.name).join(', ')
-  return `Per diem, ${scope}: ${meals}`
+/**
+ * Per diem, domestic or international, then the meals of a per diem claimed that are, in the
+ * order of a day.
+ */
+export function perDiemDescriptionOf(perDiem: PerDiem, areInternational: boolean): string {
+  const scope = areInternational ? 'international' : 'domestic'
+  const meals = perDiem.mealsClaimedThat(areInternational).map((meal) => meal.name)
+  return `Per diem, ${scope}: ${meals.join(', ')}`
+}
+
+/**
+ * The descriptions of a per diem's meals claimed, one per currency: its domestic meals, then its
+ * international ones.
+ */
+export function perDiemDescriptionsOf(perDiem: PerDiem): readonly string[] {
+  return [false, true]
+    .filter((areInternational) => perDiem.mealsClaimedThat(areInternational).length > 0)
+    .map((areInternational) => perDiemDescriptionOf(perDiem, areInternational))
 }
 
 /**
@@ -411,11 +454,14 @@ export function totalOf(
       addForeign(currency, foreignAmount)
     }
   }
-  for (const { amount, currency } of perDiems) {
-    if (amount !== undefined && currency !== undefined) {
-      addForeign(currency, amount)
-    } else if (amount !== undefined) {
-      claimed.push(amount)
+  for (const perDiem of perDiems) {
+    const domestic = perDiem.amountOfMealsThat(false)
+    if (domestic !== undefined) {
+      claimed.push(domestic)
+    }
+    const international = perDiem.amountOfMealsThat(true)
+    if (international !== undefined) {
+      addForeign(Currency.usDollar, international)
     }
   }
   const sum = (amounts: readonly Amount[]) => amounts.reduce((total, amount) => total.plus(amount))

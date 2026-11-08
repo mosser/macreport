@@ -509,7 +509,7 @@ describe('writeReportDocument', () => {
       })
       .afterChangingPerDiem(
         new PerDiem(october(4), {
-          isInternational: true,
+          internationalMeals: Meal.all,
           mealsClaimed: [Meal.breakfast, Meal.dinner],
           reasons: new Map([[Meal.lunch, 'provided by the conference']]),
         }),

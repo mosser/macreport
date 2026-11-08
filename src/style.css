@@ -446,11 +446,20 @@ footer p {
   margin-bottom: 0;
 }
 
-/* Each meal a toggle, tinted when claimed. */
+/* Each meal a toggle, tinted when claimed, domestic or international under it when asked for. */
 .meal-toggles {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.5rem 1.5rem;
+}
+
+.meal-scope {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.meal-scope .checkbox {
+  margin-bottom: 0.15rem;
 }
 
 .meal-toggle {
@@ -475,7 +484,10 @@ footer p {
   font-weight: 600;
 }
 
-/* The reason of a meal not claimed, at the width of its day; Add a reason, quiet until wanted. */
+/*
+ * The reason of a meal not claimed, at the width of its day; Add a reason and domestic or
+ * international per meal, quiet until wanted.
+ */
 .per-diem-day .reason {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
@@ -485,7 +497,7 @@ footer p {
   max-width: 32rem;
 }
 
-button.add-reason {
+button.quiet {
   display: inline-block;
   margin: 0.5rem 1.25rem 0 0;
   padding: 0;

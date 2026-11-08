@@ -42,10 +42,13 @@ interface ExpenseRecord {
   readonly bankStatements: readonly string[]
 }
 
-/** What IndexedDB keeps of a per diem: its meals claimed by their names, its reasons by meal. */
+/**
+ * What IndexedDB keeps of a per diem: its international meals and its meals claimed by their
+ * names, its reasons by meal.
+ */
 interface PerDiemRecord {
   readonly date: string
-  readonly isInternational: boolean
+  readonly internationalMeals: readonly string[]
   readonly mealsClaimed: readonly string[]
   readonly reasons: Readonly<Record<string, string>>
 }
@@ -276,7 +279,7 @@ function recordOf(
   }))
   const perDiems: PerDiemRecord[] = report.perDiems.map((perDiem) => ({
     date: perDiem.date.toString(),
-    isInternational: perDiem.isInternational,
+    internationalMeals: perDiem.internationalMeals.map((meal) => meal.name),
     mealsClaimed: perDiem.mealsClaimed.map((meal) => meal.name),
     reasons: Object.fromEntries([...perDiem.reasons].map(([meal, reason]) => [meal.name, reason])),
   }))
@@ -369,7 +372,8 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
 }
 
 /**
- * The per diem a record holds, its meals and reasons by their names, a reason kept only for a meal
+ * The per diem a record holds, its international meals, its meals claimed and its reasons by the
+ * meals' names, a reason kept only for a meal
  * not claimed; none when its date is not a calendar date.
  */
 function perDiemOf(value: unknown): PerDiem[] {
@@ -379,7 +383,9 @@ function perDiemOf(value: unknown): PerDiem[] {
   >
   const day = date(record.date)
   if (day === undefined) return []
-  const mealsClaimed = identifiers(record.mealsClaimed).flatMap((name) => Meal.named(name) ?? [])
+  const mealsOf = (value: unknown) => identifiers(value).flatMap((name) => Meal.named(name) ?? [])
+  const mealsClaimed = mealsOf(record.mealsClaimed)
+  const internationalMeals = mealsOf(record.internationalMeals)
   const given = typeof record.reasons === 'object' && record.reasons !== null ? record.reasons : {}
   const reasons = new Map(
     Object.entries(given).flatMap(([name, reason]) => {
@@ -390,9 +396,7 @@ function perDiemOf(value: unknown): PerDiem[] {
         : [[meal, kept] as const]
     }),
   )
-  return [
-    new PerDiem(day, { isInternational: record.isInternational === true, mealsClaimed, reasons }),
-  ]
+  return [new PerDiem(day, { internationalMeals, mealsClaimed, reasons })]
 }
 
 /** The browser's IndexedDB, or nothing when the browser does not give access to it. */

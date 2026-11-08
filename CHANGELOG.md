@@ -13,10 +13,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   travel kept before this version asks for it at the Report step.
 - Per diems for a business travel. **Manage per diems**, next to **Add an
   expense**, lists every day of the travel, by its date and its day of the
-  week, each domestic or international (**All domestic** and **All
-  international** set every day at once), with breakfast (28.40), lunch
-  (27.40) and dinner (57.70) to tick, in Canadian dollars for a domestic day
-  and in US dollars for an international one. On a day with a meal claimed,
+  week, with breakfast (28.40), lunch (27.40) and dinner (57.70) to tick, in
+  Canadian dollars for a domestic meal and in US dollars for an international
+  one. Each day is domestic or international (**All domestic** and **All
+  international** set every day at once), or, with **Domestic or
+  international per meal**, each of its meals. On a day with a meal claimed,
   **Add a reason for not claiming** a meal says why, optionally. Above the
   expenses, the days claimed and their total, then each of those days with
   its meals claimed and its meals not claimed; a report may claim per diems
@@ -24,9 +25,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   Review step shows them in a section of their own, then the total of the
   report. In the report document, each day with a meal claimed is a row of
   the cover's table, among the expenses by date, with its Entered box, and
-  its meals not claimed and their reasons under it; an international per
-  diem is in the foreign amount column, in US dollars, and in the total by
-  currency. Changing the dates drops the per diems of the days left out;
+  its meals not claimed and their reasons under it, a day of domestic and
+  international meals taking a row for each; international meals are in the
+  foreign amount column, in US dollars, and in the total by currency. Changing the dates drops the per diems of the days left out;
   unticking business travel drops them all.
 
 - Several expenses per report. The Expenses step lists them, sorted by date,

@@ -1,6 +1,7 @@
 import { fieldNames, findingsOf } from '../domain/findings.ts'
 import { type ExpenseRow, type Layout, layoutOf, type Section } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
+import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
 import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
 import { html, type Markup } from './html.ts'
@@ -41,17 +42,19 @@ function coverOf(layout: Layout, linkOf: LinkOf): Markup {
 }
 
 /**
- * The per diems, one row per day with a meal claimed: its number, its date, domestic or
- * international, each meal claimed with its rate or not claimed with its reason, and its total.
+ * The per diems, one row per day with a meal claimed: its numbers on the cover, its date, domestic
+ * or international, each meal claimed with its rate or not claimed with its reason, and its total,
+ * one amount per currency.
  */
 function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
-  const perDiems = rows.flatMap((row) =>
-    row.perDiem === undefined ? [] : [[row.number, row.perDiem] as const],
-  )
-  if (perDiems.length === 0) {
+  const numbers = new Map<PerDiem, number[]>()
+  for (const { perDiem, number } of rows) {
+    if (perDiem !== undefined) numbers.set(perDiem, [...(numbers.get(perDiem) ?? []), number])
+  }
+  if (numbers.size === 0) {
     return html``
   }
-  const lines = perDiems.map(([number, perDiem]) => {
+  const lines = [...numbers].map(([perDiem, numbered]) => {
     const meals = Meal.all.map((meal) => {
       if (perDiem.isClaiming(meal)) {
         return html`<td>${perDiem.rateTextOf(meal)}</td>`
@@ -59,10 +62,14 @@ function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
       const reason = perDiem.reasonFor(meal)
       return html`<td class="not-claimed">Not claimed${reason === undefined ? '' : html`<div>${reason}</div>`}</td>`
     })
+    const scopes = [
+      ...(perDiem.mealsClaimedThat(false).length > 0 ? [fieldNames.domestic] : []),
+      ...(perDiem.mealsClaimedThat(true).length > 0 ? [fieldNames.international] : []),
+    ]
     return html`<tr>
-      <td>${number}</td><td>${perDiem.date.toString()}</td>
-      <td>${perDiem.isInternational ? fieldNames.international : fieldNames.domestic}</td>
-      ${meals}<td>${perDiem.amountText}</td>
+      <td>${numbered.join(', ')}</td><td>${perDiem.date.toString()}</td>
+      <td>${scopes.join(', ')}</td>
+      ${meals}<td>${perDiem.amountTexts.map((amount) => html`<div>${amount}</div>`)}</td>
     </tr>`
   })
   return html`<h3>Per diems</h3>

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { CalendarDate } from './calendar-date.ts'
-import { Currency } from './currency.ts'
 import { Meal } from './meal.ts'
 import { PerDiem } from './per-diem.ts'
 
@@ -20,31 +19,51 @@ describe('Meal', () => {
 })
 
 describe('PerDiem', () => {
-  it('starts domestic, no meal claimed, claiming nothing', () => {
+  it('starts every meal domestic, no meal claimed, claiming nothing', () => {
     const perDiem = new PerDiem(day)
-    expect(perDiem.isInternational).toBe(false)
+    expect(perDiem.isEveryMealDomestic).toBe(true)
+    expect(perDiem.isEveryMealInternational).toBe(false)
     expect(perDiem.mealsClaimed).toEqual([])
     expect(perDiem.mealsNotClaimed).toEqual(Meal.all)
     expect(perDiem.hasMealClaimed).toBe(false)
-    expect(perDiem.amount).toBeUndefined()
-    expect(perDiem.amountText).toBe('')
+    expect(perDiem.amountOfMealsThat(false)).toBeUndefined()
+    expect(perDiem.amountTexts).toEqual([])
   })
 
-  it('claims each meal once, in the order of a day, at its rate in Canadian dollars when domestic', () => {
+  it('claims each meal once, in the order of a day, a domestic one at its rate in Canadian dollars', () => {
     const perDiem = new PerDiem(day, { mealsClaimed: [Meal.dinner, Meal.breakfast, Meal.dinner] })
     expect(perDiem.mealsClaimed).toEqual([Meal.breakfast, Meal.dinner])
     expect(perDiem.isClaiming(Meal.lunch)).toBe(false)
-    expect(perDiem.currency).toBeUndefined()
-    expect(perDiem.amountText).toBe('$86.10')
-    expect(new PerDiem(day, { mealsClaimed: Meal.all }).amountText).toBe('$113.50')
+    expect(perDiem.amountTexts).toEqual(['$86.10'])
+    expect(perDiem.rateTextOf(Meal.dinner)).toBe('$57.70')
+    expect(new PerDiem(day, { mealsClaimed: Meal.all }).amountTexts).toEqual(['$113.50'])
   })
 
-  it('claims an international per diem at the same rates, in US dollars', () => {
-    const perDiem = new PerDiem(day, { isInternational: true, mealsClaimed: [Meal.lunch] })
-    expect(perDiem.currency).toBe(Currency.usDollar)
-    expect(perDiem.amountText).toBe('USD 27.40')
-    expect(perDiem.rateTextOf(Meal.breakfast)).toBe('USD 28.40')
-    expect(new PerDiem(day).rateTextOf(Meal.dinner)).toBe('$57.70')
+  it('claims an international meal at the same rate, in US dollars, apart from the domestic ones', () => {
+    const perDiem = new PerDiem(day, {
+      mealsClaimed: Meal.all,
+      internationalMeals: [Meal.dinner, Meal.lunch],
+    })
+    expect(perDiem.internationalMeals).toEqual([Meal.lunch, Meal.dinner])
+    expect(perDiem.isInternational(Meal.breakfast)).toBe(false)
+    expect(perDiem.mealsClaimedThat(true)).toEqual([Meal.lunch, Meal.dinner])
+    expect(perDiem.mealsClaimedThat(false)).toEqual([Meal.breakfast])
+    expect(perDiem.amountTexts).toEqual(['$28.40', 'USD 85.10'])
+    expect(perDiem.rateTextOf(Meal.lunch)).toBe('USD 27.40')
+    expect(perDiem.isEveryMealDomestic || perDiem.isEveryMealInternational).toBe(false)
+  })
+
+  it('makes every meal, or one meal, domestic or international', () => {
+    const perDiem = new PerDiem(day, { mealsClaimed: [Meal.dinner], reasons: lunchReason })
+    const international = perDiem.afterMakingEveryMeal(true)
+    expect(international.isEveryMealInternational).toBe(true)
+    expect(international.mealsClaimed).toEqual([Meal.dinner])
+    expect(international.reasonFor(Meal.lunch)).toBe('provided by the conference')
+    expect(international.date).toBe(day)
+    const breakfast = international.afterMaking(Meal.breakfast, false)
+    expect(breakfast.internationalMeals).toEqual([Meal.lunch, Meal.dinner])
+    expect(breakfast.afterMaking(Meal.breakfast, true).isEveryMealInternational).toBe(true)
+    expect(international.afterMakingEveryMeal(false).isEveryMealDomestic).toBe(true)
   })
 
   it('gives a reason only to a meal not claimed, and claiming the meal takes it out', () => {
@@ -60,14 +79,5 @@ describe('PerDiem', () => {
     const unclaimed = claimed.afterClaiming(Meal.lunch, false)
     expect(unclaimed.mealsClaimed).toEqual([])
     expect(unclaimed.reasonFor(Meal.lunch)).toBeUndefined()
-  })
-
-  it('changes from domestic to international, keeping its meals and reasons', () => {
-    const perDiem = new PerDiem(day, { mealsClaimed: [Meal.dinner], reasons: lunchReason })
-    const changed = perDiem.afterChanging({ isInternational: true })
-    expect(changed.isInternational).toBe(true)
-    expect(changed.mealsClaimed).toEqual([Meal.dinner])
-    expect(changed.reasonFor(Meal.lunch)).toBe('provided by the conference')
-    expect(changed.date).toBe(day)
   })
 })

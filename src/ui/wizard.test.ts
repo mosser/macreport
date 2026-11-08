@@ -1108,7 +1108,8 @@ describe('the per diems', () => {
       heading.textContent?.replace(/\s+/g, ' ').trim(),
     )
   /** The amount of each per diem with a meal claimed, as the draft keeps it. */
-  const amounts = () => kept.at(-1)?.claimedPerDiems.map((perDiem) => perDiem.amountText)
+  const amounts = () =>
+    kept.at(-1)?.claimedPerDiems.map((perDiem) => perDiem.amountTexts.join(', '))
 
   it('are managed for a business travel whose dates are given, one row per day', () => {
     fillReport()
@@ -1261,6 +1262,57 @@ describe('the per diems', () => {
     ])
     const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
     expect(total).toEqual(['Total', '$1,040.75USD 57.70'])
+  })
+
+  it('make one meal domestic or international, once asked for per meal, and whenever the meals of the day differ', async () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-04')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    const mealScope = (day: string, name: string) =>
+      root.querySelector<HTMLInputElement>(
+        `input[type="radio"][data-day="${day}"][data-meal="${name}"][value="international"]`,
+      )
+    const dayScopes = (day: string) =>
+      [
+        ...root.querySelectorAll<HTMLInputElement>(
+          `input[type="radio"][name="scope-${day}"]:checked`,
+        ),
+      ].map((radio) => radio.value)
+    expect(mealScope('2026-10-03', 'dinner')).toBeNull()
+    button('[data-per-meal][data-day="2026-10-03"]')?.click()
+    expect(button('[data-per-meal][data-day="2026-10-03"]')).toBeNull()
+    expect(button('[data-per-meal][data-day="2026-10-04"]')).not.toBeNull()
+    claim('2026-10-03', 'breakfast')
+    claim('2026-10-03', 'dinner')
+    const dinner = mealScope('2026-10-03', 'dinner')
+    if (dinner === null) throw new TypeError('No dinner scope')
+    dinner.checked = true
+    dinner.dispatchEvent(new Event('change'))
+    expect(dayScopes('2026-10-03')).toEqual([])
+    expect(amounts()).toEqual(['$28.40, USD 57.70'])
+    button('[data-action="done"]')?.click()
+    expect(
+      [...root.querySelectorAll('table.per-diem-list td.description')].map(
+        (cell) => cell.textContent,
+      ),
+    ).toEqual(['Per diem, domestic: breakfast\nPer diem, international: dinner'])
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(mealScope('2026-10-03', 'dinner')?.checked).toBe(true)
+    expect(mealScope('2026-10-04', 'dinner')).toBeNull()
+    scope('2026-10-03', 'domestic')
+    expect(dayScopes('2026-10-03')).toEqual(['domestic'])
+    expect(mealScope('2026-10-03', 'dinner')).toBeNull()
+    button('[data-action="all-international"]')?.click()
+    expect(dayScopes('2026-10-03')).toEqual(['international'])
+    expect(dayScopes('2026-10-04')).toEqual(['international'])
+    button('[data-action="done"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(mealScope('2026-10-03', 'dinner')).toBeNull()
+    claim('2026-10-03', 'dinner', false)
+    claim('2026-10-03', 'breakfast', false)
+    expect(kept.at(-1)?.claimedPerDiems).toEqual([])
   })
 
   it('leave the step closed, and are closed with Done', () => {

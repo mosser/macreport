@@ -97,10 +97,10 @@ describe('the draft store', () => {
     expect(restored.documents.filter((document) => restored.isNameTaken(document))).toEqual([])
   })
 
-  it('keeps the locations and the per diems, their meals claimed and their reasons', async () => {
+  it('keeps the locations and the per diems, their international meals, their meals claimed and their reasons', async () => {
     const factory = new IDBFactory()
     const perDiem = new PerDiem(new CalendarDate(2026, 10, 4), {
-      isInternational: true,
+      internationalMeals: [Meal.dinner],
       mealsClaimed: [Meal.dinner, Meal.breakfast],
       reasons: new Map([[Meal.lunch, 'provided by the conference']]),
     })
@@ -127,7 +127,7 @@ describe('the draft store', () => {
           { date: 'not a date', mealsClaimed: ['lunch'] },
           {
             date: '2026-10-04',
-            isInternational: 'yes',
+            internationalMeals: ['dinner', 'tea', 4],
             mealsClaimed: ['lunch', 'supper', 3],
             reasons: { lunch: 'kept?', dinner: '  ', breakfast: 'at the hotel', tea: 'no' },
           },
@@ -142,7 +142,7 @@ describe('the draft store', () => {
       '2026-10-05',
     ])
     const [damaged] = restored.perDiems
-    expect(damaged?.isInternational).toBe(false)
+    expect(damaged?.internationalMeals).toEqual([Meal.dinner])
     expect(damaged?.mealsClaimed).toEqual([Meal.lunch])
     expect([...(damaged?.reasons ?? [])]).toEqual([[Meal.breakfast, 'at the hotel']])
   })
