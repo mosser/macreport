@@ -246,7 +246,17 @@ function isEnlargedPage(page: ScannedPage['node']): boolean {
   return unit !== undefined && unit > 1
 }
 
-/** The decoded bytes of a page's content, its streams one after the other; nothing if unreadable. */
+/** Whether a stream ends inside a string, which the line after it would then become part of. */
+function endsInsideAString(bytes: Uint8Array): boolean {
+  const scanner = new ContentScanner(bytes)
+  while (scanner.next() !== undefined);
+  return scanner.isCutShort
+}
+
+/**
+ * The decoded bytes of a page's content, its streams one after the other; nothing if unreadable, or
+ * if a string runs from one stream into the next, as a PDF should not write it.
+ */
 function contentOf(page: ScannedPage['node'], pdf: PDFDocument): Uint8Array | undefined {
   const contents = pdf.context.lookup(page.get(PDFName.of('Contents')))
   const streams =
@@ -256,7 +266,9 @@ function contentOf(page: ScannedPage['node'], pdf: PDFDocument): Uint8Array | un
   const parts: Uint8Array[] = []
   for (const stream of streams) {
     if (!(stream instanceof PDFRawStream)) return undefined
-    parts.push(decodePDFRawStream(stream).decode(), new Uint8Array([10]))
+    const decoded = decodePDFRawStream(stream).decode()
+    if (endsInsideAString(decoded)) return undefined
+    parts.push(decoded, new Uint8Array([10]))
   }
   return concatenatedBytes(parts)
 }

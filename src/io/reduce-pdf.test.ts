@@ -88,6 +88,15 @@ describe('reducedPdf', () => {
     expect(imagesOf(await PDFDocument.load(reduced))[0]?.contents).toEqual(small)
   })
 
+  it('reduces an image whose subtype is an indirect object', async () => {
+    const pdf = await PDFDocument.load(await pdfWithImage(scan))
+    const [image] = imagesOf(pdf)
+    image?.dict.set(PDFName.of('Subtype'), pdf.context.register(PDFName.of('Image')))
+    const { encoder, jpeg } = encoderOf()
+    await reducedPdf(await pdf.save(), encoder, true)
+    expect(jpeg).toHaveBeenCalledOnce()
+  })
+
   it('leaves an image in CMYK as it is', async () => {
     const { encoder, jpeg } = encoderOf()
     await reducedPdf(await pdfWithImage(jpegOf(3000, 4000, 5000, 4)), encoder, true)

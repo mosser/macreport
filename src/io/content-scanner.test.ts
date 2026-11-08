@@ -73,6 +73,17 @@ describe('ContentScanner', () => {
     expect(sourceOf('<41')).toEqual(['<41'])
   })
 
+  it('says whether the stream ended inside a string', () => {
+    const scanned = (text: string) => {
+      const scanner = new ContentScanner(new TextEncoder().encode(text))
+      while (scanner.next() !== undefined);
+      return scanner.isCutShort
+    }
+    expect(scanned('BT (whole) Tj ET <41> Tj')).toBe(false)
+    expect(scanned('BT (he')).toBe(true)
+    expect(scanned('BT <41')).toBe(true)
+  })
+
   it('reads bytes that are no text as they are', () => {
     const scanner = new ContentScanner(new Uint8Array([0x28, 0x80, 0xff, 0x29, 0x20, 0x66]))
     expect(scanner.next()).toEqual({ kind: 'other', start: 0, end: 4 })

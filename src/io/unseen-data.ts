@@ -23,8 +23,8 @@ function dictionaryOf(object: unknown): PDFDict | undefined {
 
 /** Whether a dictionary is that of a page, or of an image or a form a page draws. */
 function isDrawn(dictionary: PDFDict): boolean {
-  const type = dictionary.get(PDFName.of('Type'))
-  const subtype = dictionary.get(PDFName.of('Subtype'))
+  const type = dictionary.lookup(PDFName.of('Type'))
+  const subtype = dictionary.lookup(PDFName.of('Subtype'))
   return type === pageType || drawnSubtypes.has(subtype)
 }
 
@@ -40,7 +40,7 @@ export function isJpeg(stream: PDFRawStream, context: PDFContext): boolean {
 function leaveOutExif(reference: PDFRef, object: unknown, context: PDFContext): void {
   const isJpegImage =
     object instanceof PDFRawStream &&
-    object.dict.get(PDFName.of('Subtype')) === PDFName.of('Image') &&
+    object.dict.lookup(PDFName.of('Subtype')) === PDFName.of('Image') &&
     isJpeg(object, context)
   if (!isJpegImage) return
   const kept = withoutExif(object.contents)

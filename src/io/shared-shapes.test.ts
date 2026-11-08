@@ -317,6 +317,17 @@ describe('shareShapes', () => {
     expect(drawingsOf(contentOf(pdf, 0))).toHaveLength(2)
   })
 
+  it('leaves a page whose string runs from one stream into the next as it is', async () => {
+    const pdf = await pdfDrawing('')
+    const parts = [`${outline(1, 1)} ${outline(2, 2)} BT (he`, 'llo) Tj ET']
+    const streams = parts.map((part) => pdf.context.register(pdf.context.flateStream(part)))
+    const contents = pdf.context.obj(streams)
+    pdf.getPage(0).node.set(PDFName.of('Contents'), contents)
+    shareShapes(pdf)
+    expect(pdf.getPage(0).node.get(PDFName.of('Contents'))).toBe(contents)
+    expect(formsOf(pdf, 0).size).toBe(0)
+  })
+
   it('leaves a page it cannot read as it is', async () => {
     const pdf = await pdfDrawing(outline(1, 1))
     const stream = PDFRawStream.of(

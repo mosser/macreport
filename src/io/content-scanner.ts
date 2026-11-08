@@ -42,6 +42,8 @@ const numberLike = /^[+-]?(\d+(\.\d*)?|\.\d+)$/
 export class ContentScanner {
   private readonly bytes: Uint8Array
   private position = 0
+  /** Whether the stream ended inside a string, so that what follows it would be part of that string. */
+  isCutShort = false
 
   constructor(bytes: Uint8Array) {
     this.bytes = bytes
@@ -102,7 +104,10 @@ export class ContentScanner {
     let depth = 0
     for (;;) {
       const byte = this.bytes[this.position]
-      if (byte === undefined) break
+      if (byte === undefined) {
+        this.isCutShort = true
+        break
+      }
       this.position += byte === backslash ? 2 : 1
       if (byte === openParenthesis) depth += 1
       if (byte === closeParenthesis) depth -= 1
@@ -120,7 +125,10 @@ export class ContentScanner {
     }
     for (;;) {
       const byte = this.bytes[this.position]
-      if (byte === undefined) break
+      if (byte === undefined) {
+        this.isCutShort = true
+        break
+      }
       this.position += 1
       if (byte === greaterThan) break
     }

@@ -130,8 +130,8 @@ Options considered for what makes a document heavy:
     grey image becomes RGB, and a grey one by a colour profile stays as it is.
   - **Its shapes.** A shape filled, drawn more than once, is kept once and drawn
     from there, its coordinates at 0.01 point. What it cannot rewrite safely it
-    leaves as it is: a page holding an inline image, a page its `UserUnit`
-    enlarges, a shape under a transform that enlarges, a shape filled with a
+    leaves as it is: a page holding an inline image, a page with a string running
+    from one of its content streams into the next, a page its `UserUnit` enlarges, a shape under a transform that enlarges, a shape filled with a
     pattern, a shape in a path another operator interrupts, a shape in a text
     object.
 - **A bank statement's shapes are not shared.** A shape kept apart from its page

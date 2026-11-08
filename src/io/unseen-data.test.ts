@@ -78,11 +78,31 @@ describe('leaveOutWhatNoReaderShows', () => {
       expect(await bytesAfter({ Subtype: 'Image', Filter: ['DCTDecode'] })).toEqual(withoutIt)
     })
 
+    it('takes it out of an image whose subtype is an indirect object', async () => {
+      const pdf = await PDFDocument.create()
+      const stream = pdf.context.stream(jpeg, { Filter: 'DCTDecode' })
+      stream.dict.set(key('Subtype'), pdf.context.register(key('Image')))
+      const reference = pdf.context.register(stream)
+      leaveOutWhatNoReaderShows(pdf)
+      const after = pdf.context.lookup(reference)
+      if (!(after instanceof PDFRawStream)) throw new TypeError('No stream')
+      expect([...after.contents]).toEqual(withoutIt)
+    })
+
     it('leaves bytes it cannot read, under another filter or not an image, as they are', async () => {
       const filters = ['FlateDecode', 'DCTDecode']
       expect(await bytesAfter({ Subtype: 'Image', Filter: filters })).toEqual([...jpeg])
       expect(await bytesAfter({ Filter: 'DCTDecode' })).toEqual([...jpeg])
     })
+  })
+
+  it('takes them out of an image whose subtype is an indirect object', async () => {
+    const pdf = await PDFDocument.create()
+    const image = pdf.context.flateStream('pixels', { Metadata: 'unseen' })
+    image.dict.set(key('Subtype'), pdf.context.register(key('Image')))
+    pdf.context.register(image)
+    leaveOutWhatNoReaderShows(pdf)
+    expect(image.dict.has(key('Metadata'))).toBe(false)
   })
 
   it('keeps what the page shows', async () => {

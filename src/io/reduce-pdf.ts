@@ -49,7 +49,7 @@ function isPlainColourSpace(value: unknown, context: PDFContext): boolean {
 function isReducibleImage(object: unknown, context: PDFContext): object is PDFRawStream {
   if (!(object instanceof PDFRawStream)) return false
   const { dict } = object
-  if (dict.get(name('Subtype')) !== name('Image') || !isJpeg(object, context)) return false
+  if (dict.lookup(name('Subtype')) !== name('Image') || !isJpeg(object, context)) return false
   if (unsafeImageKeys.some((key) => dict.has(key))) return false
   if (!isPlainColourSpace(dict.get(name('ColorSpace')), context)) return false
   const size = sizeOfJpeg(object.contents)
