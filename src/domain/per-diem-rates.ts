@@ -1,4 +1,4 @@
-import configured from '../../config/per-diems.json'
+import configured from '../../config/per-diems.json' with { type: 'json' }
 import { Amount } from './amount.ts'
 import { Meal } from './meal.ts'
 

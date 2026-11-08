@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import type { Plugin } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import { defineConfig } from 'vitest/config'
+import { PerDiemRates } from './src/domain/per-diem-rates.ts'
 
 const { version } = JSON.parse(readFileSync('./package.json', 'utf8')) as { version: string }
 
@@ -19,10 +20,23 @@ function nameAfterVersion(): Plugin {
   }
 }
 
+/**
+ * Refuses to build unless `config/per-diems.json` holds a rate for each meal, domestic and
+ * international (ADR 0010), rather than writing a page that would fail as it opens.
+ */
+function checkPerDiemRates(): Plugin {
+  return {
+    name: 'macreport:check-per-diem-rates',
+    buildStart() {
+      PerDiemRates.from(JSON.parse(readFileSync('./config/per-diems.json', 'utf8')))
+    },
+  }
+}
+
 export default defineConfig({
   base: './',
   define: { __VERSION__: JSON.stringify(version) },
-  plugins: [viteSingleFile(), nameAfterVersion()],
+  plugins: [checkPerDiemRates(), viteSingleFile(), nameAfterVersion()],
   build: { assetsInlineLimit: Number.MAX_SAFE_INTEGER },
   test: {
     include: ['src/**/*.test.ts'],
