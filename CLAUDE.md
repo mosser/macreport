@@ -18,8 +18,7 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** v0.3.1, plus images written smaller and a heavy PDF document
-reduced on request (ADR 0011), on top of the list of expenses and per
+**Current state:** v0.3.1, plus a heavy document reduced on request (ADR 0011), on top of the list of expenses and per
 diems: one report, its expenses listed by date, each added, changed or
 removed, with one receipt and one bank statement, chosen again among those
 already in the report, and a foreign amount and currency; the locations and
@@ -63,7 +62,7 @@ src/ui/       the wizard and its four steps: Report, Expenses, Additional docume
 src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 config/       per-diems.json: the per diem rates; document-sizes.json: when a
-              document is heavy and an image reduced; inlined at build time
+              document is heavy; inlined at build time
 src/style.css McMaster palette tokens and all styling
 scripts/      check-adr.sh: the scriptable ADR checks; release.sh and
               release-notes.sh: cutting a release (ADR 0003)
@@ -175,16 +174,15 @@ first.
 
 ### ADR 0011: the size of the report document
 
-- An image above the size `config/document-sizes.json` sets (1 MB) is reduced
-  when the report document is written, to a long side of 2200 pixels at most;
-  the draft keeps the file added. A JPEG written holds no Exif data. A copied
-  page leaves out what no reader shows.
-- A document is heavy above the size that file sets (2 MB); the build refuses a
-  file without both sizes. A heavy PDF document is reduced only when the
-  Claimant asks, on the Review step: its plain JPEG images and, unless it is a
-  bank statement, the shapes it draws repeatedly. It is offered only when that
-  makes it at least 10 % smaller; Restore brings back the file added. The
-  Claimant is asked for no quality or size.
+- Nothing is reduced unless the Claimant asks: a document is written from the
+  file added, the draft keeps it, and Restore brings it back. A JPEG written holds
+  no Exif data. A copied page leaves out what no reader shows.
+- A document is heavy above the size `config/document-sizes.json` sets (2 MB); the
+  build refuses a file without it. On the Review step, a heavy image can be reduced
+  to a long side of 2200 pixels at most; a heavy PDF document, its plain JPEG images
+  and, unless it is a bank statement, the shapes it draws repeatedly. It is offered
+  only when that makes it at least 10 % smaller. The Claimant is asked for no
+  quality or size.
 - The canvas is used only in its own file under `src/io/`.
 
 ## Writing

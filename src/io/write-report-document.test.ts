@@ -876,9 +876,10 @@ describe('the size of what it holds', () => {
   async function writtenWith(
     content: Uint8Array,
     encoder: ImageEncoder = neverEncoding,
+    isReduced = false,
   ): Promise<PDFDocument> {
     const base = await reportOf('Taxi')
-    const replaced = new Document(Kind.receipt, 'taxi', content)
+    const replaced = new Document(Kind.receipt, 'taxi', content, undefined, isReduced)
     const report = new Report({ ...base, expenses: [] }).afterAdding(
       (base.expenses[0] as Expense).afterChanging({ receipts: [replaced] }),
     )
@@ -930,12 +931,22 @@ describe('the size of what it holds', () => {
     expect(String.fromCharCode(...(image?.contents ?? []))).not.toContain('Exif')
   })
 
-  it('holds a large image as encoded, on a Letter page', async () => {
+  it('holds a large image as added until the Claimant reduces it, encoding nothing', async () => {
+    const large = new Uint8Array(5_000_000)
+    large.set(jpegOf(4000, 3000))
+    const pdf = await writtenWith(large)
+    const image = streamsOf(pdf).find(
+      (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+    )
+    expect(image?.contents.length).toBe(large.length)
+  })
+
+  it('holds a large image the Claimant reduced as encoded, on a Letter page', async () => {
     const large = new Uint8Array(2_000_000)
     large.set(jpegOf(4000, 3000))
     const encoded = jpegOf(2200, 1650)
     const encoder: ImageEncoder = { jpeg: async () => encoded, png: async () => encoded }
-    const pdf = await writtenWith(large, encoder)
+    const pdf = await writtenWith(large, encoder, true)
     const image = streamsOf(pdf).find(
       (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
     )
@@ -951,7 +962,7 @@ describe('the size of what it holds', () => {
     const notSmaller = new Uint8Array(1_000_000)
     notSmaller.set([0x89, 0x50, 0x4e, 0x47])
     const encoder: ImageEncoder = { jpeg: async () => encoded, png: async () => notSmaller }
-    const pdf = await writtenWith(large, encoder)
+    const pdf = await writtenWith(large, encoder, true)
     expect(
       streamsOf(pdf).some(
         (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),

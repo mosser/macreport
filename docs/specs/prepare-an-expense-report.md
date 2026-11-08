@@ -208,7 +208,8 @@ once reduced. The Entered boxes are the report document's alone.
 The sizes stand at the top of the step: the size of the report
 document, or *Working out the sizes…* until the sizes are known, Save the report
 staying offered meanwhile; then each document heavy or reduced, by its label and
-its name, with its size. A heavy PDF document that reducing makes at least 10 %
+its name, with its size. Nothing is reduced unless the Claimant asks. A heavy
+document that reducing makes at least 10 %
 smaller also offers **Reduce**, an icon and its size once reduced, as *545 KB*,
 named *Reduce to 545 KB*. Once reduced, even when no longer heavy, it shows a link
 to the file added and one to its reduced file, each opening in a new tab of the

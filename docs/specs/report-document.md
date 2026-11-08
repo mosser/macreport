@@ -44,18 +44,17 @@ R1, R2, and so on.
   margins when it is larger, never enlarged, and centred.
 - A JPEG image is first mirrored and turned as its Exif orientation says, so
   that a photo taken with a phone shows upright.
-- An image document of at most the size `config/document-sizes.json` sets,
-  today 1 MB, keeps its pixels as added. A larger one is written with a long
-  side of at most 2200 pixels, never enlarged. A JPEG is encoded at quality 0.8,
-  and keeps the pixels it was added with when that is not smaller. A PNG stays a
-  PNG unless that is more than twice the size of the same image as a JPEG, a
+- An image document keeps its pixels as added, whatever its size, unless the
+  Claimant reduced it (`prepare-an-expense-report.md`). Reduced, its long side is
+  at most 2200 pixels, never enlarged: a JPEG is encoded at quality 0.8; a PNG stays
+  a PNG unless that is more than twice the size of the same image as a JPEG, a
   transparent background becoming white.
 - A JPEG image holds its image and its colour profile only, without the Exif
   data of a photo.
 - A PDF document the Claimant reduced (`prepare-an-expense-report.md`) has the
   same pages, text, links and form fields. Each JPEG in RGB, by a colour profile
   or not, or in plain grey, without a mask or decoding parameters, with a long
-  side above 2200 pixels is encoded by the rule above, an RGB one keeping its
+  side above 2200 pixels is encoded at that size and quality, an RGB one keeping its
   colour space. A shape filled and drawn more than once is kept once and drawn
   from there, within 0.01 point of where it was, unless the document is a bank
   statement. A page holding an inline image, a page with a string running from one

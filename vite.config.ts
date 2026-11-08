@@ -35,8 +35,7 @@ function checkPerDiemRates(): Plugin {
 }
 
 /**
- * Refuses to build unless `config/document-sizes.json` holds both sizes, each more than zero
- * (ADR 0011), rather than writing a page that would fail as it opens.
+ * Refuses to build unless `config/document-sizes.json` holds its size, more than zero (ADR 0011), rather than writing a page that would fail as it opens.
  */
 function checkDocumentSizes(): Plugin {
   return {

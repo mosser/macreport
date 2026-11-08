@@ -7,7 +7,7 @@ const bytesPerKilobyte = 1_000
 const largestShareWorthOffering = 0.9
 
 /** The keys `config/document-sizes.json` holds, each a number of megabytes. */
-const configuredKeys = ['heavyDocumentMegabytes', 'reducedImageMegabytes'] as const
+const configuredKeys = ['heavyDocumentMegabytes'] as const
 
 /** How much of a document's size goes where, as the Review step shows it. */
 export interface DocumentWeight {
@@ -28,22 +28,20 @@ export interface ReportWeights {
 }
 
 /**
- * The sizes that decide how a report document stays small, as `config/document-sizes.json` sets
- * them: above which a document is heavy, and above which an image is reduced.
+ * The size that decides which documents the Review step names and offers to reduce, as
+ * `config/document-sizes.json` sets it: above which a document is heavy.
  */
 export class DocumentSizes {
   private readonly heavyDocumentBytes: number
-  private readonly reducedImageBytes: number
 
-  private constructor(heavyDocumentMegabytes: number, reducedImageMegabytes: number) {
+  private constructor(heavyDocumentMegabytes: number) {
     this.heavyDocumentBytes = heavyDocumentMegabytes * bytesPerMegabyte
-    this.reducedImageBytes = reducedImageMegabytes * bytesPerMegabyte
   }
 
   /**
-   * The sizes a configuration gives, as `config/document-sizes.json` holds them: each a number of
-   * megabytes. Throws a TypeError when the configuration holds anything else, or misses a size; a
-   * RangeError when a size is not more than zero.
+   * The size a configuration gives, as `config/document-sizes.json` holds it: a number of
+   * megabytes. Throws a TypeError when the configuration holds anything else, or misses it; a
+   * RangeError when it is not more than zero.
    */
   static from(configuration: unknown): DocumentSizes {
     if (typeof configuration !== 'object' || configuration === null) {
@@ -56,20 +54,14 @@ export class DocumentSizes {
     ) {
       throw new TypeError(`The document sizes hold exactly ${configuredKeys.join(', ')}`)
     }
-    const [heavyDocument, reducedImage] = configuredKeys.map((key) =>
-      megabytesOf(key, entries.get(key)),
+    return new DocumentSizes(
+      megabytesOf('heavyDocumentMegabytes', entries.get('heavyDocumentMegabytes')),
     )
-    return new DocumentSizes(heavyDocument ?? 0, reducedImage ?? 0)
   }
 
   /** Whether a document of this many bytes is heavy. */
   isHeavy(byteCount: number): boolean {
     return byteCount > this.heavyDocumentBytes
-  }
-
-  /** Whether an image of this many bytes is reduced when the report document is written. */
-  isImageToReduce(byteCount: number): boolean {
-    return byteCount > this.reducedImageBytes
   }
 }
 

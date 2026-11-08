@@ -12,12 +12,16 @@ project adheres to [Semantic Versioning](https://semver.org/).
   size of each heavy document: above 2 MB, a size set in
   `config/document-sizes.json`.
 - **Reduce**, an icon and the size it reaches, at the top of the Review step,
-  makes a heavy PDF document smaller when that saves at least 10 %, and **Reduce
-  all** does so for every document on offer: its large JPEG images are written with fewer
-  pixels and each shape it draws repeatedly is kept once, its pages, text, links
-  and form fields staying as they are. A conference programme of 8 pages printed
-  from a web page goes from 9.4 MB to 545 KB and looks the same. Links to the
-  original and to the reduced file then let them be compared before saving, and
+  makes a heavy document smaller when that saves at least 10 %, and **Reduce all**
+  does so for every document on offer. Nothing is reduced unless the Claimant asks.
+  An image is written with a long side of at most 2200 pixels: a 5 MB phone photo
+  comes to well under 1 MB, its small print still readable. A PNG stays a PNG unless
+  that is more than twice the size of the same JPEG, so that a screenshot's text
+  stays crisp. A PDF document has its large JPEG images written with fewer pixels and
+  each shape it draws repeatedly kept once, its pages, text, links and form fields
+  staying as they are: a conference programme of 8 pages printed from a web page goes
+  from 9.4 MB to 545 KB and looks the same. Links to the original and to the reduced
+  file then let them be compared before saving, and
   **Restore** brings back the file added. A bank statement's shapes are not
   shared, so that a PDF reader's redaction tool still reaches them.
 
@@ -44,12 +48,6 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - The total of the report, on the Review step and on the cover of the report
   document, writes every line with its currency's code, as *CAD 1,068.15*, the
   codes and the amounts aligned.
-- An image above 1 MB, also set in `config/document-sizes.json`, is written with
-  a long side of at most 2200 pixels: a 5 MB phone photo weighs well under 1 MB
-  in the report document, and its small print stays readable. A PNG stays a PNG
-  unless that is more than twice the size of the same JPEG, so that a
-  screenshot's text stays crisp. The draft keeps the file added, and a smaller
-  image keeps its pixels.
 - A page copied from a PDF document leaves out what no reader shows: its
   thumbnail, the private data of the editor that wrote it, its metadata, and the
   Exif data of its JPEG images.

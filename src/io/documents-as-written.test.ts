@@ -65,45 +65,110 @@ async function heavyPdfOfNoise(): Promise<Uint8Array> {
 
 describe('DocumentsAsWritten', () => {
   describe('an image', () => {
-    it('is worked out once per file, however many documents have it', async () => {
+    const photo = (size = 3 * megabyte, name = 'photo.jpg') =>
+      new Document(Kind.receipt, name, jpegOf(size))
+
+    it('is the file added, however large, and nothing is encoded, until the Claimant asks', async () => {
       const { encoder, jpeg } = encoderOf()
       const documents = new DocumentsAsWritten(encoder)
-      const receipt = new Document(Kind.receipt, 'photo.jpg', jpegOf(2 * megabyte))
+      const receipt = photo()
+      expect((await documents.imageOf(receipt)).content).toBe(receipt.content)
+      expect(documents.contentShown(receipt)).toBe(receipt.content)
+      expect(jpeg).not.toHaveBeenCalled()
+    })
+
+    it('is its reduced file once reduced, and the file added again once restored', async () => {
+      const documents = new DocumentsAsWritten(encoderOf().encoder)
+      const receipt = photo()
+      const reduced = receipt.afterReducing()
+      const image = await documents.imageOf(reduced)
+      expect(image.content).toHaveLength(4)
+      expect(image.format).toBe('jpeg')
+      expect(documents.contentShown(reduced)).toBe(image.content)
+      const restored = reduced.afterRestoring()
+      expect((await documents.imageOf(restored)).content).toBe(receipt.content)
+      expect(documents.contentShown(restored)).toBe(receipt.content)
+    })
+
+    it('is reduced once per file, however many documents have it', async () => {
+      const { encoder, jpeg } = encoderOf()
+      const documents = new DocumentsAsWritten(encoder)
+      const receipt = photo().afterReducing()
       const first = await documents.imageOf(receipt)
-      expect(await documents.imageOf(receipt.afterNaming('Hotel'))).toBe(first)
+      const again = await documents.imageOf(receipt.afterNaming('Hotel'))
+      expect(again.content).toBe(first.content)
       expect(jpeg).toHaveBeenCalledOnce()
     })
 
-    it('is worked out one at a time', async () => {
+    it('is reduced one at a time', async () => {
       const { encoder, mostAtOnce } = encoderOf()
       const documents = new DocumentsAsWritten(encoder)
       await Promise.all(
         [1, 2, 3].map((index) =>
-          documents.imageOf(new Document(Kind.receipt, `${index}.jpg`, jpegOf(2 * megabyte))),
+          documents.imageOf(photo(undefined, `${index}.jpg`).afterReducing()),
         ),
       )
       expect(mostAtOnce()).toBe(1)
     })
 
-    it('weighs what the report document holds, and is never offered to be reduced', async () => {
+    it('weighs a heavy image, with what reducing would make it', async () => {
       const documents = new DocumentsAsWritten(encoderOf().encoder)
-      const photo = new Document(Kind.receipt, 'photo.jpg', jpegOf(2 * megabyte))
-      expect(await documents.weightOf(photo)).toEqual({ addedSize: 2 * megabyte, size: 4 })
+      const receipt = photo()
+      expect(await documents.weightOf(receipt)).toEqual({
+        addedSize: 3 * megabyte,
+        size: 3 * megabyte,
+        reducedSize: 4,
+      })
+      expect((await documents.weightOf(receipt.afterReducing())).size).toBe(4)
     })
 
-    it('still shows as added, and goes on after one that failed', async () => {
+    it('does not work out reducing for an image that is not heavy', async () => {
+      const { encoder, jpeg } = encoderOf()
+      const documents = new DocumentsAsWritten(encoder)
+      expect(await documents.weightOf(photo(2 * megabyte))).toEqual({
+        addedSize: 2 * megabyte,
+        size: 2 * megabyte,
+      })
+      expect(jpeg).not.toHaveBeenCalled()
+    })
+
+    it('judges a JPEG without its Exif data', async () => {
+      const { encoder, jpeg } = encoderOf()
+      const documents = new DocumentsAsWritten(encoder)
+      const segment = [0xff, 0xe1, 0xff, 0xff, ...new Array<number>(0xfffd).fill(0)]
+      const content = new Uint8Array(2 * megabyte + 100)
+      content.set([0xff, 0xd8, ...segment, 0xff, 0xda])
+      const weight = await documents.weightOf(new Document(Kind.receipt, 'exif.jpg', content))
+      expect(weight.addedSize).toBe(content.length)
+      expect(weight.size).toBe(content.length - segment.length)
+      expect(jpeg).not.toHaveBeenCalled()
+    })
+
+    it('offers nothing when encoding does not make it 10 % smaller, and stays as added', async () => {
+      const receipt = photo()
+      const notSmaller = jpegOf(2_800_000)
       const documents = new DocumentsAsWritten({
-        jpeg: async () => {
-          throw new TypeError('Cannot read it')
-        },
+        jpeg: async () => notSmaller,
+        png: async () => notSmaller,
+      })
+      expect((await documents.weightOf(receipt)).reducedSize).toBeUndefined()
+      const reduced = receipt.afterReducing()
+      expect((await documents.imageOf(reduced)).content).toBe(receipt.content)
+      expect(documents.contentShown(reduced)).toBe(receipt.content)
+    })
+
+    it('offers nothing when it cannot be encoded, and goes on after it', async () => {
+      const documents = new DocumentsAsWritten({
+        jpeg: vi
+          .fn<ImageEncoder['jpeg']>()
+          .mockRejectedValueOnce(new TypeError('Cannot read it'))
+          .mockResolvedValue(new Uint8Array([0xff, 0xd8, 0xff, 0xda])),
         png: async () => new Uint8Array(),
       })
-      const content = jpegOf(2 * megabyte)
-      const first = await documents.imageOf(new Document(Kind.receipt, 'a.jpg', content))
-      expect(first.content).toBe(content)
-      expect(
-        (await documents.imageOf(new Document(Kind.receipt, 'b.jpg', jpegOf(10)))).content,
-      ).toHaveLength(10)
+      const failed = photo(undefined, 'a.jpg')
+      expect((await documents.weightOf(failed)).reducedSize).toBeUndefined()
+      expect((await documents.imageOf(failed.afterReducing())).content).toBe(failed.content)
+      expect((await documents.weightOf(photo(undefined, 'b.jpg'))).reducedSize).toBe(4)
     })
   })
 
@@ -220,7 +285,9 @@ describe('DocumentsAsWritten', () => {
       const documents = new DocumentsAsWritten(encoderOf().encoder)
       const weights = await documents.weightsOf(report, async () => new Uint8Array(1234))
       expect(weights.reportDocumentSize).toBe(1234)
-      expect(weights.weights.get(report.additionalDocuments[0] as Document)?.size).toBe(4)
+      expect(weights.weights.get(report.additionalDocuments[0] as Document)?.size).toBe(
+        2 * megabyte,
+      )
     })
 
     it('gives no size for a report document that cannot be written', async () => {

@@ -47,8 +47,8 @@ document.
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
-| Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: a PDF document by the size of its file, or of its reduced file once reduced, an image by its size as written in the report document. |
-| Reduce | The Claimant asks the system to make a heavy PDF document smaller: its images written with fewer pixels and, unless it is a bank statement, each shape it draws repeatedly kept once. Its pages, text, links and form fields stay as they are. |
+| Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: by the size it is written at: that of the file added, a JPEG without its Exif data, or of its reduced file once reduced. |
+| Reduce | The Claimant asks the system to make a heavy document smaller: its images written with fewer pixels and, for a PDF document that is not a bank statement, each shape it draws repeatedly kept once. The pages, text, links and form fields of a PDF document stay as they are. Nothing is reduced unless the Claimant asks. |
 | Original | The file the Claimant added, as the Review step calls it next to the reduced file of a document. |
 | Restore | The Claimant takes back reducing a document: the report document holds the file added again. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |

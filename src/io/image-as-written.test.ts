@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { imageAsWritten } from './image-as-written.ts'
+import { imageAsAdded, imageReduced, reducedImage } from './image-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
 
 const megabyte = 1_000_000
@@ -49,87 +49,79 @@ function encoderOf(sizes: { jpeg?: number; png?: number }) {
   return { encoder, handed }
 }
 
-const failing: ImageEncoder = {
-  jpeg: async () => {
-    throw new TypeError('Cannot read it')
-  },
-  png: async () => {
-    throw new TypeError('Cannot read it')
-  },
-}
-
-describe('imageAsWritten', () => {
-  it('keeps the pixels of a JPEG up to the size configured, without its Exif data', async () => {
-    const content = jpegOf(megabyte)
-    const { encoder, handed } = encoderOf({ jpeg: 10 })
-    const image = await imageAsWritten(content, encoder)
-    expect(handed).toEqual([])
+describe('imageAsAdded', () => {
+  it('keeps the pixels of a JPEG, however large, without its Exif data', () => {
+    const content = jpegOf(5 * megabyte)
+    const image = imageAsAdded(content)
     expect(image.format).toBe('jpeg')
     expect(image.content).toHaveLength(content.length - exifSegment.length)
     expect([...image.content.subarray(0, 4)]).toEqual([0xff, 0xd8, 0xff, 0xda])
   })
 
-  it('encodes a JPEG above the size configured, handing it over without its Exif data', async () => {
+  it('keeps a PNG, however large, as it was added', () => {
+    const content = pngOf(5 * megabyte)
+    expect(imageAsAdded(content)).toEqual({
+      content,
+      format: 'png',
+      orientation: { isMirrored: false, turn: 0 },
+    })
+  })
+
+  it('shows a JPEG as its Exif orientation says', () => {
+    expect(imageAsAdded(jpegOf(1000)).orientation).toEqual({ isMirrored: false, turn: 90 })
+  })
+})
+
+describe('imageReduced', () => {
+  it('shows what reducing gave as the Exif orientation of the file added says', () => {
+    const reduced = encodedJpeg(500)
+    expect(imageReduced(jpegOf(1000), reduced)).toEqual({
+      content: reduced,
+      format: 'jpeg',
+      orientation: { isMirrored: false, turn: 90 },
+    })
+  })
+
+  it('takes the format of what reducing gave', () => {
+    expect(imageReduced(pngOf(1000), encodedJpeg(500)).format).toBe('jpeg')
+    expect(imageReduced(pngOf(1000), pngOf(500)).format).toBe('png')
+  })
+})
+
+describe('reducedImage', () => {
+  it('encodes a JPEG, handing it over without its Exif data', async () => {
     const { encoder, handed } = encoderOf({ jpeg: 500 })
-    const image = await imageAsWritten(jpegOf(2 * megabyte), encoder)
-    expect(image.content).toHaveLength(500)
-    expect(image.format).toBe('jpeg')
+    expect(await reducedImage(jpegOf(2 * megabyte), encoder)).toHaveLength(500)
     expect([...(handed[0]?.subarray(0, 4) ?? [])]).toEqual([0xff, 0xd8, 0xff, 0xda])
   })
 
-  it('still shows a JPEG as its Exif orientation says, once encoded or not', async () => {
-    const small = await imageAsWritten(jpegOf(1000), encoderOf({}).encoder)
-    expect(small.orientation).toEqual({ isMirrored: false, turn: 90 })
-    const large = await imageAsWritten(jpegOf(2 * megabyte), encoderOf({ jpeg: 500 }).encoder)
-    expect(large.orientation).toEqual({ isMirrored: false, turn: 90 })
-  })
-
-  it('keeps the pixels of a JPEG that encoding does not make smaller', async () => {
-    const content = jpegOf(2 * megabyte)
-    const image = await imageAsWritten(content, encoderOf({ jpeg: 3 * megabyte }).encoder)
-    expect(image.content).toHaveLength(content.length - exifSegment.length)
-  })
-
-  it('writes an image it cannot encode as it was added', async () => {
-    const jpeg = await imageAsWritten(jpegOf(2 * megabyte), failing)
-    expect(jpeg.content).toHaveLength(2 * megabyte - exifSegment.length)
-    const png = pngOf(2 * megabyte)
-    expect((await imageAsWritten(png, failing)).content).toBe(png)
-  })
-
-  it('leaves a PNG up to the size configured as it was added', async () => {
-    const content = pngOf(megabyte)
-    const { encoder, handed } = encoderOf({ png: 10, jpeg: 10 })
-    const image = await imageAsWritten(content, encoder)
-    expect(image).toEqual({ content, format: 'png', orientation: { isMirrored: false, turn: 0 } })
-    expect(handed).toEqual([])
-  })
-
   it('keeps a screenshot a PNG, up to twice the size of the same JPEG', async () => {
-    const image = await imageAsWritten(
+    const reduced = await reducedImage(
       pngOf(5 * megabyte),
       encoderOf({ png: 200, jpeg: 100 }).encoder,
     )
-    expect(image.format).toBe('png')
-    expect(image.content).toHaveLength(200)
+    expect([...reduced.subarray(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47])
+    expect(reduced).toHaveLength(200)
   })
 
   it('makes a photo saved as a PNG a JPEG, beyond twice the size', async () => {
-    const image = await imageAsWritten(
+    const reduced = await reducedImage(
       pngOf(25 * megabyte),
       encoderOf({ png: 201, jpeg: 100 }).encoder,
     )
-    expect(image.format).toBe('jpeg')
-    expect(image.content).toHaveLength(100)
+    expect([...reduced.subarray(0, 2)]).toEqual([0xff, 0xd8])
+    expect(reduced).toHaveLength(100)
   })
 
-  it('leaves a PNG as it was added when neither encoding is smaller', async () => {
-    const content = pngOf(2 * megabyte)
-    const image = await imageAsWritten(
-      content,
-      encoderOf({ png: 3 * megabyte, jpeg: 2 * megabyte }).encoder,
-    )
-    expect(image.content).toBe(content)
-    expect(image.format).toBe('png')
+  it('rejects an image it cannot encode', async () => {
+    const failing: ImageEncoder = {
+      jpeg: async () => {
+        throw new TypeError('Cannot read it')
+      },
+      png: async () => {
+        throw new TypeError('Cannot read it')
+      },
+    }
+    await expect(reducedImage(jpegOf(1000), failing)).rejects.toThrow(TypeError)
   })
 })
