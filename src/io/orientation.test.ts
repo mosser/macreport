@@ -51,7 +51,7 @@ describe('withOrientationOf', () => {
 
   it('keeps nothing of the original but its orientation', () => {
     const shown = withOrientationOf(photoOf(6), encoded)
-    expect(shown.length).toBe(encoded.length + 36)
+    expect(shown).toHaveLength(encoded.length + 36)
   })
 })
 
