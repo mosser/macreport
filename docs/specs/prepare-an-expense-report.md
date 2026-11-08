@@ -21,7 +21,7 @@ browser, on this computer. Nothing is collected, sent or shared.*
 **New report** is offered on every step. It asks for confirmation, in a
 dialog over the step as every confirmation is, then
 discards the draft, its expenses and its documents, and opens the Report step
-on a report holding only the name of claimant, position and email, and the
+on a report holding only the name of claimant, position, job title and email, and the
 supervisor or the host with their email, kept as the new draft. When the browser does not delete the draft, the report
 stays as it is and the system says so, so that the Claimant can try again.
 
@@ -40,7 +40,7 @@ between them.
 ### 1. Report
 
 The fields are grouped in sections: **Claimant** (name of claimant, position,
-email), **Supervisor** or **Host** when the position asks for one,
+job title, email), **Supervisor** or **Host** when the position asks for one,
 **Purpose** (purpose, business travel, its first and last day and its
 locations) and
 **Account**.
@@ -49,8 +49,8 @@ locations) and
 |---|---|
 | Name of claimant | Required. |
 | Position | Required, one of Faculty, Postdoctoral fellow, Student, Staff, Visitor. |
+| Job title | Required, free text. Written on missing receipt authorizations, under *Title*. |
 | Email | Required, an email address. |
-| Extension | Optional. Written on missing receipt authorizations. |
 | Supervisor, supervisor's email | Asked of a Student or a Postdoctoral fellow, and then required: the supervisor's name, and an email address. |
 | Host, host's email | Asked of a Visitor, and then required: the host's name, and an email address. |
 | Purpose | Required. |
@@ -71,8 +71,7 @@ diems of the days no longer between them. Continue is offered once every require
 The expenses, under the heading *Itemized expenses* once there is one, sorted
 by date, then in the order they were added. Each shows
 its date, on one line, its description, its foreign amount, its claimed amount, its
-receipt or that its receipt is missing, its bank statement or that it was
-paid in cash, and, in red, what it still lacks: a required field, or a
+receipt or *Missing receipt*, its bank statement or *Paid in cash*, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them, and, for a
@@ -103,8 +102,6 @@ the expense is discarded.
 | Paid in another currency | Optional. When ticked: **Foreign amount**, more than zero, at most two decimals, and **Currency**, a three-letter ISO 4217 code other than CAD, its name shown
 under it, are required. Unticked, the expense has neither. |
 | Receipt | One, unless the receipt is missing. |
-| I don't have the receipt | When ticked: the expense has no receipt, and two more fields are required: **Paid to**, who was paid, and **Reason**, why the receipt is missing. |
-| Paid in cash | When ticked: the expense has no bank statement. |
 | Bank statement | One, unless the expense was paid in cash. |
 
 A receipt or a bank statement is added from the expense, dropped on the zone
@@ -112,6 +109,29 @@ of its kind or chosen from the computer, or chosen among the receipts or bank
 statements already in the report. The same document may be chosen by
 several expenses. The trash can next to it takes it out of this expense
 only.
+
+A Receipt that holds no document also offers **Missing receipt**, and a Bank
+statement that holds none **Paid in cash**. Neither is offered while a file is
+being added.
+
+**Paid in cash** takes the place of the field: *Paid in cash*, and **Take
+back**, a cross.
+
+**Missing receipt** opens a dialog over the step, under the heading *Missing
+receipt*. **Cancel**, or Escape, leaves the expense as it was. **Done**, offered
+once what is required is filled in, closes it: what it holds is kept then, not as
+it is typed. *Missing receipt* then takes the place of the field, with **Change**,
+a pen, which opens the dialog filled in, and **Take back**, a cross.
+
+| Field | Rule |
+|---|---|
+| Reason for missing original receipt or boarding pass(es) | Required. It may run over several lines: its line breaks are kept in the report document. |
+| Paid to | Required. |
+| Extension | Optional. |
+
+**Take back** asks for no confirmation: the field holds no document again, its
+zone and the documents to choose from are back, and what the dialog held goes.
+Discard undoes it, as any change to the expense.
 
 **Remove** asks for confirmation, naming the receipt and the bank statement
 that leave the report with the expense. Removing an expense, or a document
@@ -195,7 +215,7 @@ Continue is not offered.
 With a finding, the step shows its findings, as errors, and nothing else. Without
 one, it shows the report as it will be written: the cover, with the table of the
 expenses, under the heading *Itemized expenses*, each on two lines as in the report document, its documents by their
-names, or *No expense entered* in grey; the per diems of a business travel, under their own
+names, *Missing receipt* and *Paid in cash* standing where a document would, or *No expense entered* in grey; the per diems of a business travel, under their own
 heading, one row per day with a meal claimed, or *No per diem entered* in
 grey, with its numbers on
 the cover, its date, domestic, international or both, each meal claimed with
@@ -204,7 +224,8 @@ total, one amount per currency; then the total of the report, as on the
 cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added, or from its reduced file
-once reduced. The Entered boxes and the Policy section are the report document's alone.
+once reduced. A missing receipt authorization has no file to open: its section shows its
+label, who was paid and its expense, without a link. The Entered boxes and the Policy section are the report document's alone.
 
 The sizes stand at the top of the step: the size of the report
 document, or *Working out the sizes…* until the sizes are known, Save the report
@@ -235,10 +256,10 @@ name of the claimant in lower case, without accents, words joined by
 hyphens. The browser does not tell the system whether it wrote the file or
 the Claimant cancelled, so the step says the report document was handed to
 the browser, with its file name, and keeps Save the report on offer to hand
-it over again. It also says that each missing receipt authorization, when
-there is one, is to be signed; that the bank statements, when there are
-some, are to be redacted in the report document before it is submitted; and
-that the draft, bank statements included, stays in this browser until New
+it over again. It also says that the bank statements, when there are
+some, are to be redacted in the report document before it is submitted; that
+each missing receipt authorization, when there is one, is to be signed, once
+those bank statements are redacted; and that the draft, bank statements included, stays in this browser until New
 report. What it says holds for the report
 as saved: once the report changes, it is no longer said.
 

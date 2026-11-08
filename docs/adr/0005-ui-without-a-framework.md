@@ -1,7 +1,7 @@
 # ADR 0005: The interface is a step-by-step wizard built on the DOM, without a framework
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -53,6 +53,10 @@ The interface uses **the DOM directly**, with two small in-house pieces.
   naming the action. The browser's own `confirm()` is not used: it cannot
   take the palette, nor name the documents an action takes away, and a test
   cannot answer it.
+- **A missing receipt** is stated in a modal `<dialog>` of its own
+  (`src/ui/missing-receipt-dialog.ts`), answered with Cancel, Escape, or Done.
+  Its fields change the report only when Done closes it, unlike those of a step:
+  a missing receipt holds its reason and who was paid, or is not stated.
 - **Files** are added through an `<input type="file">` and by dropping them on
   the step; both go through the same handler.
 - **Styling** is `src/style.css`, which holds the palette (ADR 0002) and every

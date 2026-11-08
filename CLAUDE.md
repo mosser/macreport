@@ -59,7 +59,8 @@ src/domain/   the object model of a report and its rules: pure, no DOM, no PDF l
 src/io/       reading documents, writing the report document (@cantoo/pdf-lib),
               the draft store (IndexedDB), saving a file
 src/ui/       the wizard and its four steps: Report, Expenses, Additional documents, Review
-src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
+src/assets/   McSCert logos, as supplied; the McMaster logo, cut and scaled;
+              fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 config/       per-diems.json: the per diem rates; document-sizes.json: when a
               document is heavy; policy.json: the documents of the policy; inlined
@@ -94,7 +95,9 @@ first.
   takes its colours from the same tokens.
 - Maroon dominates, gold is secondary, accents signal. Never gold text on a
   light background. Approved text pairings are tabled in the ADR.
-- The McSCert logos are used as supplied, never redrawn or recoloured.
+- The McSCert logos are used as supplied, never redrawn or recoloured. The
+  McMaster logo, cut to its marks and scaled down once, heads the missing receipt
+  authorizations; it is never redrawn or recoloured either.
 
 ### ADR 0003: releases
 
@@ -156,7 +159,7 @@ first.
 - Only `src/io/draft-store.ts` touches IndexedDB; nothing uses
   `localStorage`, `sessionStorage`, cookies or the Cache API. Every access is
   guarded and the system works without it. New report deletes everything but
-  the claimant's name, position and email, and the supervisor or host.
+  the claimant's name, position, job title and email, and the supervisor or host.
 
 ### ADR 0009: vocabulary
 

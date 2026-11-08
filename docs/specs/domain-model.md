@@ -14,8 +14,9 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its locations, the account, the expenses, the per diems, the travel justifications and the additional documents. There is one report at a time. |
+| Report | What the Claimant prepares: the claimant's name, position, job title and email, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its locations, the account, the expenses, the per diems, the travel justifications and the additional documents. There is one report at a time. |
 | Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. The report of a student or a postdoctoral fellow names their supervisor, a visitor's their host. |
+| Job title | What the claimant's job is called, in the Claimant's words, as a missing receipt authorization writes it under *Title*: Research engineer, Doctoral student. |
 | Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
 | Purpose | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit, equipment. A report is not necessarily for an event. |
@@ -35,7 +36,10 @@ document.
 | Rate | What a meal claimed is worth, in Canadian dollars for a domestic meal, in US dollars for an international one. The rates are configured, one for each meal and each of domestic and international, in `config/per-diems.json`: today breakfast 28.40, lunch 27.40 and dinner 57.70, either way. |
 | Total | What the report claims: the sum of the claimed amounts and of the domestic meals claimed, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount, and, in US dollars, of the international meals claimed. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
-| Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
+| Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid, and the extension when the Claimant gives one; the system writes a missing receipt authorization for it. |
+| Paid to | Who was paid for an expense with a missing receipt, in the Claimant's words. |
+| Extension | The claimant's telephone extension, given or not with each missing receipt, and written on its missing receipt authorization. |
+| Take back | The Claimant goes back on a missing receipt or on an expense paid in cash: the expense asks for its receipt or its bank statement again. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
 | Name | What a document is called in the report and in the report document: its file name without its extension, unless the Claimant gives it another. No two documents of a report have the same name, whatever its case. |
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
@@ -52,7 +56,7 @@ document.
 | Original | The file the Claimant added, as the Review step calls it next to the reduced file of a document. |
 | Restore | The Claimant takes back reducing a document: the report document holds the file added again. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
-| New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position and email, and the supervisor of a student or a postdoctoral fellow or the host of a visitor, are kept. |
+| New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position, job title and email, and the supervisor of a student or a postdoctoral fellow or the host of a visitor, are kept. |
 | Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
 | Report document | The single PDF the system writes from a report without findings: the cover, then one section per kind of document. It is the only thing that counts once the report is done. |
 | Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses and the per diems numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |

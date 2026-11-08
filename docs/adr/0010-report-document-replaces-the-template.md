@@ -97,9 +97,12 @@ The report document is written as `docs/specs/report-document.md` says:
   what a reader recognizes (*Visa, October*) rather than what a bank or a
   browser called the file.
 - **A missing receipt authorization per expense without a receipt**, written
-  by the system in McMaster's wording, filled in from the expense and the
-  report, its signature line left blank. The Claimant signs the saved report
-  document, on paper or with a PDF reader.
+  by the system in McMaster's wording and laid out as McMaster's form, black,
+  framed and ruled, under McMaster's logo, so that the administration recognizes
+  it; filled in from the expense and the report, its signature line left blank.
+  The Claimant signs the saved report document, on paper or with a PDF reader,
+  once its bank statements are redacted: a change to a signed PDF may invalidate
+  its signature.
 - **A per diem is one row of the cover per day and currency with a meal
   claimed**, among the expenses by date and numbered with them, its meals
   not claimed and their reasons on the line where an expense's documents
@@ -110,8 +113,10 @@ The report document is written as `docs/specs/report-document.md` says:
   and has no row. The rates are the system's, configured in
   `config/per-diems.json`, one per meal for domestic and for international
   meals, and built into the system: a claimant cannot change them.
-- **An expense paid in cash** has no bank statement; the cover says *cash*
-  where its statement's label would be.
+- **An expense paid in cash** has no bank statement; the cover says *Paid in
+  cash* where its statement's label would be. An expense may be paid in cash and
+  have a missing receipt: no file then supports it but the signed form, and the
+  administration decides.
 - **The cover's table names each expense's documents**, on a line under the
   expense, and gives each expense an **Entered** box, a form field the administration
   ticks on screen or by hand on paper as it enters the expense in McMaster's
@@ -167,8 +172,9 @@ The report document is written as `docs/specs/report-document.md` says:
   phone photos still weighs several megabytes.
 
 - The cover is not the template itself, and the missing receipt authorization
-  is a reproduction of McMaster's form. If the administration requires the
-  official documents, this ADR is amended.
+  is a reproduction of McMaster's form, written in Noto Sans as the rest of the
+  report document is (ADR 0006). If the administration requires the official
+  documents, this ADR is amended.
 - When McMaster changes the wording of its form, the system changes with it.
 - When McSCert changes its per diem rates, `config/per-diems.json` changes
   and a new version is released; a report document keeps the rates of the

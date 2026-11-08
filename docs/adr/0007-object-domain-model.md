@@ -1,7 +1,7 @@
 # ADR 0007: The report is an object model
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -42,8 +42,8 @@ Options considered:
     calendar date; a currency is a three-letter code other than CAD; a
     receipt is a document of the receipt kind, a bank statement of the bank
     statement kind; an expense never has both receipts and a missing receipt,
-    and an expense paid in cash never has a bank statement; a document is in
-    the report once.
+    and an expense paid in cash never has a bank statement; a missing receipt
+    has a reason and says who was paid; a document is in the report once.
   - **Completeness** is what a report must have before it is saved, and is
     checked by findings, never by a constructor: required fields, at least
     one expense, a receipt or a missing receipt, a bank statement unless paid

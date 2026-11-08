@@ -1,7 +1,7 @@
 # ADR 0008: The draft is kept in the browser's IndexedDB, best effort
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -35,14 +35,16 @@ Options considered:
   one draft. Each document's content is kept as its bytes, apart from the
   report's fields and expenses, which refer to documents by an identifier
   given when the document is added.
-- **Every change is written at once.** There is no "save draft" action.
+- **Every change is written at once.** There is no "save draft" action. What is
+  typed in the dialog of a missing receipt is a change once Done closes it
+  (ADR 0005).
 - **At opening**, the system restores the draft when there is one.
 - **Best effort.** Every access is guarded: when IndexedDB is unavailable,
   refused or fails, the system works without it and the wizard shows a notice
   on every step that closing the page will lose the report. The system asks
   the browser for persistent storage, and goes on whatever the answer.
 - **New report** deletes the draft and its documents, then keeps the
-  claimant's name, position and email, and the supervisor or the host with
+  claimant's name, position, job title and email, and the supervisor or the host with
   their email, as the new draft: a claimant prepares report after report, and
   retyping who they are, and who supervises or hosts them, each time is what
   the system saves them. Everything else goes, bank statements first.
@@ -84,5 +86,5 @@ A change is compliant with this ADR when:
   `sessionStorage`, cookies or the Cache API;
 - every IndexedDB access is guarded, and the system works when it is missing;
 - New report deletes the draft and every document's content, and keeps
-  nothing but the claimant's name, position and email, and the supervisor or
-  the host with their email.
+  nothing but the claimant's name, position, job title and email, and the
+  supervisor or the host with their email.
