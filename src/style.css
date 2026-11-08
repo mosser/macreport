@@ -427,6 +427,19 @@ table.per-diems .checkbox {
   margin-bottom: 0.25rem;
 }
 
+/* A meal's tick box, its heading and Add a reason centred in its column. */
+table.per-diems .meal {
+  text-align: center;
+}
+
+table.per-diems td.meal .checkbox {
+  justify-content: center;
+}
+
+table.per-diems td.meal .reason {
+  text-align: left;
+}
+
 table.per-diems .reason {
   margin-bottom: 0;
   font-size: 0.9rem;

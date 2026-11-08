@@ -305,7 +305,7 @@ function mealOf(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>): Ma
   const day = perDiem.date.toString()
   const isClaimed = perDiem.isClaiming(meal)
   const reason = reasonOf(perDiem, meal, askedFor)
-  return html`<td>
+  return html`<td class="meal">
     <label class="checkbox">
       <input type="checkbox" name="meal" data-day="${day}" data-meal="${meal.name}"
         ${isClaimed ? html`checked` : ''} aria-label="${meal.title}, ${day}" />
@@ -334,7 +334,7 @@ function perDiemsFormOf(report: Report, askedFor: ReadonlySet<string>): Markup {
     </div>
     <table class="per-diems">
       <thead><tr>
-        <th>Date</th><th></th>${Meal.all.map((meal) => html`<th>${meal.title}</th>`)}
+        <th>Date</th><th></th>${Meal.all.map((meal) => html`<th class="meal">${meal.title}</th>`)}
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
