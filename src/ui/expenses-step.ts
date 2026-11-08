@@ -31,10 +31,14 @@ import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
 import type { Context, Step } from './step.ts'
 
-/** The expense whose fields are open: its rank in the order the expenses were added, and the report it is of. */
+/**
+ * The expense whose fields are open: its rank in the order the expenses were added, the report it
+ * is of, and the report as it was before they opened, which Discard goes back to.
+ */
 interface Opened {
   readonly session: number
   readonly index: number
+  readonly before: Report
 }
 
 /** A value typed in a field of an expense: what it keeps, and whether it breaks the rule. */
@@ -182,7 +186,10 @@ function formOf(
     </label>
     ${foreign}
     ${fields.map((field) => documentFieldOf(field, report, chosenAgain.get(field.field)))}
-    <button type="button" class="primary" data-action="done" data-held>Done</button>`
+    <div class="expense-buttons">
+      <button type="button" class="primary" data-action="done" data-held>Done</button>
+      <button type="button" data-action="discard" data-held-while-adding>Discard</button>
+    </div>`
 }
 
 /**
@@ -317,7 +324,8 @@ function removalOf(report: Report, expense: Expense) {
 
 /**
  * Step 2: the expenses, each changed or removed, Add an expense and Manage per diems; or the
- * fields of the expense added or changed, or the per diems, until Done.
+ * fields of the expense added or changed, until Done, or Discard, which undoes every change made
+ * since they opened; or the per diems, until Done.
  */
 export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
   let opened: Opened | undefined
@@ -336,8 +344,8 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     broken.clear()
   }
 
-  const open = (context: Context, index: number | undefined) => {
-    opened = index === undefined ? undefined : { session: context.session, index }
+  const open = (context: Context, index: number | undefined, before = context.report) => {
+    opened = index === undefined ? undefined : { session: context.session, index, before }
     forget()
     context.refresh()
   }
@@ -384,6 +392,10 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     panel
       .querySelector('[data-action="done"]')
       ?.addEventListener('click', () => open(context, undefined))
+    panel.querySelector('[data-action="discard"]')?.addEventListener('click', () => {
+      if (opened !== undefined) context.change(opened.before)
+      open(context, undefined)
+    })
     listenToDocumentFields(panel, context, readFile, fields, (field, document) => {
       chosenAgain.set(field.field, document)
     })
@@ -446,8 +458,9 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       context.refresh()
     })
     panel.querySelector('[data-action="add-expense"]')?.addEventListener('click', () => {
-      context.change(context.report.afterAdding(new Expense()))
-      open(context, context.report.expenses.length - 1)
+      const before = context.report
+      context.change(before.afterAdding(new Expense()))
+      open(context, context.report.expenses.length - 1, before)
     })
     for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-change]')) {
       button.addEventListener('click', () => open(context, Number(button.dataset.change)))

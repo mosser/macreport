@@ -39,7 +39,8 @@ The interface uses **the DOM directly**, with two small in-house pieces.
   which forgets what the step showed, such as the expense whose fields are
   open, as the wizard goes to another step. An element a step marks
   `data-held` is disabled while files are being added or the step holds the
-  others.
+  others; one it marks `data-held-while-adding`, only while files are being
+  added, as Discard, which is how a value that holds the others is left.
   The wizard (`src/ui/wizard.ts`) owns the step index, the stepper, the
   Back/Continue actions, New report, and the notice shown when the draft
   cannot be kept.

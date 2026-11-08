@@ -544,7 +544,7 @@ describe('the wizard', () => {
     return finish
   }
 
-  it('holds Done and Remove while a file is being added to an expense', async () => {
+  it('holds Done, Discard and Remove while a file is being added to an expense', async () => {
     fillReport()
     proceed()
     await fillExpense()
@@ -553,6 +553,7 @@ describe('the wizard', () => {
     openExpense()
     const finish = giveSlowly('receipts', 'late.pdf')
     expect(button('[data-action="done"]')?.disabled).toBe(true)
+    expect(button('[data-action="discard"]')?.disabled).toBe(true)
     finish()
     await vi.waitFor(() => expect(root.textContent).toContain('late.pdf'))
     expect(button('[data-action="done"]')?.disabled).toBe(false)
@@ -1026,6 +1027,48 @@ describe('the Expenses step', () => {
     tick('paidInAnotherCurrency', false)
     expect(kept.at(-1)?.expenses[0]?.foreignAmount).toBeUndefined()
     expect(continueButton()?.disabled).toBe(true)
+  })
+})
+
+describe('Discard', () => {
+  const descriptions = () => kept.at(-1)?.expenses.map((expense) => expense.description)
+
+  it('takes an expense just added out of the report, its documents with it', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    button('[data-action="discard"]')?.click()
+    expect(root.querySelector('[name="date"]')).toBeNull()
+    expect(kept.at(-1)?.expenses).toEqual([])
+    expect(kept.at(-1)?.documents).toEqual([])
+    expect(continueButton()?.hidden).toBe(false)
+  })
+
+  it('puts an expense changed back as it was when its fields opened, its documents and their names included', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    button('[data-action="done"]')?.click()
+    const before = kept.at(-1)
+    button('[data-change="0"]')?.click()
+    type('description', 'Air Transat')
+    type('claimedAmount', '12,50')
+    expect(button('[data-action="done"]')?.disabled).toBe(true)
+    expect(button('[data-action="discard"]')?.disabled).toBe(false)
+    const name = root.querySelector<HTMLInputElement>('input[name="documentName"]')
+    if (name === null) throw new TypeError('No name')
+    name.value = 'Booking'
+    name.dispatchEvent(new Event('input'))
+    button('[data-action="discard"]')?.click()
+    expect(kept.at(-1)).toBe(before)
+    expect(descriptions()).toEqual(['Air Canada, YYZ–CDG return'])
+    expect(kept.at(-1)?.documents.map((document) => document.name)).toEqual([
+      'air-canada',
+      'statement',
+    ])
+    expect(button('[data-step="0"]')?.disabled).toBe(false)
+    button('[data-change="0"]')?.click()
+    expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('1012.35')
   })
 })
 

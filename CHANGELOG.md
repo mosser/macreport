@@ -32,6 +32,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   opens empty fields, **Change** (a pen) opens an
   expense's fields filled in, and **Done** goes back to the list, where
   Continue is offered again; every change is kept as it is typed.
+- **Discard**, next to Done, closes an expense's fields and undoes every
+  change made since they opened: an expense just added leaves the report,
+  an expense changed is put back as it was, its documents and their names
+  included.
 - **Remove** (a trash can) takes an expense out of the report once
   confirmed. A receipt or a bank statement no other expense uses leaves the
   report with it, and the confirmation names each.
