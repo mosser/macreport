@@ -41,6 +41,11 @@ export const fieldNames = {
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
   paidInCash: 'Paid in cash',
+  missingReceipt: 'Missing receipt',
+  reasonForMissingReceipt: 'Reason for missing original receipt or boarding pass(es)',
+  paidTo: 'Paid to',
+  jobTitle: 'Job title',
+  extension: 'Extension',
   travelJustifications: 'Travel justification(s)',
   additionalDocuments: 'Additional document(s)',
   documentName: 'Name',
@@ -65,6 +70,7 @@ export const fieldRules: Partial<Record<Field, string>> = {
   currency: 'A three-letter ISO 4217 code, other than CAD.',
   receipts: 'A PDF, a JPEG image or a PNG image.',
   bankStatements: 'A PDF, a JPEG image or a PNG image.',
+  jobTitle: 'As Associate Prof, Research Engineer, PhD Student.',
   travelJustifications:
     'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
   additionalDocuments: 'A PDF, a JPEG image or a PNG image.',
@@ -91,6 +97,8 @@ const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'accountCode',
   'paidInAnotherCurrency',
   'paidInCash',
+  'missingReceipt',
+  'extension',
   'additionalDocuments',
   'documentName',
   'domestic',
@@ -124,7 +132,7 @@ export function missingFieldsOf(expense: Expense): readonly Field[] {
     values.push(['foreignAmount', expense.foreignAmount], ['currency', expense.currency])
   }
   values.push(
-    ['receipts', expense.hasReceipt || undefined],
+    ['receipts', expense.hasReceipt || expense.missingReceipt !== undefined || undefined],
     ['bankStatements', expense.hasBankStatement || expense.isPaidInCash || undefined],
   )
   return values
@@ -274,22 +282,32 @@ const writtenReportFields = [
 
 /**
  * Every text the Claimant gave that the report document writes: the fields of the report, the
- * description of each expense, the reason of each meal not claimed of a day with a meal claimed,
- * and the name of each document.
+ * description of each expense and what its missing receipt states, the reason of each meal not
+ * claimed of a day with a meal claimed, and the name of each document.
  */
 function writtenTextsOf(report: Report): readonly WrittenText[] {
   return [
     ...writtenReportFields.map(
       (field): WrittenText => ({ step: 'Report', subject: '', field, value: report[field] }),
     ),
-    ...report.expensesByDate.map(
-      (expense): WrittenText => ({
-        step: 'Expenses',
-        subject: `${expenseWording(expense)}: `,
-        field: 'description',
-        value: expense.description,
-      }),
-    ),
+    ...report.expensesByDate.flatMap((expense) => {
+      const missing = expense.missingReceipt
+      const fields: readonly [Field, string | undefined][] = [
+        ['description', expense.description],
+        ['reasonForMissingReceipt', missing?.reason],
+        ['paidTo', missing?.paidTo],
+        ['jobTitle', missing?.jobTitle],
+        ['extension', missing?.extension],
+      ]
+      return fields.map(
+        ([field, value]): WrittenText => ({
+          step: 'Expenses',
+          subject: `${expenseWording(expense)}: `,
+          field,
+          value,
+        }),
+      )
+    }),
     ...report.claimedPerDiems.flatMap((perDiem) =>
       perDiem.mealsNotClaimed.map(
         (meal): WrittenText => ({

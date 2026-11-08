@@ -20,6 +20,7 @@ import {
 } from './findings.ts'
 import { Kind } from './kind.ts'
 import { Meal } from './meal.ts'
+import { MissingReceipt } from './missing-receipt.ts'
 import { PerDiem } from './per-diem.ts'
 import { Report } from './report.ts'
 
@@ -328,6 +329,50 @@ describe('findings of the Additional documents step', () => {
     expect(missingFieldsOf(paid)).toEqual([])
     expect(missingFieldsOf(paid.afterChanging({ isPaidInCash: false }))).toEqual(['bankStatements'])
     expect(isRequired('paidInCash')).toBe(false)
+  })
+
+  it('requires no receipt of an expense with a missing receipt, and it again once that is taken back', () => {
+    const missing = new MissingReceipt({ reason: 'Lost', paidTo: 'Taxi', jobTitle: 'PhD Student' })
+    const stated = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      claimedAmount: new Amount(5500),
+      missingReceipt: missing,
+      isPaidInCash: true,
+    })
+    expect(missingFieldsOf(stated)).toEqual([])
+    expect(missingFieldsOf(stated.afterChanging({ missingReceipt: undefined }))).toEqual([
+      'receipts',
+    ])
+  })
+
+  it('finds a character the report document cannot write in what a missing receipt states', () => {
+    const stated = complete.afterAdding(
+      new Expense({
+        date: new CalendarDate(2026, 10, 5),
+        description: 'Taxi',
+        missingReceipt: new MissingReceipt({
+          reason: '失',
+          paidTo: '東',
+          jobTitle: '教',
+          extension: '分',
+        }),
+      }),
+    )
+    expect(wordings(findingsOfCharacters(stated))).toEqual([
+      'Expense 2026-10-05, Taxi: Reason for missing original receipt or boarding pass(es) holds a character the report document cannot write: 失 (U+5931).',
+      'Expense 2026-10-05, Taxi: Paid to holds a character the report document cannot write: 東 (U+6771).',
+      'Expense 2026-10-05, Taxi: Job title holds a character the report document cannot write: 教 (U+6559).',
+      'Expense 2026-10-05, Taxi: Extension holds a character the report document cannot write: 分 (U+5206).',
+    ])
+  })
+
+  it('requires what a missing receipt states but its extension, and gives examples of a job title', () => {
+    expect(isRequired('reasonForMissingReceipt')).toBe(true)
+    expect(isRequired('paidTo')).toBe(true)
+    expect(isRequired('jobTitle')).toBe(true)
+    expect(isRequired('extension')).toBe(false)
+    expect(fieldRules.jobTitle).toBe('As Associate Prof, Research Engineer, PhD Student.')
   })
 
   it('requires a travel justification, but neither an additional document nor a name', () => {

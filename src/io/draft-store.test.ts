@@ -7,6 +7,7 @@ import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
 import { Meal } from '../domain/meal.ts'
+import { MissingReceipt } from '../domain/missing-receipt.ts'
 import { PerDiem } from '../domain/per-diem.ts'
 import { Report } from '../domain/report.ts'
 import { openDraftStore } from './draft-store.ts'
@@ -101,6 +102,64 @@ describe('the draft store', () => {
     const restored = await (await openDraftStore(factory)).restore()
     expect(restored.expenses[0]?.hasBankStatement).toBe(true)
     expect(restored.expenses[0]?.isPaidInCash).toBe(false)
+  })
+
+  it('keeps a missing receipt, its extension included', async () => {
+    const factory = new IDBFactory()
+    const stated = report
+      .afterAdding(
+        new Expense({
+          description: 'Taxi',
+          missingReceipt: new MissingReceipt({
+            reason: 'Lost\nin a taxi',
+            paidTo: 'Taxi Rio',
+            jobTitle: 'PhD Student',
+            extension: '24242',
+          }),
+        }),
+      )
+      .afterAdding(
+        new Expense({
+          missingReceipt: new MissingReceipt({ reason: 'Lost', paidTo: 'Bus', jobTitle: 'Staff' }),
+        }),
+      )
+    expect(await (await openDraftStore(factory)).keep(stated)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.missingReceipt)).toEqual([
+      undefined,
+      new MissingReceipt({
+        reason: 'Lost\nin a taxi',
+        paidTo: 'Taxi Rio',
+        jobTitle: 'PhD Student',
+        extension: '24242',
+      }),
+      new MissingReceipt({ reason: 'Lost', paidTo: 'Bus', jobTitle: 'Staff' }),
+    ])
+  })
+
+  it('restores no missing receipt that lacks what one must hold, or of an expense with a receipt', async () => {
+    const factory = new IDBFactory()
+    const stated = { reason: 'Lost', paidTo: 'Taxi', jobTitle: 'PhD Student' }
+    await written(
+      factory,
+      {
+        expenses: [
+          { missingReceipt: { reason: 'Lost', paidTo: 'Taxi' } },
+          { missingReceipt: 'Lost' },
+          { receipts: ['one'], missingReceipt: stated },
+          { missingReceipt: stated },
+        ],
+      },
+      { one: { letter: 'R', fileName: 'reçu.pdf', content: new Uint8Array([37, 80]) } },
+    )
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.missingReceipt?.paidTo)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      'Taxi',
+    ])
+    expect(restored.expenses[2]?.hasReceipt).toBe(true)
   })
 
   it('keeps the travel justifications, the additional documents and the name of each document', async () => {

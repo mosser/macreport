@@ -5,6 +5,7 @@ import { Currency } from './currency.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
+import { MissingReceipt } from './missing-receipt.ts'
 
 const receipt = new Document(Kind.receipt, 'receipt.pdf', new Uint8Array())
 const statement = new Document(Kind.bankStatement, 'statement.pdf', new Uint8Array())
@@ -75,6 +76,25 @@ describe('Expense', () => {
     const back = paid.afterChanging({ isPaidInCash: false })
     expect(back.isPaidInCash).toBe(false)
     expect(back.afterChanging({ bankStatements: [statement] }).hasBankStatement).toBe(true)
+  })
+
+  it('has no missing receipt unless one is stated, and then has no receipt', () => {
+    const missing = new MissingReceipt({ reason: 'Lost', paidTo: 'Taxi', jobTitle: 'PhD Student' })
+    expect(new Expense().missingReceipt).toBeUndefined()
+    expect(new Expense({ missingReceipt: missing }).missingReceipt).toBe(missing)
+    expect(() => new Expense({ missingReceipt: missing, receipts: [receipt] })).toThrow(
+      new TypeError('An expense with a missing receipt has no receipt'),
+    )
+  })
+
+  it('keeps its missing receipt through any other change, until that is taken back', () => {
+    const missing = new MissingReceipt({ reason: 'Lost', paidTo: 'Taxi', jobTitle: 'PhD Student' })
+    const stated = new Expense({ missingReceipt: missing, bankStatements: [statement] })
+    expect(stated.afterChanging({ description: 'Taxi' }).missingReceipt).toBe(missing)
+    expect(stated.afterRemoving(statement).missingReceipt).toBe(missing)
+    const back = stated.afterChanging({ missingReceipt: undefined })
+    expect(back.missingReceipt).toBeUndefined()
+    expect(back.afterChanging({ receipts: [receipt] }).hasReceipt).toBe(true)
   })
 
   it('stops referring to a document, leaving the others', () => {

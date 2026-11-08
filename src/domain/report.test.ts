@@ -4,10 +4,22 @@ import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
 import { Meal } from './meal.ts'
+import { MissingReceipt } from './missing-receipt.ts'
 import { PerDiem } from './per-diem.ts'
 import { positions, Report } from './report.ts'
 
 describe('Report', () => {
+  it('knows the missing receipt of the last expense added that has one', () => {
+    const missing = (paidTo: string) =>
+      new MissingReceipt({ reason: 'Lost', paidTo, jobTitle: 'PhD Student' })
+    const first = new Expense({ missingReceipt: missing('Taxi'), description: 'Taxi' })
+    const second = new Expense({ missingReceipt: missing('Bus') })
+    expect(new Report().lastMissingReceipt).toBeUndefined()
+    const stated = new Report().afterAdding(first).afterAdding(second).afterAdding(new Expense())
+    expect(stated.lastMissingReceipt?.paidTo).toBe('Bus')
+    expect(stated.afterRemovingExpense(second).lastMissingReceipt?.paidTo).toBe('Taxi')
+  })
+
   it('starts empty', () => {
     const report = new Report()
     expect(report.claimantName).toBeUndefined()
