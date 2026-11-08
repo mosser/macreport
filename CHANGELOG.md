@@ -12,12 +12,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
   claimant, written on the cover under its dates. A draft of a business
   travel kept before this version asks for it at the Report step.
 - Per diems for a business travel. **Manage per diems**, next to **Add an
-  expense**, lists every day of the travel, each domestic or international
-  (**All domestic** and **All international** set every day at once), with
-  breakfast (28.40), lunch (27.40) and dinner (57.70) to tick, in Canadian
-  dollars for a domestic day and in US dollars for an international one, and
-  an optional reason for each meal not claimed. The days claimed and their
-  total show above the expenses; a report may claim per diems only. The
+  expense**, lists every day of the travel, by its date and its day of the
+  week, each domestic or international (**All domestic** and **All
+  international** set every day at once), with breakfast (28.40), lunch
+  (27.40) and dinner (57.70) to tick, in Canadian dollars for a domestic day
+  and in US dollars for an international one. On a day with a meal claimed,
+  **Add a reason** under a meal not claimed says why, optionally. Above the
+  expenses, the days claimed and their total, then each of those days with
+  its meals claimed and its meals not claimed; a report may claim per diems
+  only. The
   Review step shows them in a section of their own, then the total of the
   report. In the report document, each day with a meal claimed is a row of
   the cover's table, among the expenses by date, with its Entered box, and

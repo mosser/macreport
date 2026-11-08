@@ -71,9 +71,11 @@ document whose name a document before it already has. A document's name opens th
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them, and, for a
 business travel whose dates are valid, **Manage per diems**, next to it.
-When a meal is claimed, the per diems stand above the expenses on one line:
-the number of days with a meal claimed, and their total, in Canadian dollars
-then in US dollars.
+When a meal is claimed, the per diems stand above the expenses: on one line,
+the number of days with a meal claimed and their total, in Canadian dollars
+then in US dollars; then each of those days, by date, on two lines as on the
+cover of the report document: its meals claimed, then its meals not claimed
+and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
 **Change** opens the fields of an expense, filled in. Every change is kept as
@@ -110,17 +112,15 @@ from an expense, takes out of the report any receipt or bank statement no
 expense refers to any more.
 
 **Manage per diems** opens the per diems of the business travel, one row per
-day, from its first day to its last. As with an expense's fields, Continue is
+day, from its first day to its last, each by its date and its day of the
+week. As with an expense's fields, Continue is
 not offered while they are open, and **Done** closes them.
 
 | Field | Rule |
 |---|---|
 | Domestic, international | One of them, for each day. A per diem starts domestic. **All domestic** and **All international**, above the days, set every day at once. |
-| Breakfast, lunch, dinner | Each ticked when claimed, at its rate: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic per diem, in US dollars for an international one. A per diem starts with no meal claimed. |
-| Reason | Optional, for a meal not claimed: why it is not, as *provided by the conference*. Ticking the meal takes its reason out. |
-
-Each day shows its total: the sum of the rates of its meals claimed, in the
-currency of its rates.
+| Breakfast, lunch, dinner | Each ticked when claimed, at its rate: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic per diem, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
+| Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason**, under the meal, opens its field; a reason given stays shown in it. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
 
 Continue is offered once there is at least one expense or a meal claimed,
 and every expense follows the rules above.

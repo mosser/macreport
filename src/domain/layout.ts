@@ -362,18 +362,23 @@ function rowOf(expense: Expense, number: number, labels: Map<Document, string>):
  * international one; under it, its meals not claimed and their reasons. No document supports it.
  */
 function perDiemRowOf(perDiem: PerDiem, number: number): ExpenseRow {
-  const scope = perDiem.isInternational ? 'international' : 'domestic'
-  const meals = perDiem.mealsClaimed.map((meal) => meal.name).join(', ')
   return {
     number,
     date: perDiem.date.toString(),
-    description: `Per diem, ${scope}: ${meals}`,
+    description: perDiemDescriptionOf(perDiem),
     foreignAmount: perDiem.isInternational ? perDiem.amountText : '',
     claimedAmount: perDiem.isInternational ? '' : perDiem.amountText,
     supportingDocuments: [],
     perDiem,
     mealsNotClaimed: mealsNotClaimedOf(perDiem),
   }
+}
+
+/** Per diem, domestic or international, then its meals claimed, in the order of a day. */
+export function perDiemDescriptionOf(perDiem: PerDiem): string {
+  const scope = perDiem.isInternational ? 'international' : 'domestic'
+  const meals = perDiem.mealsClaimed.map((meal) => meal.name).join(', ')
+  return `Per diem, ${scope}: ${meals}`
 }
 
 /**

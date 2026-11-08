@@ -30,4 +30,9 @@ describe('CalendarDate', () => {
     expect(new CalendarDate(2028, 2, 28).dayAfter.toString()).toBe('2028-02-29')
     expect(new CalendarDate(2026, 12, 31).dayAfter.toString()).toBe('2027-01-01')
   })
+
+  it('names the day of the week it falls on', () => {
+    expect(new CalendarDate(2026, 10, 3).dayOfWeek).toBe('Saturday')
+    expect(new CalendarDate(2028, 2, 29).dayOfWeek).toBe('Tuesday')
+  })
 })

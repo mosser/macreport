@@ -1107,8 +1107,8 @@ describe('the per diems', () => {
     [...root.querySelectorAll('table.per-diems tbody tr')].map(
       (row) => row.querySelector('th')?.textContent,
     )
-  const totals = () =>
-    [...root.querySelectorAll('table.per-diems .per-diem-total')].map((cell) => cell.textContent)
+  /** The amount of each per diem with a meal claimed, as the draft keeps it. */
+  const amounts = () => kept.at(-1)?.claimedPerDiems.map((perDiem) => perDiem.amountText)
 
   it('are managed for a business travel whose dates are given, one row per day', () => {
     fillReport()
@@ -1125,14 +1125,15 @@ describe('the per diems', () => {
     expect(continueButton()?.disabled).toBe(true)
     button('[data-action="manage-per-diems"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Per diems')
-    expect(days()).toEqual(['2026-10-03', '2026-10-04', '2026-10-05'])
+    expect(days()).toEqual(['2026-10-03Saturday', '2026-10-04Sunday', '2026-10-05Monday'])
+    expect(root.querySelector('table.per-diems .day-of-week')?.textContent).toBe('Saturday')
     expect(continueButton()?.hidden).toBe(true)
     expect(meal('2026-10-03', 'breakfast')?.checked).toBe(false)
     expect(
       root.querySelector<HTMLInputElement>('input[data-day="2026-10-03"][value="domestic"]')
         ?.checked,
     ).toBe(true)
-    expect(totals()).toEqual(['', '', ''])
+    expect(root.querySelector('table.per-diems')?.textContent).not.toContain('$')
   })
 
   it('claim each meal at its rate, domestic in Canadian dollars, international in US dollars, set all at once', () => {
@@ -1143,39 +1144,67 @@ describe('the per diems', () => {
     button('[data-action="manage-per-diems"]')?.click()
     claim('2026-10-03', 'breakfast')
     claim('2026-10-03', 'dinner')
-    expect(totals()).toEqual(['$86.10', ''])
-    expect(meal('2026-10-03', 'breakfast')?.closest('label')?.textContent?.trim()).toBe('$28.40')
+    expect(amounts()).toEqual(['$86.10'])
     scope('2026-10-04', 'international')
     claim('2026-10-04', 'lunch')
-    expect(totals()).toEqual(['$86.10', 'USD 27.40'])
+    expect(amounts()).toEqual(['$86.10', 'USD 27.40'])
     button('[data-action="all-international"]')?.click()
-    expect(totals()).toEqual(['USD 86.10', 'USD 27.40'])
+    expect(amounts()).toEqual(['USD 86.10', 'USD 27.40'])
     button('[data-action="all-domestic"]')?.click()
-    expect(totals()).toEqual(['$86.10', '$27.40'])
+    expect(amounts()).toEqual(['$86.10', '$27.40'])
     claim('2026-10-03', 'dinner', false)
-    expect(totals()).toEqual(['$28.40', '$27.40'])
-    expect(kept.at(-1)?.claimedPerDiems).toHaveLength(2)
+    expect(amounts()).toEqual(['$28.40', '$27.40'])
+    expect(root.querySelector('table.per-diems')?.textContent).not.toMatch(/\$|USD/)
   })
 
-  it('give a meal not claimed a reason, kept as it is typed, taken out once the meal is claimed', () => {
+  it('ask a reason only once Add a reason is clicked, under a meal not claimed of a day with a meal claimed', () => {
     fillReport()
     travel()
-    type('lastDay', '2026-10-03')
+    type('lastDay', '2026-10-04')
     proceed()
     button('[data-action="manage-per-diems"]')?.click()
-    expect(root.querySelectorAll('input[name="reason"]')).toHaveLength(3)
+    expect(root.querySelectorAll('input[name="reason"], [data-add-reason]')).toHaveLength(0)
+    claim('2026-10-03', 'dinner')
+    expect(root.querySelectorAll('input[name="reason"]')).toHaveLength(0)
+    expect(
+      [...root.querySelectorAll<HTMLElement>('[data-add-reason]')].map(
+        (each) => `${each.dataset.day} ${each.dataset.meal}`,
+      ),
+    ).toEqual(['2026-10-03 breakfast', '2026-10-03 lunch'])
+    button('[data-add-reason][data-meal="lunch"]')?.click()
     const typed = root.querySelector('input[name="reason"][data-meal="lunch"]')
+    expect(document.activeElement).toBe(typed)
+    expect(button('[data-add-reason][data-meal="lunch"]')).toBeNull()
     reason('2026-10-03', 'lunch', ' provided by the conference ')
     expect(root.querySelector('input[name="reason"][data-meal="lunch"]')).toBe(typed)
     expect([...(kept.at(-1)?.perDiems[0]?.reasons.values() ?? [])]).toEqual([
       'provided by the conference',
     ])
-    claim('2026-10-03', 'lunch')
-    expect(root.querySelector('input[name="reason"][data-meal="lunch"]')).toBeNull()
-    claim('2026-10-03', 'lunch', false)
+    claim('2026-10-04', 'lunch')
     expect(
-      root.querySelector<HTMLInputElement>('input[name="reason"][data-meal="lunch"]')?.value,
-    ).toBe('')
+      root.querySelector<HTMLInputElement>('input[name="reason"][data-day="2026-10-03"]')?.value,
+    ).toBe('provided by the conference')
+    claim('2026-10-03', 'lunch')
+    expect(root.querySelector('input[name="reason"][data-day="2026-10-03"]')).toBeNull()
+    claim('2026-10-03', 'lunch', false)
+    expect(button('[data-add-reason][data-day="2026-10-03"][data-meal="lunch"]')).not.toBeNull()
+    claim('2026-10-03', 'lunch')
+    claim('2026-10-03', 'dinner', false)
+    claim('2026-10-03', 'lunch', false)
+    expect(root.querySelectorAll('[data-day="2026-10-03"][data-add-reason]')).toHaveLength(0)
+  })
+
+  it('forget the reasons asked for and left empty once Done is clicked', () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-03')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    claim('2026-10-03', 'dinner')
+    button('[data-add-reason][data-meal="lunch"]')?.click()
+    button('[data-action="done"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(root.querySelector('input[name="reason"]')).toBeNull()
   })
 
   it('show above the expenses once a meal is claimed, which is enough to continue, and in their own section on review', async () => {
@@ -1186,11 +1215,21 @@ describe('the per diems', () => {
     claim('2026-10-04', 'breakfast')
     scope('2026-10-05', 'international')
     claim('2026-10-05', 'dinner')
+    button('[data-add-reason][data-day="2026-10-05"][data-meal="lunch"]')?.click()
     reason('2026-10-05', 'lunch', 'provided by the conference')
     button('[data-action="done"]')?.click()
     expect(root.querySelector('.per-diems-line')?.textContent).toBe(
       'Per diems: 2 days · $28.40 · USD 57.70',
     )
+    const listed = [...root.querySelectorAll('table.per-diem-list tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
+    )
+    expect(listed).toEqual([
+      ['2026-10-04', 'Per diem, domestic: breakfast'],
+      ['', 'Not claimed: lunch, dinner'],
+      ['2026-10-05', 'Per diem, international: dinner'],
+      ['', 'Not claimed: breakfast, lunch (provided by the conference)'],
+    ])
     expect(continueButton()?.disabled).toBe(false)
     await fillExpense()
     proceed()

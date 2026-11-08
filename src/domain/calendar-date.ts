@@ -1,5 +1,8 @@
 const isoDate = /^(\d{4})-(\d{2})-(\d{2})$/
 
+/** The days of the week by their names in English, counted in UTC as a calendar date is. */
+const dayOfWeek = new Intl.DateTimeFormat('en', { weekday: 'long', timeZone: 'UTC' })
+
 /** A calendar date: a day of a month of a year, that exists in the calendar. */
 export class CalendarDate {
   readonly year: number
@@ -34,6 +37,11 @@ export class CalendarDate {
     } catch {
       return undefined
     }
+  }
+
+  /** The day of the week this date falls on, in English: Saturday. */
+  get dayOfWeek(): string {
+    return dayOfWeek.format(new Date(Date.UTC(this.year, this.month - 1, this.day)))
   }
 
   /** The day after this one. */
