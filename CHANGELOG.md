@@ -51,6 +51,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The finding of an email address missing or invalid says what is needed: *Email
+  is required, as an email address.*
 - A character the report document cannot write, such as Chinese, Japanese or an
   emoji, no longer vanishes from it silently: it is a finding on the Review step,
   naming the field and the character, and the report cannot be saved until it is

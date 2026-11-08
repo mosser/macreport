@@ -48,7 +48,7 @@ describe('findings of the Report step', () => {
     expect(wordings(findingsOfReportStep(new Report()))).toEqual([
       'Name of claimant is required.',
       'Position is required.',
-      'Email is required.',
+      'Email is required, as an email address.',
       'Purpose is required.',
       'Account name is required.',
     ])
@@ -69,7 +69,7 @@ describe('findings of the Report step', () => {
     for (const position of ['Student', 'Postdoctoral fellow'] as const) {
       expect(wordings(findingsOfReportStep(complete.afterChanging({ position })))).toEqual([
         'Supervisor is required.',
-        "Supervisor's email is required.",
+        "Supervisor's email is required, as an email address.",
       ])
     }
   })
@@ -78,7 +78,7 @@ describe('findings of the Report step', () => {
     const visitor = complete.afterChanging({ position: 'Visitor' })
     expect(wordings(findingsOfReportStep(visitor))).toEqual([
       'Host is required.',
-      "Host's email is required.",
+      "Host's email is required, as an email address.",
     ])
   })
 

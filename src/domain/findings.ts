@@ -142,9 +142,12 @@ function missing(step: FindingStep, field: Field, expense?: Expense): Finding {
   return { step, wording: `${subject}${requiredWording(field)}` }
 }
 
+/** The fields holding an email address: one typed that is not stays out of the report, as if empty. */
+const emailFields: ReadonlySet<Field> = new Set<Field>(['email', 'supervisorEmail', 'hostEmail'])
+
 /**
- * The required fields of the Report step that are missing, the dates and the locations of a
- * business travel among them, and a last day before the first.
+ * The required fields of the Report step that are missing or invalid, the dates and the locations
+ * of a business travel among them, and a last day before the first.
  */
 export function findingsOfReportStep(report: Report): readonly Finding[] {
   const required: [Field, unknown][] = [
@@ -172,7 +175,12 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
   required.push(['accountName', report.accountName])
   const findings = required
     .filter(([, value]) => value === undefined)
-    .map(([field]) => missing('Report', field))
+    .map(
+      ([field]): Finding =>
+        emailFields.has(field)
+          ? { step: 'Report', wording: `${fieldNames[field]} is required, as an email address.` }
+          : missing('Report', field),
+    )
   const { firstDay, lastDay } = report
   if (firstDay !== undefined && lastDay?.isBefore(firstDay)) {
     findings.push({ step: 'Report', wording: 'Last day is before the first day.' })
