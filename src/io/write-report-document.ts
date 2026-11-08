@@ -17,25 +17,29 @@ import {
   popGraphicsState,
   pushGraphicsState,
   rectangle,
-  rgb,
   scale,
 } from '@cantoo/pdf-lib'
 import boldFont from '../assets/fonts/NotoSans-Bold.ttf?inline'
 import regularFont from '../assets/fonts/NotoSans-Regular.ttf?inline'
+import mcmasterLogoImage from '../assets/mcmaster-col.png?inline'
 import logoImage from '../assets/mcscert-left-col.png?inline'
 import type { CalendarDate } from '../domain/calendar-date.ts'
 import type { Document } from '../domain/document.ts'
 import type {
   ExpenseRow,
-  LabelledDocument,
   Layout,
+  MissingReceiptAuthorization,
   Section,
+  SectionEntry,
   StampedExpense,
   TotalLine,
 } from '../domain/layout.ts'
+import { nameOf } from '../domain/layout.ts'
 import type { DocumentsAsWritten } from './documents-as-written.ts'
 import { formatOf } from './format.ts'
+import { colourOf, letterPortrait, margin, wrap } from './generated-page.ts'
 import { bytesOf } from './inlined.ts'
+import { type FormPage, formPagesOf } from './missing-receipt-form.ts'
 import type { Orientation } from './orientation.ts'
 import { type Box, fitOf, type PageView, portraitRotationOf, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
@@ -53,10 +57,7 @@ export interface Writing {
   readonly documents: Pick<DocumentsAsWritten, 'imageOf' | 'pdfOf'>
 }
 
-const letterPortrait: [number, number] = [612, 792]
 const letter = { width: letterPortrait[0], height: letterPortrait[1] }
-/** Three-quarter-inch margins. */
-const margin = 54
 const stampBaseline = 24
 const logoWidth = 170
 /** The space under the logo of a generated page. */
@@ -137,7 +138,7 @@ const nameSeparator = ' · '
 /** A page of the report document, and the document it belongs to when it belongs to one. */
 interface StampedPage {
   readonly page: PDFPage
-  readonly entry?: LabelledDocument
+  readonly entry?: SectionEntry
 }
 
 /**
@@ -178,10 +179,14 @@ interface Place {
   readonly top: number
 }
 
-/** A document ready for its pages: a PDF's pages copied, or an image to place on a page of its own. */
+/**
+ * A document ready for its pages: a PDF's pages copied, an image to place on a page of its own, or
+ * the pages of a form to draw.
+ */
 type Source =
   | { readonly pages: readonly PDFPage[]; readonly pageCount: number }
   | { readonly image: PDFImage; readonly orientation: Orientation; readonly pageCount: 1 }
+  | { readonly form: readonly FormPage[]; readonly pageCount: number }
 
 /**
  * Writes the report document of a layout: the cover, then each section, its section pages and
@@ -191,19 +196,33 @@ type Source =
 export async function writeReportDocument(writing: Writing): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   pdf.registerFontkit(fontkit)
+  const regular = await pdf.embedFont(bytesOf(regularFont), { subset: true })
+  const bold = await pdf.embedFont(bytesOf(boldFont), { subset: true })
   const writer = new Writer({
     pdf,
     palette: writing.palette,
-    regular: await pdf.embedFont(bytesOf(regularFont), { subset: true }),
-    bold: await pdf.embedFont(bytesOf(boldFont), { subset: true }),
+    regular,
+    bold,
     logo: await pdf.embedPng(bytesOf(logoImage)),
   })
+  // Embedded once, and only for a report document that has a form.
+  let formLogo: Promise<PDFImage> | undefined
+  const sourceOfForm = async (authorization: MissingReceiptAuthorization): Promise<Source> => {
+    formLogo ??= pdf.embedPng(bytesOf(mcmasterLogoImage))
+    const logo = await formLogo
+    const form = formPagesOf(authorization, { regular, bold, logo, black: writing.palette.black })
+    return { form, pageCount: form.length }
+  }
   // Every document is read, its pages copied and its image embedded first, all at once; the
   // pages are then added in the order of the report document.
   const sources = await Promise.all(
     writing.layout.sections.map((section) =>
       Promise.all(
-        section.documents.map((entry) => sourceOf(pdf, entry.document, writing.documents)),
+        section.documents.map((entry) =>
+          'document' in entry
+            ? sourceOf(pdf, entry.document, writing.documents)
+            : sourceOfForm(entry.authorization),
+        ),
       ),
     ),
   )
@@ -236,53 +255,6 @@ async function sourceOf(
   leaveOutWhatNoReaderShows(source)
   const pages = await pdf.copyPages(source, source.getPageIndices())
   return { pages, pageCount: pages.length }
-}
-
-/**
- * The lines a text wraps into within a width, breaking a word longer than the width; each of its
- * own line breaks starts a line.
- */
-export function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
-  const fits = (candidate: string) => font.widthOfTextAtSize(candidate, size) <= width
-  return text.split('\n').flatMap((paragraph) => wrapParagraph(paragraph, fits))
-}
-
-/** The lines a paragraph wraps into, filling each line with as many pieces of words as fit. */
-function wrapParagraph(paragraph: string, fits: (text: string) => boolean): string[] {
-  const pieces = paragraph
-    .split(/\s+/)
-    .filter((word) => word !== '')
-    .flatMap((word) => breakWord(word, fits))
-  const lines: string[] = []
-  let line = ''
-  for (const piece of pieces) {
-    const candidate = line === '' ? piece : `${line} ${piece}`
-    if (fits(candidate) || line === '') {
-      line = candidate
-    } else {
-      lines.push(line)
-      line = piece
-    }
-  }
-  lines.push(line)
-  return lines
-}
-
-function breakWord(word: string, fits: (text: string) => boolean): string[] {
-  if (fits(word)) {
-    return [word]
-  }
-  const pieces: string[] = []
-  let piece = ''
-  for (const character of word) {
-    if (piece !== '' && !fits(piece + character)) {
-      pieces.push(piece)
-      piece = ''
-    }
-    piece += character
-  }
-  pieces.push(piece)
-  return pieces
 }
 
 /**
@@ -771,7 +743,7 @@ class Writer {
       if (title !== undefined) this.sectionHeading(flow, title)
       const rows = documents.map((entry): Cell[] => [
         [{ text: entry.label, target: { label: entry.label } }],
-        entry.document.name,
+        nameOf(entry),
         [
           {
             text: pagesOf.get(entry) ?? '',
@@ -792,7 +764,16 @@ class Writer {
     })
   }
 
-  private copy(entry: LabelledDocument, source: Source): void {
+  private copy(entry: SectionEntry, source: Source): void {
+    if ('form' in source) {
+      for (const drawings of source.form) {
+        const page = this.pdf.addPage(letterPortrait)
+        for (const draw of drawings) draw(page)
+        this.pages.push({ page, entry })
+      }
+      this.markFirstPage(entry, this.pages.length - source.form.length)
+      return
+    }
     if ('pages' in source) {
       for (const page of source.pages) {
         this.pages.push({ page: turnedPortrait(fittedToLetter(this.pdf.addPage(page))), entry })
@@ -823,7 +804,7 @@ class Writer {
     this.markFirstPage(entry, this.pages.length - 1)
   }
 
-  private markFirstPage(entry: LabelledDocument, index: number): void {
+  private markFirstPage(entry: SectionEntry, index: number): void {
     const first = this.pages[index]?.page
     if (first !== undefined) {
       this.firstPages.set(entry.label, first)
@@ -1052,7 +1033,7 @@ class Writer {
 }
 
 /** The label of a stamp: a link only for a document supporting no expense to go back to. */
-function stampedLabelOf({ label, expenses }: LabelledDocument): StampPiece {
+function stampedLabelOf({ label, expenses }: SectionEntry): StampPiece {
   return expenses.length === 0 ? { text: label, label } : { text: label }
 }
 
@@ -1193,8 +1174,4 @@ function withoutHiddenAnnotations(page: PDFPage, crop: Box): void {
 function turnedPortrait(page: PDFPage): PDFPage {
   page.setRotation(degrees(portraitRotationOf(page.getCropBox(), page.getRotation().angle)))
   return page
-}
-
-function colourOf(colour: Colour) {
-  return rgb(colour.red, colour.green, colour.blue)
 }

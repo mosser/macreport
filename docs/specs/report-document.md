@@ -172,8 +172,8 @@ Receipt Authorization Form, filled in, on one page when it fits. Its text and
 lines are black. A frame runs across the page, within its margins, and rules
 across the frame divide it in four parts:
 
-1. The McMaster logo, on the left; under it, centred, bold and underlined,
-   *Missing Receipt Authorization Form*; then:
+1. The McMaster logo, on the left; level with its bottom, centred, bold and
+   underlined, *Missing Receipt Authorization Form*; then:
 
    > **Original invoices** on company letterhead or official receipts are
    > required for reimbursements. Where the original invoice or receipt is not

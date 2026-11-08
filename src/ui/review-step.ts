@@ -7,6 +7,7 @@ import {
   type LabelledDocument,
   type Layout,
   layoutOf,
+  nameOf,
   type Section,
 } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
@@ -169,7 +170,9 @@ function sizesOf(
   linkOf: LinkOf,
 ): Markup {
   const rows = layout.sections.flatMap((section) =>
-    section.documents.flatMap((entry) => sizeRowOf(entry, report, weights, linkOf)),
+    section.documents.flatMap((entry) =>
+      'document' in entry ? sizeRowOf(entry, report, weights, linkOf) : [],
+    ),
   )
   const reportSize = reportSizeOf(weights)
   if (rows.length === 0 && reportSize.text === '') return html``
@@ -203,7 +206,7 @@ function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
           ({ description }) => html`<div>${description}</div>`,
         )
         const numbers = html`<td>${descriptions}</td>`
-        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}</td>${expenses(numbers)}</tr>`
+        return html`<tr><td>${entry.label}</td><td>${'document' in entry ? linkOf(entry.document) : nameOf(entry)}</td>${expenses(numbers)}</tr>`
       })
       return html`<table class="documents">
         <colgroup><col class="label" /><col />${expenses(html`<col />`)}</colgroup>
