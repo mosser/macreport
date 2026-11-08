@@ -577,7 +577,7 @@ describe('writeReportDocument', () => {
     const [cad, euro] = [place('CAD'), place('EUR')]
     expect(euro?.x).toBe(cad?.x)
     expect(euro?.y).toBeLessThan(cad?.y ?? 0)
-    expect(place('Total')?.y).toBe(cad?.y)
+    expect(place('Total')?.y).toBeCloseTo(((cad?.y ?? 0) + (euro?.y ?? 0)) / 2, 5)
     // Right-aligned: digits are of one width in Noto Sans, so the shorter amount starts further on.
     expect(place('1,012.35')?.y).toBe(cad?.y)
     expect(place('55.00')?.y).toBe(euro?.y)
@@ -1035,17 +1035,37 @@ describe('the rows of a table', () => {
     )
   }
 
-  it('centres each cell of the cover in the height of its row, on a line and between two', async () => {
-    const pdf = await written(reportWith('First\nSecond\nThird\nFourth'))
+  it('centres each cell of the cover in the height of its row, the documents under its description included', async () => {
+    for (const description of ['Taxi', 'First\nSecond', 'First\nSecond\nThird\nFourth']) {
+      const pdf = await written(reportWith(description))
+      const places = placesOf(pdf, pdf.getPage(0))
+      const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
+      const top = yOf(description.split('\n')[0] ?? '')
+      const middle = (top + yOf('Receipt')) / 2
+      expect(yOf('1')).toBeCloseTo(middle, 5)
+      expect(yOf('2026-10-03')).toBeCloseTo(middle, 5)
+      expect(yOf('$1,012.35')).toBeCloseTo(middle, 5)
+      expect(top).toBeGreaterThan(yOf('2026-10-03'))
+    }
+  })
+
+  it('centres Total beside the lines of the total', async () => {
+    const pdf = await written(
+      reportWith('Taxi').afterAdding(
+        new Expense({
+          date: new CalendarDate(2026, 10, 4),
+          description: 'Bus',
+          isPaidInAnotherCurrency: true,
+          foreignAmount: new Amount(3500),
+          currency: Currency.parse('EUR'),
+          isPaidInCash: true,
+          receipts: [new Document(Kind.receipt, 'bus.png', png)],
+        }),
+      ),
+    )
     const places = placesOf(pdf, pdf.getPage(0))
     const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
-    const middle = (yOf('First') + yOf('Fourth')) / 2
-    expect(yOf('2026-10-03')).toBeCloseTo(middle, 5)
-    expect(yOf('$1,012.35')).toBeCloseTo(middle, 5)
-    const threeLines = await written(reportWith('First\nSecond\nThird'))
-    const three = placesOf(threeLines, threeLines.getPage(0))
-    const threeOf = (text: string) => three.find((place) => place.text === text)?.y
-    expect(threeOf('2026-10-03')).toBeCloseTo(threeOf('Second') ?? 0, 5)
+    expect(yOf('Total')).toBeCloseTo((yOf('CAD') + yOf('EUR')) / 2, 5)
   })
 
   it('centres the Entered box of a row', async () => {

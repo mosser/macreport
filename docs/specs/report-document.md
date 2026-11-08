@@ -32,7 +32,9 @@ R1, R2, and so on.
   have three-quarter-inch margins. A text wraps within its column or its
   line, never clipped; what does not fit a page continues on the next one, as
   each part below says. In the tables of the cover and of section pages, each cell
-  stands centred in the height of its row, an Entered box included.
+  stands centred in the height of its row, an Entered box included: on the cover, a
+  row holds what stands under its description, and *Total* stands centred beside
+  its lines.
 - Each page of a PDF document is placed on a Letter page, across the page
   when it shows wider than tall, as close to its own size as it can be:
   scaled down to fit the page when it is larger, never enlarged, and centred.
