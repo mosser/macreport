@@ -16,6 +16,11 @@ Under every step, the footer names the system and its version, and the
 McMaster Centre for Software Certification, and states: *Everything you enter and add stays in this
 browser, on this computer. Nothing is collected, sent or shared.*
 
+**Help**, a question mark in the header, is offered on every step. It opens a
+dialog over the step, under the heading *Policy*, with the name of each document
+`config/policy.json` lists, each a link that opens it in a new tab of the browser,
+and **Close**.
+
 **New report** is offered on every step. It asks for confirmation, in a
 dialog over the step as every confirmation is, then
 discards the draft, its expenses and its documents, and opens the Report step
@@ -202,7 +207,7 @@ total, one amount per currency; then the total of the report, as on the
 cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added, or from its reduced file
-once reduced. The Entered boxes are the report document's alone.
+once reduced. The Entered boxes and the Policy section are the report document's alone.
 
 The sizes stand at the top of the step: the size of the report
 document, or *Working out the sizes…* until the sizes are known, Save the report

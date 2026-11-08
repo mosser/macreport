@@ -131,6 +131,9 @@ the template's fields and its table, so that nothing else needs filling in.
   when every meal is claimed. A per diem is supported by no document: no section page
   and no stamp names it, and its number is never a link.
 
+- **Policy.** After the total, under its heading, the name of each document
+  `config/policy.json` lists, one per line, each a link followed by its arrow.
+
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.
 
@@ -237,6 +240,7 @@ label of their row already showing where they go.
 | Cover, expenses | A document among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
 | Section page | An expense's description | The expense's row on the cover |
+| Cover, Policy | The name of a document | The address `config/policy.json` gives it, opened as the PDF reader opens a link |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
 | Stamp | The label of an additional document, which has no expense to go back to | The document's row on its section page |
 

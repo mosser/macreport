@@ -13,6 +13,7 @@ import {
   PDFName,
   PDFNumber,
   type PDFPage,
+  PDFString,
   popGraphicsState,
   pushGraphicsState,
   rectangle,
@@ -32,6 +33,7 @@ import type {
   StampedExpense,
   TotalLine,
 } from '../domain/layout.ts'
+import type { PolicyDocument } from '../domain/policy.ts'
 import type { DocumentsAsWritten } from './documents-as-written.ts'
 import { formatOf } from './format.ts'
 import { bytesOf } from './inlined.ts'
@@ -139,13 +141,14 @@ interface StampPiece {
 const stampSeparator = ' · '
 
 /**
- * What a link goes to: the first page of a document, the row of an expense on the cover, or the row
- * of a document on its section page.
+ * What a link goes to: the first page of a document, the row of an expense on the cover, the row
+ * of a document on its section page, or an address outside the report document.
  */
 type Target =
   | { readonly label: string }
   | { readonly expenseNumber: number }
   | { readonly documentRow: string }
+  | { readonly url: string }
 
 /** A rectangle of a page that a reader clicks to go to a target. */
 interface Link {
@@ -459,6 +462,36 @@ class Writer {
     }
     this.totalRow(flow, columns, layout.total)
     flow.stopContinuing()
+    flow.down(12)
+    this.sectionHeading(flow, 'Policy')
+    for (const document of layout.policyDocuments) {
+      this.policyLine(flow, document)
+    }
+  }
+
+  /** A document of the policy: its name, each of its lines a link marked with an arrow. */
+  private policyLine(flow: Flow, { name, url }: PolicyDocument): void {
+    const { black } = this.palette
+    const room = letterPortrait[0] - 2 * margin - arrowRoom * bodySize
+    for (const line of wrap(name, this.regular, bodySize, room)) {
+      flow.ensure(bodySize * leading)
+      flow.text(line, margin, this.regular, bodySize, black)
+      const page = flow.page
+      if (page !== undefined) {
+        const width = this.regular.widthOfTextAtSize(line, bodySize)
+        const baseline = flow.cursor - bodySize
+        drawArrow(page, margin + width, baseline, bodySize, black)
+        this.links.push({
+          page,
+          x: margin,
+          y: baseline - 2,
+          width: width + arrowRoom * bodySize,
+          height: bodySize + 3,
+          target: { url },
+        })
+      }
+      flow.down(bodySize * leading)
+    }
   }
 
   /**
@@ -615,28 +648,38 @@ class Writer {
   link(): void {
     const context = this.pdf.context
     for (const link of this.links) {
-      const target = link.target
-      let destination: PDFArray | undefined
-      if ('label' in target) {
-        const page = this.firstPages.get(target.label)
-        destination = page && context.obj([page.ref, 'Fit'])
-      } else {
-        const row =
-          'documentRow' in target
-            ? this.documentRows.get(target.documentRow)
-            : this.expenseRows.get(target.expenseNumber)
-        destination = row && context.obj([row.page.ref, 'XYZ', null, row.top, null])
-      }
-      if (destination === undefined) continue
+      const goesTo = this.whereLinkGoes(link.target)
+      if (goesTo === undefined) continue
       const annotation = context.obj({
         Type: 'Annot',
         Subtype: 'Link',
         Rect: [link.x, link.y, link.x + link.width, link.y + link.height],
         Border: [0, 0, 0],
-        Dest: destination,
+        ...goesTo,
       })
       link.page.node.addAnnot(context.register(annotation))
     }
+  }
+
+  /** What a link's annotation says of where it goes; nothing when that does not exist. */
+  private whereLinkGoes(
+    target: Target,
+  ): { readonly Dest: PDFArray } | { readonly A: PDFDict } | undefined {
+    const context = this.pdf.context
+    if ('url' in target) {
+      return {
+        A: context.obj({ Type: 'Action', S: 'URI', URI: PDFString.of(pdfStringOf(target.url)) }),
+      }
+    }
+    if ('label' in target) {
+      const page = this.firstPages.get(target.label)
+      return page && { Dest: context.obj([page.ref, 'Fit']) }
+    }
+    const row =
+      'documentRow' in target
+        ? this.documentRows.get(target.documentRow)
+        : this.expenseRows.get(target.expenseNumber)
+    return row && { Dest: context.obj([row.page.ref, 'XYZ', null, row.top, null]) }
   }
 
   private sectionPage(
@@ -962,6 +1005,11 @@ function cellOffsetOf(column: Column, width: number, isHeader: boolean): number 
   if (isHeader && column.isTitleCentred) return (column.width - width) / 2
   if (!isHeader && column.isRightAligned) return column.width - cellPadding - width
   return cellPadding
+}
+
+/** A text as a PDF's literal string holds it: its backslashes and parentheses escaped. */
+function pdfStringOf(text: string): string {
+  return text.replace(/[\\()]/g, (character) => `\\${character}`)
 }
 
 /** What a piece of a stamp is a link to, when it is one. */

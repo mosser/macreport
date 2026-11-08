@@ -62,7 +62,8 @@ src/ui/       the wizard and its four steps: Report, Expenses, Additional docume
 src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 config/       per-diems.json: the per diem rates; document-sizes.json: when a
-              document is heavy; inlined at build time
+              document is heavy; policy.json: the documents of the policy; inlined
+              at build time
 src/style.css McMaster palette tokens and all styling
 scripts/      check-adr.sh: the scriptable ADR checks; release.sh and
               release-notes.sh: cutting a release (ADR 0003)
@@ -184,6 +185,13 @@ first.
   only when that makes it at least 10 % smaller. The Claimant is asked for no
   quality or size.
 - The canvas is used only in its own file under `src/io/`.
+
+### ADR 0012: the policy
+
+- The documents of the policy are links, never copies. `config/policy.json` holds
+  each one's name and https address, and is the only place an address appears; the
+  build refuses a file without a valid one. The report document has a Policy section
+  after the total; Help, a question mark in the header, opens them in a new tab.
 
 ## Writing
 

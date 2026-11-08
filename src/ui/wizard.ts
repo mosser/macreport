@@ -4,7 +4,9 @@ import { confirmed } from './confirmation.ts'
 import type { ReadFile } from './document-field.ts'
 import type { DocumentLinks } from './document-link.ts'
 import { expensesStep } from './expenses-step.ts'
+import { showHelp } from './help.ts'
 import { html } from './html.ts'
+import { questionMark } from './icons.ts'
 import { reportStep } from './report-step.ts'
 import { reviewStep, type SaveReport, type WeighReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
@@ -124,6 +126,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         <img src="${options.logo}" alt="McSCert" />
         <h1>McSCert Expense Report</h1>
         <button class="new-report" data-action="new-report">New report</button>
+        <button class="icon help" data-action="help" aria-label="Help" title="Help">${questionMark}</button>
       </header>
       <main>
         <p class="notice" data-notice="draft" ${draftNotice}>No draft is kept: closing the page will lose the report.</p>
@@ -153,6 +156,9 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
       if (isConfirmed) {
         await startNewReport()
       }
+    })
+    root.querySelector('[data-action="help"]')?.addEventListener('click', () => {
+      showHelp(root.ownerDocument)
     })
     root.querySelector('[data-action="back"]')?.addEventListener('click', () => go(current - 1))
     root.querySelector('[data-action="continue"]')?.addEventListener('click', () => go(current + 1))

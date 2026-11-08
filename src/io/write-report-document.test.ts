@@ -11,6 +11,7 @@ import {
   type PDFPage,
   PDFRawStream,
   PDFRef,
+  PDFString,
   StandardFonts,
 } from '@cantoo/pdf-lib'
 import { describe, expect, it } from 'vitest'
@@ -23,6 +24,7 @@ import { Kind } from '../domain/kind.ts'
 import { layoutOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import { PerDiem } from '../domain/per-diem.ts'
+import { policy } from '../domain/policy.ts'
 import { Report } from '../domain/report.ts'
 import { DocumentsAsWritten } from './documents-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
@@ -242,6 +244,7 @@ function linksOf(pdf: PDFDocument, page: PDFPage) {
   const annotations = (page.node.Annots()?.asArray() ?? [])
     .map((reference) => pdf.context.lookup(reference, PDFDict))
     .filter((annotation) => annotation.get(PDFName.of('Subtype')) === PDFName.of('Link'))
+    .filter((annotation) => annotation.has(PDFName.of('Dest')))
   return annotations.map((annotation) => {
     const destination = annotation.lookup(PDFName.of('Dest'), PDFArray)
     const top = destination.lookupMaybe(3, PDFNumber)?.asNumber()
@@ -611,6 +614,30 @@ describe('writeReportDocument', () => {
     const column = 54 + 22 + 62 + 220 + 76
     expect(large?.x).toBeGreaterThan(column + 4)
     expect(total?.x).toBeGreaterThan(large?.x ?? 0)
+  })
+
+  it('has a Policy section after the total, each document named and a link to its address', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const cover = pdf.getPage(0)
+    const places = placesOf(pdf, cover)
+    const at = (text: string) => places.find((place) => place.text === text)
+    const [first, second] = policy.documents
+    if (first === undefined || second === undefined) throw new TypeError('No policy')
+    const [total, heading, one, other] = ['Total', 'Policy', first.name, second.name].map(at)
+    expect(heading?.y).toBeLessThan(total?.y ?? 0)
+    expect(one?.y).toBeLessThan(heading?.y ?? 0)
+    expect(other?.y).toBeLessThan(one?.y ?? 0)
+    const addresses = (cover.node.Annots()?.asArray() ?? [])
+      .map((reference) => pdf.context.lookup(reference, PDFDict))
+      .filter((annotation) => annotation.has(PDFName.of('A')))
+      .map((annotation) => annotation.lookup(PDFName.of('A'), PDFDict))
+    expect(addresses.map((action) => action.get(PDFName.of('S')))).toEqual([
+      PDFName.of('URI'),
+      PDFName.of('URI'),
+    ])
+    expect(
+      addresses.map((action) => action.lookup(PDFName.of('URI'), PDFString).asString()),
+    ).toEqual(policy.documents.map(({ url }) => url))
   })
 
   it('keeps an amount of the total too wide for its column clear of its currency', async () => {

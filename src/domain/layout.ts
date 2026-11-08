@@ -6,6 +6,7 @@ import { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
 import { Kind } from './kind.ts'
 import type { PerDiem } from './per-diem.ts'
+import { type PolicyDocument, policy } from './policy.ts'
 import type { Report } from './report.ts'
 
 /** A field of the cover: its name and its value. */
@@ -123,6 +124,8 @@ export interface Layout {
    * the expenses without a claimed amount, US dollars including the international per diems.
    */
   readonly total: readonly TotalLine[]
+  /** The documents of the policy, in the section after the expenses. */
+  readonly policyDocuments: readonly PolicyDocument[]
   readonly sections: readonly Section[]
 }
 
@@ -168,6 +171,7 @@ export function layoutOf(report: Report): Layout {
       entry instanceof Expense ? rowOf(entry, index + 1, labels) : perDiemRowOf(entry, index + 1),
     ),
     total: totalOf(expenses, report.claimedPerDiems),
+    policyDocuments: policy.documents,
     sections,
   }
 }

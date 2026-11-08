@@ -80,6 +80,11 @@ body {
   margin-left: auto;
 }
 
+/* Help beside New report: on the maroon bar, it takes the colours of a button on it. */
+.masthead .help {
+  flex-shrink: 0;
+}
+
 main {
   max-width: 56rem;
   margin: 0 auto;
@@ -646,7 +651,8 @@ td.expense-actions button + button {
 }
 
 /* A confirmation, over the step, holding everything else until it is answered. */
-dialog.confirmation {
+dialog.confirmation,
+dialog.help {
   max-width: 32rem;
   padding: 1.25rem 1.5rem;
   border: 1px solid var(--color-accent);
@@ -655,11 +661,21 @@ dialog.confirmation {
   color: var(--color-text);
 }
 
-dialog.confirmation::backdrop {
+dialog.confirmation::backdrop,
+dialog.help::backdrop {
   background: color-mix(in srgb, var(--mac-black) 50%, transparent);
 }
 
-dialog.confirmation .actions {
+dialog.help ul {
+  padding-left: 1.25rem;
+}
+
+dialog.help li + li {
+  margin-top: 0.5rem;
+}
+
+dialog.confirmation .actions,
+dialog.help .actions {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1rem;

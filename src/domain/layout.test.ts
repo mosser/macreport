@@ -19,6 +19,7 @@ const linesOf = (total: readonly TotalLine[]) =>
 
 import { Meal } from './meal.ts'
 import { PerDiem } from './per-diem.ts'
+import { policy } from './policy.ts'
 import { Report } from './report.ts'
 
 const receipt = new Document(Kind.receipt, 'air-canada.pdf', new Uint8Array([1]))
@@ -294,6 +295,10 @@ describe('layoutOf', () => {
     expect(layoutOf(stamped).sections[1]?.documents[0]?.expenses[0]?.description).toBe(
       'Dinner with Ada',
     )
+  })
+
+  it('holds the documents of the policy', () => {
+    expect(layoutOf(report).policyDocuments).toEqual(policy.documents)
   })
 
   it('calls a document by its kind on the cover, whatever the Claimant named it', () => {
