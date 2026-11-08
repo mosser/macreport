@@ -1,12 +1,11 @@
+import { policy } from '../domain/policy.ts'
 import type { Report } from '../domain/report.ts'
 import { additionalDocumentsStep } from './additional-documents-step.ts'
 import { confirmed } from './confirmation.ts'
 import type { ReadFile } from './document-field.ts'
 import type { DocumentLinks } from './document-link.ts'
 import { expensesStep } from './expenses-step.ts'
-import { showHelp } from './help.ts'
-import { html } from './html.ts'
-import { questionMark } from './icons.ts'
+import { html, type Markup } from './html.ts'
 import { reportStep } from './report-step.ts'
 import { reviewStep, type SaveReport, type WeighReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
@@ -30,6 +29,14 @@ export interface WizardOptions {
   readonly keep: (report: Report) => Promise<boolean>
   /** Deletes the draft and its documents, for New report; gives whether the browser did. */
   readonly discard: () => Promise<boolean>
+}
+
+/** The documents of the policy, one after the other, each a link that opens it in a new tab. */
+function policyLinks(): Markup[] {
+  return policy.documents.flatMap(({ name, url }, index) => {
+    const link = html`<a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`
+    return index === 0 ? [link] : [html` · `, link]
+  })
 }
 
 /**
@@ -126,7 +133,6 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         <img src="${options.logo}" alt="McSCert" />
         <h1>McSCert Expense Report</h1>
         <button class="new-report" data-action="new-report">New report</button>
-        <button class="icon help" data-action="help" aria-label="Help" title="Help">${questionMark}</button>
       </header>
       <main>
         <p class="notice" data-notice="draft" ${draftNotice}>No draft is kept: closing the page will lose the report.</p>
@@ -140,6 +146,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
       </main>
       <footer>
         <p>McSCert Expense Report v${options.version} · McMaster Centre for Software Certification</p>
+        <p class="policy-links">${policyLinks()}</p>
         <p class="privacy">Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.</p>
       </footer>`.text
 
@@ -156,9 +163,6 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
       if (isConfirmed) {
         await startNewReport()
       }
-    })
-    root.querySelector('[data-action="help"]')?.addEventListener('click', () => {
-      showHelp(root.ownerDocument)
     })
     root.querySelector('[data-action="back"]')?.addEventListener('click', () => go(current - 1))
     root.querySelector('[data-action="continue"]')?.addEventListener('click', () => go(current + 1))

@@ -30,8 +30,10 @@ Options considered for where the addresses live:
 
 Options considered for where the interface offers them:
 
-- **In the footer.** Out of sight on a long step, and small.
-- **A question mark in the header.** On every step, without scrolling.
+- **A question mark in the header, opening a dialog.** Visible on every step without
+  scrolling, but an icon that says little, and a click more before the document.
+- **Links in the footer.** Named for what they open, one click from the document, and
+  under every step, at the cost of scrolling down a long step.
 
 ## Decision
 
@@ -44,8 +46,8 @@ Options considered for where the interface offers them:
   document can write.
 - **The report document has a Policy section** after the expenses, on the cover: the
   name of each document, a link marked with an arrow (`report-document.md`).
-- **The interface has Help**: a question mark in the header on every step opens a
-  dialog over the step, with the same links.
+- **The footer of the interface links to them**, under every step, each by its name
+  and in a new tab.
 
 ## Consequences
 
@@ -70,4 +72,4 @@ A change is compliant with this ADR when:
 - no business code under `src/` holds an http or https address;
 - `config/policy.json` is the only source of the documents, read through
   `src/domain/policy.ts`, which the build refuses unless it holds valid ones;
-- tests read the links back from a written report document, and from the dialog.
+- tests read the links back from a written report document, and from the footer.

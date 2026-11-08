@@ -337,39 +337,25 @@ describe('the wizard', () => {
     })
   })
 
-  describe('Help', () => {
-    const dialog = () => document.querySelector('dialog.help')
-    const openHelp = () => button('[data-action="help"]')?.click()
+  describe('the footer', () => {
+    const links = () => [...root.querySelectorAll<HTMLAnchorElement>('footer .policy-links a')]
 
-    it('is a question mark in the header of every step', () => {
-      expect(button('.masthead [data-action="help"]')?.getAttribute('aria-label')).toBe('Help')
-      expect(button('[data-action="help"]')?.querySelector('svg')).not.toBeNull()
+    it('links to each document of the policy, in a new tab, on every step', () => {
+      const expected = policy.documents.map(({ name, url }) => [name, url])
+      const shown = () => links().map((link) => [link.textContent, link.getAttribute('href')])
+      expect(shown()).toEqual(expected)
+      expect(links().every((link) => link.target === '_blank')).toBe(true)
+      expect(links().every((link) => link.rel === 'noopener noreferrer')).toBe(true)
       fillReport()
       proceed()
-      expect(button('.masthead [data-action="help"]')).not.toBeNull()
+      expect(shown()).toEqual(expected)
     })
 
-    it('opens a dialog linking to each document of the policy, in a new tab', () => {
-      openHelp()
-      expect(dialog()?.hasAttribute('open')).toBe(true)
-      expect(dialog()?.querySelector('h2')?.textContent).toBe('Policy')
-      const links = [...(dialog()?.querySelectorAll('a') ?? [])]
-      expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual(
-        policy.documents.map(({ name, url }) => [name, url]),
+    it('separates them by a middle dot, and offers no help in the header', () => {
+      expect(root.querySelector('footer .policy-links')?.textContent).toBe(
+        policy.documents.map(({ name }) => name).join(' · '),
       )
-      expect(links.every((link) => link.target === '_blank')).toBe(true)
-      expect(links.every((link) => link.rel === 'noopener noreferrer')).toBe(true)
-      dialog()?.querySelector<HTMLButtonElement>('[data-action="close-help"]')?.click()
-      expect(dialog()).toBeNull()
-    })
-
-    it('changes nothing of the report', () => {
-      fillReport()
-      const before = kept.at(-1)
-      openHelp()
-      dialog()?.querySelector<HTMLButtonElement>('[data-action="close-help"]')?.click()
-      expect(kept.at(-1)).toBe(before)
-      expect(root.querySelector<HTMLInputElement>('[name="purpose"]')?.value).toBe('ICSE 2026')
+      expect(root.querySelector('.masthead [data-action="help"]')).toBeNull()
     })
   })
 

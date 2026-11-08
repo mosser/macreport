@@ -7,11 +7,6 @@ function icon(paths: string) {
   )
 }
 
-/** A question mark in a circle: Help. */
-export const questionMark = icon(
-  '<circle cx="12" cy="12" r="10"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7"/><path d="M12 17h.01"/>',
-)
-
 /** Two arrows pointing at each other: Reduce. */
 export const reduceArrows = icon(
   '<path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>',

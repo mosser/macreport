@@ -13,13 +13,10 @@ When the browser refuses to keep a draft, the system says so on every step:
 closing the page will lose the report. Everything else works.
 
 Under every step, the footer names the system and its version, and the
-McMaster Centre for Software Certification, and states: *Everything you enter and add stays in this
+McMaster Centre for Software Certification; gives the name of each document
+`config/policy.json` lists, separated by a middle dot, each a link that opens it
+in a new tab of the browser; and states: *Everything you enter and add stays in this
 browser, on this computer. Nothing is collected, sent or shared.*
-
-**Help**, a question mark in the header, is offered on every step. It opens a
-dialog over the step, under the heading *Policy*, with the name of each document
-`config/policy.json` lists, each a link that opens it in a new tab of the browser,
-and **Close**.
 
 **New report** is offered on every step. It asks for confirmation, in a
 dialog over the step as every confirmation is, then
