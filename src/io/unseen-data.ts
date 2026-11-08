@@ -2,7 +2,7 @@ import { PDFArray, PDFDict, type PDFDocument, PDFName, PDFRef, PDFStream } from 
 
 /** What a page, or an image or a form it draws, may hold that no reader shows. */
 const unseenKeys = ['Thumb', 'PieceInfo', 'Metadata'].map((key) => PDFName.of(key))
-const drawnSubtypes: readonly unknown[] = [PDFName.of('Image'), PDFName.of('Form')]
+const drawnSubtypes = new Set<unknown>([PDFName.of('Image'), PDFName.of('Form')])
 const pageType = PDFName.of('Page')
 
 /** The dictionary of an object, itself or that of a stream, when it has one. */
@@ -15,7 +15,7 @@ function dictionaryOf(object: unknown): PDFDict | undefined {
 function isDrawn(dictionary: PDFDict): boolean {
   const type = dictionary.get(PDFName.of('Type'))
   const subtype = dictionary.get(PDFName.of('Subtype'))
-  return type === pageType || drawnSubtypes.includes(subtype)
+  return type === pageType || drawnSubtypes.has(subtype)
 }
 
 /**

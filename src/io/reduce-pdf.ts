@@ -15,7 +15,7 @@ import { dropUnreachable, leaveOutWhatNoReaderShows } from './unseen-data.ts'
 const name = (text: string) => PDFName.of(text)
 /** What an image may hold that encoding it again as a plain JPEG would break. */
 const unsafeImageKeys = ['SMask', 'Mask', 'Decode', 'ImageMask'].map(name)
-const plainColourSpaces: readonly unknown[] = [name('DeviceRGB'), name('DeviceGray')]
+const plainColourSpaces = new Set<unknown>([name('DeviceRGB'), name('DeviceGray')])
 
 /** The number of components of an ICC colour space, when a colour space is one. */
 function iccComponents(colourSpace: unknown, context: PDFContext): number | undefined {
@@ -30,7 +30,7 @@ function iccComponents(colourSpace: unknown, context: PDFContext): number | unde
 /** Whether a colour space is RGB or grey. */
 function isPlainColourSpace(value: unknown, context: PDFContext): boolean {
   const colourSpace = context.lookup(value as PDFRef)
-  if (plainColourSpaces.includes(colourSpace)) return true
+  if (plainColourSpaces.has(colourSpace)) return true
   const components = iccComponents(colourSpace, context)
   return components === 1 || components === 3
 }
