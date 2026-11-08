@@ -153,7 +153,8 @@ Pages are the pages of the report document. The expenses a document
 supports are named by their description, one per line, a description longer
 than 30 characters cut to its first 30 followed by an ellipsis, as in the
 stamp. Missing receipt authorizations
-have no name: the column shows who was paid. The Expenses column
+have no name: the column shows who was paid, and the Expenses column names the
+expense, as for any other document. The Expenses column
 is left out of the section of additional documents. Of a business travel,
 that section page splits its table in two subsections, each under its
 subheading and with its own header: *Travel justifications*, then
@@ -203,7 +204,7 @@ across the frame divide it in four parts:
 | Description of Expense(s) | The expense's description | 3 |
 | Signature of Claimant | Left blank | 1 |
 | Printed Name | The claimant | 1 |
-| Title | The job title | 1 |
+| Title | The expense's job title | 1 |
 | Extension | The expense's extension, blank when not given | 1 |
 | Email | The claimant's | 1 |
 

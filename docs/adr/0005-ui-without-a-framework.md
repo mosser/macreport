@@ -56,7 +56,8 @@ The interface uses **the DOM directly**, with two small in-house pieces.
 - **A missing receipt** is stated in a modal `<dialog>` of its own
   (`src/ui/missing-receipt-dialog.ts`), answered with Cancel, Escape, or Done.
   Its fields change the report only when Done closes it, unlike those of a step:
-  a missing receipt holds its reason and who was paid, or is not stated.
+  a missing receipt holds its reason, who was paid and the job title, or is not
+  stated.
 - **Files** are added through an `<input type="file">` and by dropping them on
   the step; both go through the same handler.
 - **Styling** is `src/style.css`, which holds the palette (ADR 0002) and every

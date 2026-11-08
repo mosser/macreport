@@ -21,7 +21,7 @@ browser, on this computer. Nothing is collected, sent or shared.*
 **New report** is offered on every step. It asks for confirmation, in a
 dialog over the step as every confirmation is, then
 discards the draft, its expenses and its documents, and opens the Report step
-on a report holding only the name of claimant, position, job title and email, and the
+on a report holding only the name of claimant, position and email, and the
 supervisor or the host with their email, kept as the new draft. When the browser does not delete the draft, the report
 stays as it is and the system says so, so that the Claimant can try again.
 
@@ -40,7 +40,7 @@ between them.
 ### 1. Report
 
 The fields are grouped in sections: **Claimant** (name of claimant, position,
-job title, email), **Supervisor** or **Host** when the position asks for one,
+email), **Supervisor** or **Host** when the position asks for one,
 **Purpose** (purpose, business travel, its first and last day and its
 locations) and
 **Account**.
@@ -49,7 +49,6 @@ locations) and
 |---|---|
 | Name of claimant | Required. |
 | Position | Required, one of Faculty, Postdoctoral fellow, Student, Staff, Visitor. |
-| Job title | Required, free text. Written on missing receipt authorizations, under *Title*. |
 | Email | Required, an email address. |
 | Supervisor, supervisor's email | Asked of a Student or a Postdoctoral fellow, and then required: the supervisor's name, and an email address. |
 | Host, host's email | Asked of a Visitor, and then required: the host's name, and an email address. |
@@ -127,7 +126,12 @@ a pen, which opens the dialog filled in, and **Take back**, a cross.
 |---|---|
 | Reason for missing original receipt or boarding pass(es) | Required. It may run over several lines: its line breaks are kept in the report document. |
 | Paid to | Required. |
+| Job title | Required: as Associate Prof, Research Engineer, PhD Student. |
 | Extension | Optional. |
+
+The dialog of an expense without a missing receipt starts with the job title and the
+extension of the last expense added that has one, when the report holds one.
+Changed there, they change for this expense only.
 
 **Take back** asks for no confirmation: the field holds no document again, its
 zone and the documents to choose from are back, and what the dialog held goes.

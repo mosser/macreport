@@ -44,7 +44,7 @@ Options considered:
   on every step that closing the page will lose the report. The system asks
   the browser for persistent storage, and goes on whatever the answer.
 - **New report** deletes the draft and its documents, then keeps the
-  claimant's name, position, job title and email, and the supervisor or the host with
+  claimant's name, position and email, and the supervisor or the host with
   their email, as the new draft: a claimant prepares report after report, and
   retyping who they are, and who supervises or hosts them, each time is what
   the system saves them. Everything else goes, bank statements first.
@@ -86,5 +86,5 @@ A change is compliant with this ADR when:
   `sessionStorage`, cookies or the Cache API;
 - every IndexedDB access is guarded, and the system works when it is missing;
 - New report deletes the draft and every document's content, and keeps
-  nothing but the claimant's name, position, job title and email, and the
-  supervisor or the host with their email.
+  nothing but the claimant's name, position and email, and the supervisor or
+  the host with their email.
