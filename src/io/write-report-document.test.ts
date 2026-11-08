@@ -1140,6 +1140,14 @@ describe('a missing receipt authorization', () => {
     expect(start('Amount:')).toBeGreaterThan(start('Email:'))
   })
 
+  it('draws 5 lines for a reason and 3 across the frame for a description, however short they are', async () => {
+    const pdf = await written(stated())
+    const content = streamsOf(pdf, pdf.getPage(2)).map(decoded).join('\n')
+    const across = [...content.matchAll(/^54 ([\d.]+) m\n558 \1 l$/gm)]
+    // Under the opening paragraph, then the 5 of the reason and the 3 of the description.
+    expect(across).toHaveLength(9)
+  })
+
   it('heads its column of names Payee, and no other section', async () => {
     const pdf = await written(stated())
     expect(textsOf(pdf, pdf.getPage(1))).not.toContain('Name')

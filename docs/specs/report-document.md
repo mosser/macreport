@@ -198,11 +198,11 @@ bottom margin, the height left over shared among the gaps and the lines:
 
 | Field | Written | Lines, at least |
 |---|---|---|
-| Reason for missing original receipt or boarding pass(es) | The expense's reason | 4, across the frame |
+| Reason for missing original receipt or boarding pass(es) | The expense's reason | 5, across the frame |
 | Paid to | The expense's *paid to* | 1 |
 | Dated | The expense's date | 1 |
 | Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses, or stands alone when the expense has no claimed amount; each names its currency, as *CAD 55.00 (EUR 35.00)* | 1 |
-| Description of Expense(s) | The expense's description | 3 |
+| Description of Expense(s) | The expense's description | One next to its name, then 3 across the frame |
 | Signature of Claimant | Left blank | 1 |
 | Printed Name | The claimant | 1 |
 | Title | The expense's job title | 1 |

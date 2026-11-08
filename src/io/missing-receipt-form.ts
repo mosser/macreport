@@ -53,6 +53,10 @@ const lineHeight = 17
 const fieldHeight = 28
 const signatureHeight = 32
 const partGap = 12
+/** The lines a reason has at least, as on McMaster's form. */
+const reasonLines = 5
+/** The lines a description has at least: the one next to its name, then three across the frame. */
+const descriptionLines = 4
 /** What is kept of the spare height, so that rounding never sends the last line to another page. */
 const roundingRoom = 0.01
 
@@ -379,7 +383,7 @@ function formFlowOf(
       {
         lineStart: frameLeft,
         lineEnd: frameRight,
-        lines: atLeast(wrap(authorization.reason, bold, textSize, across), 4),
+        lines: atLeast(wrap(authorization.reason, bold, textSize, across), reasonLines),
       },
     ],
     lineHeight,
@@ -423,7 +427,7 @@ function formFlowOf(
     frameRight - descriptionStart - 2 * valueInset,
     across,
   )
-  const [firstLine = '', ...nextLines] = atLeast(description, 3)
+  const [firstLine = '', ...nextLines] = atLeast(description, descriptionLines)
   flow.fields(
     [
       {
