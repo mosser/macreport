@@ -281,6 +281,11 @@ tr.expense td {
   border-bottom: none;
 }
 
+/* A date stays on one line, however narrow its table. */
+td.date {
+  white-space: nowrap;
+}
+
 /* A description keeps the line breaks the Claimant typed. */
 td.description {
   white-space: pre-line;

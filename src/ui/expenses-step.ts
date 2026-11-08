@@ -196,7 +196,7 @@ function formOf(
 /**
  * The expenses, sorted by date, each with its fields, its documents, each a link that opens it in
  * a new tab, and what it still lacks,
- * Change, a pen, and Remove, a trash can; Add an expense above them.
+ * Change, a pen, and Remove, a trash can; Add an expense above them, the per diems under them.
  */
 function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
@@ -205,7 +205,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
     const lacks = lacksOf(report, expense).map((lack) => html`<li>${lack}</li>`)
     const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
-        <td>${expense.date?.toString() ?? ''}</td>
+        <td class="date">${expense.date?.withDayOfWeek ?? ''}</td>
         <td class="description">${expense.description ?? ''}</td>
         <td>${expense.foreignAmountText}</td>
         <td>${expense.claimedAmount?.toString() ?? ''}</td>
@@ -235,8 +235,8 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
       <button type="button" class="add-expense" data-action="add-expense">Add an expense</button>
       ${managePerDiems}
     </div>
-    ${perDiemsLineOf(report)}
-    ${table}`
+    ${table}
+    ${perDiemsLineOf(report)}`
 }
 
 /**
@@ -254,7 +254,7 @@ function perDiemsLineOf(report: Report): Markup {
   const line = [days, ...totalOf([], claimed)].join(' · ')
   const rows = claimed.map(
     (perDiem) => html`<tr class="expense">
-        <td>${perDiem.date.toString()}</td>
+        <td class="date">${perDiem.date.withDayOfWeek}</td>
         <td class="description">${perDiemDescriptionsOf(perDiem).join('\n')}</td>
       </tr>
       <tr class="supporting"><td></td><td>${mealsNotClaimedOf(perDiem)}</td></tr>`,

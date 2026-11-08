@@ -65,17 +65,17 @@ diems of the days no longer between them. Continue is offered once every require
 ### 2. Expenses
 
 The expenses, sorted by date, then in the order they were added. Each shows
-its date, its description, its foreign amount, its claimed amount, its
+its day of the week and its date on one line, as *Sat 2026-10-03*, its description, its foreign amount, its claimed amount, its
 receipt or that its receipt is missing, its bank statement or that it was
 paid in cash, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them, and, for a
 business travel whose dates are valid, **Manage per diems**, next to it.
-When a meal is claimed, the per diems stand above the expenses: on one line,
+When a meal is claimed, the per diems stand under the expenses: on one line,
 the number of days with a meal claimed and their total, in Canadian dollars
-then in US dollars; then each of those days, by date, as on the cover of the
-report document: its meals claimed, domestic then international, then its
+then in US dollars; then each of those days, by its day of the week and its
+date, as on the cover of the report document: its meals claimed, domestic then international, then its
 meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;

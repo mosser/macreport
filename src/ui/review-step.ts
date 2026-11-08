@@ -44,7 +44,7 @@ function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Mar
     .map((row) => {
       const documents = row.supportingDocuments.map((supporting) => supporting.document)
       return html`<tr class="expense">
-        <td>${row.number}</td><td>${row.date}</td><td class="description">${row.description}</td>
+        <td>${row.number}</td><td class="date">${row.date}</td><td class="description">${row.description}</td>
         <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
       </tr>
       <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`
@@ -86,7 +86,7 @@ function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
       ...(perDiem.mealsClaimedThat(true).length > 0 ? [fieldNames.international] : []),
     ]
     return html`<tr>
-      <td>${numbered.join(', ')}</td><td>${perDiem.date.toString()}</td>
+      <td>${numbered.join(', ')}</td><td class="date">${perDiem.date.toString()}</td>
       <td>${scopes.join(', ')}</td>
       ${meals}<td>${perDiem.amountTexts.map((amount) => html`<div>${amount}</div>`)}</td>
     </tr>`

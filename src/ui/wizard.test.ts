@@ -920,9 +920,9 @@ describe('the Expenses step', () => {
     type('description', 'Taxi')
     button('[data-action="done"]')?.click()
     expect(rows()).toEqual([
-      ['2026-10-01', 'Taxi', '', '', ''],
+      ['Thu 2026-10-01', 'Taxi', '', '', ''],
       ['', 'Claimed amount (CAD) is required.Receipt is required.Bank statement is required.'],
-      ['2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', ''],
+      ['Sat 2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', ''],
       ['', 'air-canada · statement'],
     ])
     expect([...root.querySelectorAll('.lacks li')].map((lack) => lack.textContent)).toEqual([
@@ -1283,7 +1283,7 @@ describe('the per diems', () => {
     expect(root.querySelector('input[name="reason"]')).toBeNull()
   })
 
-  it('show above the expenses once a meal is claimed, which is enough to continue, and in their own section on review', async () => {
+  it('show under the expenses once a meal is claimed, which is enough to continue, and in their own section on review', async () => {
     fillReport()
     travel()
     proceed()
@@ -1301,13 +1301,19 @@ describe('the per diems', () => {
       [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
     )
     expect(listed).toEqual([
-      ['2026-10-04', 'Per diem, domestic: breakfast'],
+      ['Sun 2026-10-04', 'Per diem, domestic: breakfast'],
       ['', 'Not claimed: lunch, dinner'],
-      ['2026-10-05', 'Per diem, international: dinner'],
+      ['Mon 2026-10-05', 'Per diem, international: dinner'],
       ['', 'Not claimed: breakfast, lunch (provided by the conference)'],
     ])
     expect(continueButton()?.disabled).toBe(false)
     await fillExpense()
+    button('[data-action="done"]')?.click()
+    expect(
+      [...root.querySelectorAll('table.expense-list, .per-diems-line, table.per-diem-list')].map(
+        (element) => element.className,
+      ),
+    ).toEqual(['expenses expense-list', 'per-diems-line', 'expenses per-diem-list'])
     proceed()
     await add('travelJustifications', 'invitation.pdf')
     proceed()
