@@ -31,10 +31,7 @@ describe('Policy', () => {
   })
 
   it('reads the policy of the system from its configuration: AP-01, its policy and guidelines', () => {
-    expect(policy.documents.map(({ name }) => name.split(':')[0])).toEqual([
-      'AP-01 Policy',
-      'AP-01 Guidelines',
-    ])
+    expect(policy.documents.map(({ name }) => name)).toEqual(['AP01 - Policy', 'AP01 - Guidelines'])
     for (const { url } of policy.documents) {
       expect(new URL(url).protocol).toBe('https:')
     }
