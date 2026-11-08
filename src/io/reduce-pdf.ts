@@ -8,14 +8,18 @@ import {
   type PDFRef,
 } from '@cantoo/pdf-lib'
 import { type ImageEncoder, longestSide } from './image-encoder.ts'
-import { sizeOfJpeg, withoutExif } from './jpeg.ts'
+import { sizeOfJpeg, withoutColourProfile, withoutExif } from './jpeg.ts'
 import { shareShapes } from './shared-shapes.ts'
 import { dropUnreachable, leaveOutWhatNoReaderShows } from './unseen-data.ts'
 
 const name = (text: string) => PDFName.of(text)
-/** What an image may hold that encoding it again as a plain JPEG would break. */
-const unsafeImageKeys = ['SMask', 'Mask', 'Decode', 'ImageMask'].map(name)
-const plainColourSpaces = new Set<unknown>([name('DeviceRGB'), name('DeviceGray')])
+/**
+ * What an image may hold that encoding it again as a plain JPEG would break: a decoder of the JPEG
+ * alone sees neither its mask, nor the way the PDF says to decode it.
+ */
+const unsafeImageKeys = ['SMask', 'Mask', 'Decode', 'DecodeParms', 'ImageMask'].map(name)
+const deviceRgb = name('DeviceRGB')
+const deviceGrey = name('DeviceGray')
 
 /** The number of components of an ICC colour space, when a colour space is one. */
 function iccComponents(colourSpace: unknown, context: PDFContext): number | undefined {
@@ -27,12 +31,18 @@ function iccComponents(colourSpace: unknown, context: PDFContext): number | unde
   return profile.dict.lookupMaybe(name('N'), PDFNumber)?.asNumber()
 }
 
-/** Whether a colour space is RGB or grey. */
+/**
+ * Whether the samples of a colour space stay what they mean in a JPEG encoded again, which always
+ * holds three components: RGB, by a profile or not, or plain grey. Grey by a profile cannot describe
+ * three components, and written as RGB would no longer be read by that profile.
+ */
 function isPlainColourSpace(value: unknown, context: PDFContext): boolean {
   const colourSpace = context.lookup(value as PDFRef)
-  if (plainColourSpaces.has(colourSpace)) return true
-  const components = iccComponents(colourSpace, context)
-  return components === 1 || components === 3
+  return (
+    colourSpace === deviceRgb ||
+    colourSpace === deviceGrey ||
+    iccComponents(colourSpace, context) === 3
+  )
 }
 
 /** Whether a stream's only filter is the JPEG one. */
@@ -61,16 +71,17 @@ async function reduceImage(
   encoder: ImageEncoder,
   context: PDFContext,
 ): Promise<void> {
-  const encoded = await encoder.jpeg(withoutExif(image.contents))
+  const encoded = await encoder.jpeg(withoutColourProfile(withoutExif(image.contents)))
   const size = sizeOfJpeg(encoded)
   if (size === undefined || encoded.length >= image.contents.length) return
   const dictionary = image.dict.clone(context)
   dictionary.set(name('Width'), PDFNumber.of(size.width))
   dictionary.set(name('Height'), PDFNumber.of(size.height))
-  dictionary.set(name('ColorSpace'), name('DeviceRGB'))
+  if (context.lookup(dictionary.get(name('ColorSpace'))) === deviceGrey) {
+    dictionary.set(name('ColorSpace'), deviceRgb)
+  }
   dictionary.set(name('BitsPerComponent'), PDFNumber.of(8))
   dictionary.set(name('Filter'), name('DCTDecode'))
-  dictionary.delete(name('DecodeParms'))
   context.assign(reference, PDFRawStream.of(dictionary, encoded))
 }
 

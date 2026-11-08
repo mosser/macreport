@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sizeOfJpeg, withoutExif } from './jpeg.ts'
+import { sizeOfJpeg, withoutColourProfile, withoutExif } from './jpeg.ts'
 
 const segment = (marker: number, ...data: number[]) => [
   0xff,
@@ -29,6 +29,11 @@ describe('withoutExif', () => {
     expect([...withoutExif(content)]).toEqual([...jpegOf(jfif, profile, adobe, frame)])
   })
 
+  it('leaves out a segment whose marker fill bytes pad', () => {
+    const content = jpegOf(frame, [0xff, 0xff, ...exif], jfif)
+    expect([...withoutExif(content)]).toEqual([...jpegOf(frame, [0xff, 0xff], jfif)])
+  })
+
   it('touches nothing after the start of the scan, whatever it looks like', () => {
     const kept = withoutExif(jpegOf(exif, frame))
     expect([...kept.subarray(-scan.length)]).toEqual(scan)
@@ -47,9 +52,27 @@ describe('withoutExif', () => {
   })
 })
 
+describe('withoutColourProfile', () => {
+  it('leaves out the colour profile, and only it', () => {
+    const content = jpegOf(jfif, profile, multiPicture, adobe, frame)
+    expect([...withoutColourProfile(content)]).toEqual([
+      ...jpegOf(jfif, multiPicture, adobe, frame),
+    ])
+  })
+
+  it('gives the same bytes when it holds none', () => {
+    const content = jpegOf(jfif, adobe, frame)
+    expect(withoutColourProfile(content)).toBe(content)
+  })
+})
+
 describe('sizeOfJpeg', () => {
   it('reads the size of a JPEG from its frame, past the tables before it', () => {
     expect(sizeOfJpeg(jpegOf(jfif, table, frame))).toEqual({ width: 1400, height: 2200 })
+  })
+
+  it('reads the size of a JPEG past fill bytes before its frame', () => {
+    expect(sizeOfJpeg(jpegOf(jfif, [0xff, 0xff], frame))).toEqual({ width: 1400, height: 2200 })
   })
 
   it('says nothing of bytes without a frame', () => {

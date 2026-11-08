@@ -53,12 +53,14 @@ R1, R2, and so on.
 - A JPEG image holds its image and its colour profile only, without the Exif
   data of a photo.
 - A PDF document the Claimant reduced (`prepare-an-expense-report.md`) has the
-  same pages, text, links and form fields. Each JPEG in RGB or grey, without a
-  mask, with a long side above 2200 pixels is encoded by the rule above. A shape
-  filled and drawn more than once is kept once and drawn from there, within 0.01
-  point of where it was, unless the document is a bank statement. A page holding
-  an inline image, a shape under a transform that enlarges and a shape filled
-  with a pattern stay as they are.
+  same pages, text, links and form fields. Each JPEG in RGB, by a colour profile
+  or not, or in plain grey, without a mask or decoding parameters, with a long
+  side above 2200 pixels is encoded by the rule above, an RGB one keeping its
+  colour space. A shape filled and drawn more than once is kept once and drawn
+  from there, within 0.01 point of where it was, unless the document is a bank
+  statement. A page holding an inline image, a shape under a transform that
+  enlarges, a shape filled with a pattern and a shape in a path another operator
+  interrupts stay as they are.
 
 ## Cover
 

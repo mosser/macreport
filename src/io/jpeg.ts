@@ -18,18 +18,27 @@ interface Segment {
   readonly end: number
 }
 
+/** Where the marker at an offset starts: any number of fill bytes 0xff may come before it. */
+function afterFillBytes(content: Uint8Array, offset: number): number {
+  let start = offset
+  while (content[start + 1] === 0xff) start += 1
+  return start
+}
+
 /** The segments before a JPEG's scan, as far as they can be read; none when it is not a JPEG. */
 function segmentsOf(content: Uint8Array): Segment[] {
   const segments: Segment[] = []
   if (content[0] !== 0xff || content[1] !== 0xd8) return segments
   let offset = 2
-  while (offset + 4 <= content.length && content[offset] === 0xff) {
-    const marker = content[offset + 1] ?? endOfImage
+  while (content[offset] === 0xff) {
+    const start = afterFillBytes(content, offset)
+    if (start + 4 > content.length) break
+    const marker = content[start + 1] ?? endOfImage
     if (marker === startOfScan || marker === endOfImage) break
-    const length = ((content[offset + 2] ?? 0) << 8) | (content[offset + 3] ?? 0)
-    if (offset + 2 + length > content.length) break
-    segments.push({ marker, start: offset, end: offset + 2 + length })
-    offset += 2 + length
+    const length = ((content[start + 2] ?? 0) << 8) | (content[start + 3] ?? 0)
+    if (start + 2 + length > content.length) break
+    segments.push({ marker, start, end: start + 2 + length })
+    offset = start + 2 + length
   }
   return segments
 }
@@ -58,7 +67,23 @@ function isLeftOut(content: Uint8Array, segment: Segment): boolean {
  * among it, is left out. The bytes given when there is nothing to leave out.
  */
 export function withoutExif(content: Uint8Array): Uint8Array {
-  const leftOut = segmentsOf(content).filter((segment) => isLeftOut(content, segment))
+  return withoutSegments(content, isLeftOut)
+}
+
+/**
+ * A JPEG without its colour profile, for an image of a PDF, whose colour space says how to read its
+ * samples: a decoder given the profile would convert them. The bytes given when it holds none.
+ */
+export function withoutColourProfile(content: Uint8Array): Uint8Array {
+  return withoutSegments(content, isColourProfile)
+}
+
+/** A JPEG without the segments of its header a rule takes out. */
+function withoutSegments(
+  content: Uint8Array,
+  isTakenOut: (content: Uint8Array, segment: Segment) => boolean,
+): Uint8Array {
+  const leftOut = segmentsOf(content).filter((segment) => isTakenOut(content, segment))
   if (leftOut.length === 0) return content
   const removed = leftOut.reduce((total, segment) => total + segment.end - segment.start, 0)
   const kept = new Uint8Array(content.length - removed)

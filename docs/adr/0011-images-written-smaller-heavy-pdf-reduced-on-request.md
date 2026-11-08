@@ -120,12 +120,18 @@ Options considered for what makes a document heavy:
 - **A heavy PDF document can be reduced, when the Claimant asks**, on the Review
   step. Reducing leaves its pages, its text, its links and its form fields as
   they are, and does two things:
-  - **Its images.** A JPEG in RGB or grey, without a mask, with a long side above
-    2200 pixels is encoded by the rule for a JPEG, in place.
+  - **Its images.** A JPEG in RGB, by a colour profile or not, or in plain grey,
+    without a mask or decoding parameters, with a long side above 2200 pixels is
+    encoded by the rule for a JPEG, in place. The PDF's colour space says how to
+    read the samples, which the canvas keeps: an RGB image keeps that colour space,
+    and the canvas is not handed a colour profile the JPEG holds, which would have
+    it convert them. A JPEG encoded by the canvas has three components, so a plain
+    grey image becomes RGB, and a grey one by a colour profile stays as it is.
   - **Its shapes.** A shape filled, drawn more than once, is kept once and drawn
     from there, its coordinates at 0.01 point. What it cannot rewrite safely it
     leaves as it is: a page holding an inline image, a shape under a transform
-    that enlarges, a shape filled with a pattern.
+    that enlarges, a shape filled with a pattern, a shape in a path another
+    operator interrupts.
 - **A bank statement's shapes are not shared.** A shape kept apart from its page
   is out of reach of a reader's redaction tool that only rewrites the page, which
   could seem to redact an account number while leaving it in the file. Its images
@@ -169,9 +175,9 @@ Options considered for what makes a document heavy:
   closer look at the original.
 - Saving a report of many photos takes longer the first time, and the Review step
   works out sizes before it can show them.
-- A heavy PDF document whose size comes from fonts, or whose scans are not JPEGs,
-  is named but has nothing to offer; the Claimant makes it smaller before adding
-  it. So is a heavy bank statement of outlines: the Claimant prints it again with
+- A heavy PDF document whose size comes from fonts, whose scans are not JPEGs, or
+  are in grey by a colour profile, is named but has nothing to offer; the Claimant
+  makes it smaller before adding it. So is a heavy bank statement of outlines: the Claimant prints it again with
   the browser's own Save as PDF, which writes real text.
 - The canvas call itself runs only in a browser: Node tests cover what surrounds
   it, not the pixels it produces.

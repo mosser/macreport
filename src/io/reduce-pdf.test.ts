@@ -84,10 +84,28 @@ describe('reducedPdf', () => {
     expect(jpeg).not.toHaveBeenCalled()
   })
 
-  it('reduces an image in grey', async () => {
+  it('reduces an image in grey, its three components then being RGB', async () => {
     const { encoder, jpeg } = encoderOf()
-    await reducedPdf(await pdfWithImage(jpegOf(3000, 4000, 5000, 1)), encoder, true)
+    const reduced = await reducedPdf(await pdfWithImage(jpegOf(3000, 4000, 5000, 1)), encoder, true)
     expect(jpeg).toHaveBeenCalledOnce()
+    const [image] = imagesOf(await PDFDocument.load(reduced))
+    expect(image?.dict.get(PDFName.of('ColorSpace'))).toBe(PDFName.of('DeviceRGB'))
+  })
+
+  it('leaves an image the PDF says how to decode as it is', async () => {
+    const pdf = await PDFDocument.load(await pdfWithImage(scan))
+    imagesOf(pdf)[0]?.dict.set(PDFName.of('DecodeParms'), pdf.context.obj({ ColorTransform: 0 }))
+    const { encoder, jpeg } = encoderOf()
+    await reducedPdf(await pdf.save(), encoder, true)
+    expect(jpeg).not.toHaveBeenCalled()
+  })
+
+  it('hands the encoder an image without the colour profile of its JPEG', async () => {
+    const profile = [0xff, 0xe2, 0, 15, ...new TextEncoder().encode('ICC_PROFILE'), 0, 1]
+    const content = new Uint8Array([0xff, 0xd8, ...profile, ...scan.subarray(2)])
+    const { encoder, jpeg } = encoderOf()
+    await reducedPdf(await pdfWithImage(content), encoder, true)
+    expect(jpeg.mock.calls[0]?.[0]).toEqual(scan)
   })
 
   it('leaves an image with a mask as it is', async () => {
@@ -114,7 +132,7 @@ describe('reducedPdf', () => {
     expect(jpeg).not.toHaveBeenCalled()
   })
 
-  it('reduces a JPEG in an ICC colour space of 1 or 3 components, and of no other', async () => {
+  it('reduces a JPEG in an ICC colour space of 3 components, and of no other', async () => {
     const withProfile = async (components: number) => {
       const pdf = await PDFDocument.load(await pdfWithImage(scan))
       const profile = pdf.context.register(pdf.context.flateStream('icc', { N: components }))
@@ -127,8 +145,25 @@ describe('reducedPdf', () => {
       return jpeg.mock.calls.length
     }
     expect(await withProfile(3)).toBe(1)
-    expect(await withProfile(1)).toBe(1)
+    expect(await withProfile(1)).toBe(0)
     expect(await withProfile(4)).toBe(0)
+  })
+
+  it('keeps the ICC colour space of an image it encodes, and its profile', async () => {
+    const pdf = await PDFDocument.load(await pdfWithImage(scan))
+    const profile = pdf.context.register(pdf.context.flateStream('icc', { N: 3 }))
+    imagesOf(pdf)[0]?.dict.set(
+      PDFName.of('ColorSpace'),
+      pdf.context.obj([PDFName.of('ICCBased'), profile]),
+    )
+    const saved = await PDFDocument.load(
+      await reducedPdf(await pdf.save(), encoderOf().encoder, true),
+    )
+    const colourSpace = imagesOf(saved)[0]?.dict.lookup(PDFName.of('ColorSpace'))
+    expect(colourSpace).toBeInstanceOf(PDFArray)
+    const reference = (colourSpace as PDFArray).get(1)
+    expect((colourSpace as PDFArray).get(0)).toBe(PDFName.of('ICCBased'))
+    expect(saved.context.lookup(reference)).toBeInstanceOf(PDFRawStream)
   })
 
   it('takes a filter given as an array of one', async () => {

@@ -232,6 +232,35 @@ describe('shareShapes', () => {
     expect(drawingsOf(contentOf(pdf, 0))).toHaveLength(2)
   })
 
+  it.each([
+    ['a colour', '1 0 0 rg'],
+    ['a transform', '1 0 0 1 0 0 cm'],
+    ['a saved state', 'q'],
+    ['a clip', 'W'],
+    ['a move whose operands are not its coordinates', '/Name 1 m'],
+  ])('leaves on its page a shape in a path that %s interrupts', async (_what, interruption) => {
+    const interrupted = (y: number) => `10 ${y} m 20 ${y} l ${interruption} ${outline(50, y)}`
+    const content = `${interrupted(100)} ${interrupted(200)}`
+    const pdf = await pdfDrawing(content)
+    shareShapes(pdf)
+    expect(contentOf(pdf, 0)).toBe(content)
+    expect(formsOf(pdf, 0).size).toBe(0)
+  })
+
+  it('leaves on its page a shape after a line with no point before it', async () => {
+    const content = `1 1 l ${outline(50, 100)} 1 1 l ${outline(50, 200)}`
+    const pdf = await pdfDrawing(content)
+    shareShapes(pdf)
+    expect(contentOf(pdf, 0)).toBe(content)
+  })
+
+  it('shares the shapes again once a path interrupted is painted', async () => {
+    const content = `10 10 m 1 0 0 rg ${outline(50, 50)} ${outline(100, 100)} ${outline(200, 200)}`
+    const pdf = await pdfDrawing(content)
+    shareShapes(pdf)
+    expect(drawingsOf(contentOf(pdf, 0))).toHaveLength(2)
+  })
+
   it('leaves a path whose operands are not its coordinates on its page', async () => {
     const broken = `1 m ${outline(2, 2)}`
     const other = '/Name 1 m 2 3 l 4 5 l 6 7 l h f'

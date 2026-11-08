@@ -19,6 +19,17 @@ const paddingOfBox = 1
 /** How many coordinates each operator that builds a path takes. */
 const coordinateCounts: Readonly<Record<string, number>> = { m: 2, l: 2, c: 6, v: 4, y: 4, re: 4 }
 const fillOperators: ReadonlySet<string> = new Set(['f', 'F', 'f*'])
+/** The operators that paint a path or drop it: nothing else ends one. */
+const pathEndingOperators: ReadonlySet<string> = new Set([
+  ...fillOperators,
+  'B',
+  'B*',
+  'b',
+  'b*',
+  'S',
+  's',
+  'n',
+])
 /** The operators that set a colour that is no pattern; `scn` is one unless it ends with a name. */
 const plainColourOperators: ReadonlySet<string> = new Set(['cs', 'sc', 'g', 'rg', 'k'])
 
@@ -90,6 +101,8 @@ class ShapeFinder {
   private hasOtherOperand = false
   private endsWithName = false
   private path: PathInProgress | undefined
+  /** Whether the path being built holds something unread: what paints it paints that too. */
+  private isPathUnreadable = false
   private readonly shapes: Shape[] = []
 
   constructor(content: Uint8Array) {
@@ -129,8 +142,12 @@ class ShapeFinder {
       this.extendPath(operator)
     } else if (operator === 'h') {
       this.path?.segments.push('h')
-    } else {
+    } else if (pathEndingOperators.has(operator)) {
       if (fillOperators.has(operator)) this.fill(operator, end)
+      this.path = undefined
+      this.isPathUnreadable = false
+    } else {
+      if (this.path !== undefined) this.isPathUnreadable = true
       this.path = undefined
       this.changeState(operator)
     }
@@ -150,13 +167,12 @@ class ShapeFinder {
   }
 
   private extendPath(operator: string): void {
+    if (this.isPathUnreadable) return
     const isValid = !this.hasOtherOperand && this.operands.length === coordinateCounts[operator]
-    if (!isValid) {
-      this.path = undefined
-      return
-    }
-    this.path ??= this.pathStartedBy(operator)
-    if (this.path !== undefined) {
+    this.path = isValid ? (this.path ?? this.pathStartedBy(operator)) : undefined
+    if (this.path === undefined) {
+      this.isPathUnreadable = true
+    } else {
       addSegment(this.path, operator, this.operands)
     }
   }
