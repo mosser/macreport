@@ -1,6 +1,6 @@
 {
   "name": "macreport",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "description": "Prepares an expense report for the McMaster Centre for Software Certification",
   "license": "MIT",
