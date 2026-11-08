@@ -136,7 +136,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         </div>
       </main>
       <footer>
-        <p>McSCert Expense Report v${options.version} · McSCert · McMaster University</p>
+        <p>McSCert Expense Report v${options.version} · McMaster Centre for Software Certification</p>
         <p class="privacy">Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.</p>
       </footer>`.text
 

@@ -179,7 +179,10 @@ describe('the wizard', () => {
     expect(root.querySelector('h2')?.textContent).toBe('Report')
     expect(root.textContent).toContain('closing the page will lose the report')
     const footer = root.querySelector('footer')?.textContent?.replace(/\s+/g, ' ')
-    expect(footer).toContain('McSCert Expense Report v0.1.0 · McSCert · McMaster University')
+    expect(footer).toContain(
+      'McSCert Expense Report v0.1.0 · McMaster Centre for Software Certification',
+    )
+    expect(footer).not.toContain('McMaster University')
     expect(footer).toContain(
       'Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.',
     )
