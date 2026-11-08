@@ -46,6 +46,9 @@ document.
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
+| Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: a PDF document by the size of its file, or of its reduced file once reduced, an image by its size as written in the report document. |
+| Reduce | The Claimant asks the system to make a heavy PDF document smaller: its images written with fewer pixels and, unless it is a bank statement, each shape it draws repeatedly kept once. Its pages, text, links and form fields stay as they are. |
+| Restore | The Claimant takes back reducing a document: the report document holds the file added again. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
 | New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position and email, and the supervisor of a student or a postdoctoral fellow or the host of a visitor, are kept. |
 | Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
