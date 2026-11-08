@@ -66,9 +66,9 @@ function entriesOf(value: unknown, keys: readonly string[], what: string): Map<s
     throw new TypeError(`${what} are not an object`)
   }
   const entries = new Map(Object.entries(value))
-  const expected = [...keys].sort().join(', ')
-  if ([...entries.keys()].sort().join(', ') !== expected) {
-    throw new TypeError(`${what} hold exactly ${expected}`)
+  const isExactly = entries.size === keys.length && keys.every((key) => entries.has(key))
+  if (!isExactly) {
+    throw new TypeError(`${what} hold exactly ${keys.join(', ')}`)
   }
   return entries
 }

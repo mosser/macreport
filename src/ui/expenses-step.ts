@@ -348,7 +348,9 @@ function reasonsOf(perDiem: PerDiem, askedFor: ReadonlySet<string>): Markup {
     (meal) => html`<button type="button" class="quiet" data-add-reason
       data-day="${day}" data-meal="${meal.name}">Add a reason for not claiming ${meal.name} (optional)</button>`,
   )
-  return html`${fields.length > 0 ? html`<div class="reasons">${fields}</div>` : ''}${actions.length > 0 ? html`<div class="add-reasons">${actions}</div>` : ''}`
+  const reasons = fields.length > 0 ? html`<div class="reasons">${fields}</div>` : html``
+  const additions = actions.length > 0 ? html`<div class="add-reasons">${actions}</div>` : html``
+  return html`${reasons}${additions}`
 }
 
 /**

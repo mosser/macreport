@@ -96,16 +96,19 @@ export class PerDiem {
    * USD 57.70 for its international ones; none without a meal claimed.
    */
   get amountTexts(): readonly string[] {
-    return [false, true].flatMap((areInternational) => {
-      const amount = this.amountOfMealsThat(areInternational)
-      return amount === undefined ? [] : [written(amount, areInternational)]
-    })
+    const domestic = this.amountOfMealsThat(false)
+    const international = this.amountOfMealsThat(true)
+    return [
+      ...(domestic === undefined ? [] : [domestic.toString()]),
+      ...(international === undefined ? [] : [international.inCurrency(Currency.usDollar)]),
+    ]
   }
 
   /** The rate of a meal, as $28.40 for a domestic meal, USD 28.40 for an international one. */
   rateTextOf(meal: Meal): string {
     const isInternational = this.isInternational(meal)
-    return written(perDiemRates.rateOf(meal, isInternational), isInternational)
+    const rate = perDiemRates.rateOf(meal, isInternational)
+    return isInternational ? rate.inCurrency(Currency.usDollar) : rate.toString()
   }
 
   /** The same per diem, with the fields given changed. */
@@ -149,9 +152,4 @@ export class PerDiem {
     }
     return this.afterChanging({ reasons })
   }
-}
-
-/** An amount at domestic rates, in Canadian dollars, or at international ones, in US dollars. */
-function written(amount: Amount, isInternational: boolean): string {
-  return isInternational ? amount.inCurrency(Currency.usDollar) : amount.toString()
 }

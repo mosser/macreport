@@ -60,7 +60,8 @@ function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
         return html`<td>${perDiem.rateTextOf(meal)}</td>`
       }
       const reason = perDiem.reasonFor(meal)
-      return html`<td class="not-claimed">Not claimed${reason === undefined ? '' : html`<div>${reason}</div>`}</td>`
+      const why = reason === undefined ? html`` : html`<div>${reason}</div>`
+      return html`<td class="not-claimed">Not claimed${why}</td>`
     })
     const scopes = [
       ...(perDiem.mealsClaimedThat(false).length > 0 ? [fieldNames.domestic] : []),
