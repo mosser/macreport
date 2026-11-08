@@ -252,7 +252,7 @@ names included, is a finding at the Review step
 ## Look
 
 The colours are those of the McMaster palette: maroon titles and table
-headers, grey secondary text, Dundurn Grey rules. The logo is the McSCert
+headers, grey secondary text and rules. The logo is the McSCert
 logo, in colour, as supplied, on the cover, on section pages and on missing
 receipt authorizations.
 

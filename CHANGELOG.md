@@ -43,6 +43,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The lines between the expenses, and between the rows of every table of the
+  report document, show at normal zoom: they were too pale to be seen.
 - A photo's Exif data, the location it was taken at among it, no longer reaches
   the report document.
 
