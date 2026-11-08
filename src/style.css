@@ -286,6 +286,11 @@ td.date {
   white-space: nowrap;
 }
 
+/* The column of the dates, one width in the tables of the expenses and of the per diems. */
+th.date {
+  width: 10rem;
+}
+
 /* A description keeps the line breaks the Claimant typed. */
 td.description {
   white-space: pre-line;

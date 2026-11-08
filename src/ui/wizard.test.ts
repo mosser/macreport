@@ -1401,6 +1401,11 @@ describe('the per diems', () => {
         (element) => element.className,
       ),
     ).toEqual(['expenses expense-list', 'per-diems-line', 'expenses per-diem-list'])
+    expect(
+      [...root.querySelectorAll('table.expense-list th, table.per-diem-list th')]
+        .filter((heading) => heading.textContent === 'Date')
+        .map((heading) => heading.className),
+    ).toEqual(['date', 'date'])
     expect(root.querySelector('table.expense-list')?.previousElementSibling?.textContent).toBe(
       'Itemized expenses',
     )

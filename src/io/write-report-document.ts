@@ -427,8 +427,8 @@ class Writer {
       { title: 'Date', width: 62 },
       { title: 'Description', width: 220 },
       { title: 'Foreign amount', width: 76 },
-      { title: 'Claimed (CAD)', width: 76 },
-      { title: 'Entered', width: 48 },
+      { title: 'Claimed\n(CAD)', width: 76 },
+      { title: 'Entered\n(Mosaic)', width: 48 },
     ]
     this.table(flow, columns, [])
     for (const row of layout.expenses) {

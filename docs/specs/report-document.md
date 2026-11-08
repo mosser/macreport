@@ -86,7 +86,7 @@ the template's fields and its table, so that nothing else needs filling in.
   domestic and international takes two rows, its domestic meals then its
   international ones.
 
-  | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
+  | # | Date | Description | Foreign amount | Claimed<br>(CAD) | Entered<br>(Mosaic) |
   |---|---|---|---|---|---|
   | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
   | | | *Receipt ↗ · Statement ↗* | | | |

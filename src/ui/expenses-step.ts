@@ -224,7 +224,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
       ? html`<h3>Itemized expenses</h3>
         <table class="expenses expense-list">
           <thead><tr>
-            <th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th><th></th>
+            <th class="date">Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`
@@ -263,7 +263,7 @@ function perDiemsLineOf(report: Report): Markup {
   )
   return html`<p class="per-diems-line">Per diems: ${line}</p>
     <table class="expenses per-diem-list">
-      <thead><tr><th>Date</th><th>Description</th></tr></thead>
+      <thead><tr><th class="date">Date</th><th>Description</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`
 }

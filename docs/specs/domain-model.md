@@ -58,7 +58,8 @@ document.
 | Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses and the per diems numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
 | Save | The system hands the report document to the browser, which writes it on the Claimant's computer. The document is built in the browser: nothing is fetched or sent over a network. |
 | Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and the per diems, and their total. |
-| Entered | The box of an expense or a per diem on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense. |
+| Entered | The box of an expense or a per diem on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense in Mosaic. |
+| Mosaic | The system McSCert's administrative staff enter the expenses in. |
 | Section | The part of the report document holding the documents of one kind, opened by its section pages. |
 | Section page | A page that opens a section: its title and the list of its documents, each with its label, its name, its pages and the expenses it supports, by their description. The list continues on as many section pages as it needs. |
 | Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the name of an additional document, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |

@@ -578,6 +578,18 @@ describe('writeReportDocument', () => {
     expect(place('55.00')?.x).toBeGreaterThan(place('1,012.35')?.x ?? 0)
   })
 
+  it('writes the titles of the last columns of the cover on two lines, each on its own', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const at = (text: string) => places.find((place) => place.text === text)
+    const [claimed, currency, entered, mosaic] = ['Claimed', '(CAD)', 'Entered', '(Mosaic)'].map(at)
+    expect(currency?.x).toBe(claimed?.x)
+    expect(currency?.y).toBeLessThan(claimed?.y ?? 0)
+    expect(mosaic?.x).toBe(entered?.x)
+    expect(mosaic?.y).toBe(currency?.y)
+    expect(entered?.y).toBe(claimed?.y)
+  })
+
   it('keeps an amount of the total too wide for its column clear of its currency', async () => {
     const report = await reportOf('A very large claim')
     const expense = report.expenses[0] ?? new Expense()

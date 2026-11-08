@@ -78,7 +78,8 @@ business travel whose dates are valid, **Manage per diems**, next to it.
 When a meal is claimed, the per diems stand under the expenses: on one line,
 the number of days with a meal claimed and their total, in Canadian dollars
 then in US dollars; then each of those days, by its day of the week and its
-date, as on the cover of the report document: its meals claimed, domestic then international, then its
+date, in a column as wide as the dates of the expenses, as on the cover of the
+report document: its meals claimed, domestic then international, then its
 meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;

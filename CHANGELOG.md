@@ -23,8 +23,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The Expenses step lists the expenses first, then the per diems, and shows each
-  date on one line with its day of the week, as *Sat 2026-10-03*.
+- The Expenses step lists the expenses first, then the per diems, in columns
+  aligned on their dates, and shows each date on one line with its day of the week,
+  as *Sat 2026-10-03*.
 - Typing a date moves on from the year by itself, as it does from the month,
   with no Tab to press in between.
 - **Last day**, left empty, takes the day after **First day**, and its picker
@@ -35,6 +36,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   be clicked, on the cover, on section pages and in stamps.
 - The label of an additional document in its stamp goes to its row on its section
   page, and a label or its pages on a section page go to the document.
+- The cover of the report document titles its last columns on two lines:
+  *Claimed (CAD)* and *Entered (Mosaic)*.
 - The footer names the McMaster Centre for Software Certification.
 - The table of the expenses has a title, *Itemized expenses*, on the Expenses and
   Review steps.
