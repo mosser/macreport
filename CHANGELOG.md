@@ -8,12 +8,38 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Location(s)**: a business travel now requires where it took the
+  claimant, written on the cover under its dates. A draft of a business
+  travel kept before this version asks for it at the Report step.
+- Per diems for a business travel. **Manage per diems**, next to **Add an
+  expense**, lists every day of the travel, by its date and its day of the
+  week, with breakfast (28.40), lunch (27.40) and dinner (57.70) to tick, in
+  Canadian dollars for a domestic meal and in US dollars for an international
+  one. Each day is domestic or international (**All domestic** and **All
+  international** set every day at once), or, with **Per meal**, each of
+  its meals. On a day with a meal claimed,
+  **Add a reason for not claiming** a meal says why, optionally. Above the
+  expenses, the days claimed and their total, then each of those days with
+  its meals claimed and its meals not claimed; a report may claim per diems
+  only. The
+  Review step shows them in a section of their own, then the total of the
+  report. In the report document, each day with a meal claimed is a row of
+  the cover's table, among the expenses by date, with its Entered box, and
+  its meals not claimed and their reasons under it, a day of domestic and
+  international meals taking a row for each; international meals are in the
+  foreign amount column, in US dollars, and in the total by currency. Changing the dates drops the per diems of the days left out;
+  unticking business travel drops them all.
+
 - Several expenses per report. The Expenses step lists them, sorted by date,
   each with its amounts, its documents, each a link that opens it in a new
   tab, and, in red, what it still lacks. **Add an expense**, above the list,
   opens empty fields, **Change** (a pen) opens an
   expense's fields filled in, and **Done** goes back to the list, where
   Continue is offered again; every change is kept as it is typed.
+- **Discard**, next to Done, closes an expense's fields and undoes every
+  change made since they opened: an expense just added leaves the report,
+  an expense changed is put back as it was, its documents and their names
+  included.
 - **Remove** (a trash can) takes an expense out of the report once
   confirmed. A receipt or a bank statement no other expense uses leaves the
   report with it, and the confirmation names each.
@@ -38,7 +64,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Known limitations
 
-- No per diem, missing receipt or payment in cash.
+- No missing receipt or payment in cash.
 - The Additional documents step does not show how many pages each document
   has.
 - Files are not checked when added: a damaged or password-protected PDF is

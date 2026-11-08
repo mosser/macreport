@@ -23,10 +23,22 @@ export class Currency {
   /** Every currency, by its code in alphabetical order. */
   static readonly all: readonly Currency[] = codes.map((code) => new Currency(code))
 
+  /** The US dollar, the currency of the rates of an international per diem. */
+  static readonly usDollar: Currency = Currency.of('USD')
+
   readonly code: string
 
   private constructor(code: string) {
     this.code = code
+  }
+
+  /** The currency of a code among those in use; throws a RangeError for another. */
+  private static of(code: string): Currency {
+    const currency = Currency.parse(code)
+    if (currency === undefined) {
+      throw new RangeError(`${code} is not a currency in use`)
+    }
+    return currency
   }
 
   /**

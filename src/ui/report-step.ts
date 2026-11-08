@@ -75,7 +75,7 @@ function supervisorOrHost(report: Report): Markup | undefined {
   return undefined
 }
 
-/** Step 1: the claimant, their supervisor or host, the purpose, the dates of a business travel, the account. */
+/** Step 1: the claimant, their supervisor or host, the purpose, the dates and locations of a business travel, the account. */
 export const reportStep: Step = {
   title: 'Report',
 
@@ -98,7 +98,8 @@ export const reportStep: Step = {
           ? html`<div class="dates">
               ${input('firstDay', report.firstDay?.toString() ?? '', 'date')}
               ${input('lastDay', report.lastDay?.toString() ?? '', 'date')}
-            </div>`
+            </div>
+            ${input('locations', report.locations ?? '', 'text')}`
           : html``,
       ])}
       ${section('Account', [input('account', report.account ?? '', 'text')])}`.text

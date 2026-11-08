@@ -21,6 +21,8 @@ import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
 import { layoutOf } from '../domain/layout.ts'
+import { Meal } from '../domain/meal.ts'
+import { PerDiem } from '../domain/per-diem.ts'
 import { Report } from '../domain/report.ts'
 import { paletteFrom } from './palette.ts'
 import { wrap, writeReportDocument } from './write-report-document.ts'
@@ -353,6 +355,7 @@ describe('writeReportDocument', () => {
         isBusinessTravel: true,
         firstDay: new CalendarDate(2026, 10, 3),
         lastDay: new CalendarDate(2026, 10, 7),
+        locations: 'Rio de Janeiro, Brazil',
         travelJustifications: [invitation],
         additionalDocuments: [itinerary],
       })
@@ -487,6 +490,56 @@ describe('writeReportDocument', () => {
     expect(euro?.x).toBe(cad?.x)
     expect(euro?.y).toBeLessThan(cad?.y ?? 0)
     expect(place('Total')?.y).toBe(cad?.y)
+  })
+
+  it('itemizes each per diem with a meal claimed on the cover, its meals not claimed under it, with an Entered box', async () => {
+    const invitation = new Document(
+      Kind.additionalDocument,
+      'invitation.pdf',
+      await pdfOf([[612, 792]], 'Invitation'),
+    )
+    const october = (day: number) => new CalendarDate(2026, 10, day)
+    const travel = (await reportOf('Air Canada, YYZ–CDG return'))
+      .afterChanging({
+        isBusinessTravel: true,
+        firstDay: october(3),
+        lastDay: october(5),
+        locations: 'Rio de Janeiro, Brazil',
+        travelJustifications: [invitation],
+      })
+      .afterChangingPerDiem(
+        new PerDiem(october(4), {
+          internationalMeals: Meal.all,
+          mealsClaimed: [Meal.breakfast, Meal.dinner],
+          reasons: new Map([[Meal.lunch, 'provided by the conference']]),
+        }),
+      )
+      .afterChangingPerDiem(
+        new PerDiem(october(5), { reasons: new Map([[Meal.lunch, 'at home']]) }),
+      )
+    const pdf = await written(travel)
+    const places = placesOf(pdf, pdf.getPage(0))
+    const at = (text: string) => places.find((place) => place.text === text)
+    for (const text of [
+      'Locations',
+      'Rio de Janeiro, Brazil',
+      'Per diem, international: breakfast, dinner',
+      'Not claimed: lunch (provided by the conference)',
+    ]) {
+      expect(at(text), text).toBeDefined()
+    }
+    expect(places.filter((place) => place.text === 'USD 86.10')).toHaveLength(2)
+    expect(at('Not claimed: lunch (provided by the conference)')?.x).toBeCloseTo(
+      at('Per diem, international: breakfast, dinner')?.x ?? 0,
+    )
+    expect(places.some((place) => place.text.includes('at home'))).toBe(false)
+    expect(
+      pdf
+        .getForm()
+        .getFields()
+        .map((box) => box.getName()),
+    ).toEqual(['Entered, expense 1', 'Entered, expense 2'])
+    expect(linksOf(pdf, pdf.getPage(0))).toHaveLength(2)
   })
 
   it('starts an expense and the line of its documents on the same page, however tall the expense', async () => {

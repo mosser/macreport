@@ -3,6 +3,8 @@ import { CalendarDate } from './calendar-date.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
+import { Meal } from './meal.ts'
+import { PerDiem } from './per-diem.ts'
 import { positions, Report } from './report.ts'
 
 describe('Report', () => {
@@ -205,5 +207,102 @@ describe('Report', () => {
     const report = new Report({ additionalDocuments: [scan('Receipt'), scan('receipt (2)')] })
     expect(report.freeNameLike('Hotel')).toBe('Hotel')
     expect(report.freeNameLike('Receipt')).toBe('Receipt (3)')
+  })
+
+  it('puts an expense back as it was, its documents and their names, and nothing else', () => {
+    const receipt = new Document(Kind.receipt, 'hotel.pdf', new Uint8Array([1]))
+    const other = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([2]))
+    const statement = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([3]), 'Visa')
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([4]))
+    const before = new Expense({
+      description: 'Hotel',
+      receipts: [receipt],
+      bankStatements: [statement],
+    })
+    const taxi = new Expense({ description: 'Taxi', bankStatements: [statement] })
+    const report = new Report().afterAdding(before).afterAdding(taxi)
+    const changed = report
+      .afterReplacing(
+        before,
+        before.afterRemoving(receipt).afterChanging({ description: 'Motel', receipts: [other] }),
+      )
+      .afterRenaming(statement, 'Mastercard')
+      .afterChanging({ additionalDocuments: [poster] })
+    const opened = changed.expenses[0] ?? new Expense()
+    const putBack = changed.afterPuttingBack(opened, before)
+    expect(putBack.expenses.map((expense) => expense.description)).toEqual(['Hotel', 'Taxi'])
+    expect(putBack.documents.map((document) => document.name)).toEqual(['hotel', 'Visa', 'poster'])
+    expect(putBack.expenses[0]?.bankStatements[0]).toBe(putBack.expenses[1]?.bankStatements[0])
+    expect(putBack.additionalDocuments).toEqual([poster])
+    const added = report.afterAdding(new Expense({ receipts: [other] }))
+    const fresh = added.expenses[2] ?? new Expense()
+    expect(added.afterPuttingBack(fresh, undefined).expenses).toEqual(report.expenses)
+    expect(added.afterPuttingBack(fresh, undefined).documents).toEqual(report.documents)
+  })
+
+  describe('per diems', () => {
+    const october = (day: number) => new CalendarDate(2026, 10, day)
+    const travel = new Report({
+      isBusinessTravel: true,
+      firstDay: october(3),
+      lastDay: october(5),
+      locations: 'Lyon, France',
+    })
+    const dinner = new PerDiem(october(4), { mealsClaimed: [Meal.dinner] })
+
+    it('are asked of a business travel whose dates are given, the last not before the first', () => {
+      expect(travel.asksForPerDiems).toBe(true)
+      expect(travel.days.map(String)).toEqual(['2026-10-03', '2026-10-04', '2026-10-05'])
+      expect(travel.afterChanging({ lastDay: october(3) }).days.map(String)).toEqual(['2026-10-03'])
+      for (const report of [
+        new Report(),
+        travel.afterChanging({ lastDay: undefined }),
+        travel.afterChanging({ lastDay: october(2) }),
+      ]) {
+        expect(report.asksForPerDiems).toBe(false)
+        expect(report.days).toEqual([])
+      }
+    })
+
+    it('give every day a per diem, as it starts until the Claimant changes it', () => {
+      const changed = travel.afterChangingPerDiem(dinner)
+      expect(changed.perDiems).toEqual([dinner])
+      expect(changed.perDiemOn(october(4))).toBe(dinner)
+      const [first, second, third] = changed.perDiemsByDay
+      expect(first?.date).toEqual(october(3))
+      expect(first?.hasMealClaimed).toBe(false)
+      expect(second).toBe(dinner)
+      expect(third?.isEveryMealDomestic).toBe(true)
+      expect(changed.claimedPerDiems).toEqual([dinner])
+      const again = changed.afterChangingPerDiem(dinner.afterClaiming(Meal.lunch, true))
+      expect(again.perDiems.map((perDiem) => perDiem.mealsClaimed)).toEqual([
+        [Meal.lunch, Meal.dinner],
+      ])
+    })
+
+    it('are set all international, or all domestic, at once', () => {
+      const international = travel
+        .afterChangingPerDiem(dinner)
+        .afterChangingEveryPerDiem({ internationalMeals: Meal.all })
+      expect(
+        international.perDiemsByDay.map((perDiem) => perDiem.isEveryMealInternational),
+      ).toEqual([true, true, true])
+      expect(international.perDiemOn(october(4)).mealsClaimed).toEqual([Meal.dinner])
+      const domestic = international.afterChangingEveryPerDiem({ internationalMeals: [] })
+      expect(domestic.perDiems.every((perDiem) => perDiem.isEveryMealDomestic)).toBe(true)
+    })
+
+    it('leave with the days no longer between the dates, and all of them with the business travel', () => {
+      const claimed = travel
+        .afterChangingPerDiem(new PerDiem(october(3), { mealsClaimed: [Meal.lunch] }))
+        .afterChangingPerDiem(dinner)
+      expect(claimed.afterChanging({ firstDay: october(4) }).perDiems).toEqual([dinner])
+      expect(claimed.afterChanging({ lastDay: undefined }).perDiems).toHaveLength(2)
+      const unticked = claimed.afterChanging({ isBusinessTravel: false })
+      expect(unticked.perDiems).toEqual([])
+      expect(unticked.locations).toBeUndefined()
+      expect(new Report({ perDiems: [dinner] }).perDiems).toEqual([])
+      expect(claimed.afterNewReport().perDiems).toEqual([])
+    })
   })
 })

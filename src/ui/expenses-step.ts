@@ -7,11 +7,15 @@ import {
   claimedAmountInAnotherCurrencyRule,
   expenseWording,
   type Field,
+  fieldNames,
   findingsOfExpensesStep,
   isRequired,
   lacksOf,
 } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
+import { mealsNotClaimedOf, perDiemDescriptionsOf, totalOf } from '../domain/layout.ts'
+import { Meal } from '../domain/meal.ts'
+import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
 import { textOrAbsent } from '../domain/text.ts'
 import { confirmed } from './confirmation.ts'
@@ -27,10 +31,15 @@ import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
 import type { Context, Step } from './step.ts'
 
-/** The expense whose fields are open: its rank in the order the expenses were added, and the report it is of. */
+/**
+ * The expense whose fields are open: its rank in the order the expenses were added, the report it
+ * is of, and the expense as it was before they opened, which Discard puts back; none for an
+ * expense just added, which Discard takes out.
+ */
 interface Opened {
   readonly session: number
   readonly index: number
+  readonly before: Expense | undefined
 }
 
 /** A value typed in a field of an expense: what it keeps, and whether it breaks the rule. */
@@ -178,7 +187,10 @@ function formOf(
     </label>
     ${foreign}
     ${fields.map((field) => documentFieldOf(field, report, chosenAgain.get(field.field)))}
-    <button type="button" class="primary" data-action="done" data-held>Done</button>`
+    <div class="expense-buttons">
+      <button type="button" class="primary" data-action="done" data-held>Done</button>
+      <button type="button" data-action="discard" data-held-while-adding>Discard</button>
+    </div>`
 }
 
 /**
@@ -215,9 +227,184 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
           <tbody>${rows}</tbody>
         </table>`
       : ''
+  const managePerDiems = report.asksForPerDiems
+    ? html`<button type="button" class="add-expense" data-action="manage-per-diems">Manage per diems</button>`
+    : ''
   return html`<h2>Expenses</h2>
-    <button type="button" class="add-expense" data-action="add-expense">Add an expense</button>
+    <div class="expense-buttons">
+      <button type="button" class="add-expense" data-action="add-expense">Add an expense</button>
+      ${managePerDiems}
+    </div>
+    ${perDiemsLineOf(report)}
     ${table}`
+}
+
+/**
+ * The per diems, when a meal is claimed: on one line, the number of days with a meal claimed and
+ * their total, in Canadian dollars then in US dollars; then each of those days, by date: its meals
+ * claimed, domestic then international, then its meals not claimed and their reasons. No amount
+ * but the total.
+ */
+function perDiemsLineOf(report: Report): Markup {
+  const claimed = report.claimedPerDiems
+  if (claimed.length === 0) {
+    return html``
+  }
+  const days = claimed.length === 1 ? '1 day' : `${claimed.length} days`
+  const line = [days, ...totalOf([], claimed)].join(' · ')
+  const rows = claimed.map(
+    (perDiem) => html`<tr class="expense">
+        <td>${perDiem.date.toString()}</td>
+        <td class="description">${perDiemDescriptionsOf(perDiem).join('\n')}</td>
+      </tr>
+      <tr class="supporting"><td></td><td>${mealsNotClaimedOf(perDiem)}</td></tr>`,
+  )
+  return html`<p class="per-diems-line">Per diems: ${line}</p>
+    <table class="expenses per-diem-list">
+      <thead><tr><th>Date</th><th>Description</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`
+}
+
+/**
+ * The choice of a day between domestic and international for its three meals, or per meal: per
+ * meal while it shows them per meal, domestic or international when every meal is.
+ */
+function scopeOf(
+  perDiem: PerDiem,
+  field: 'domestic' | 'international' | 'perMeal',
+  isPerMeal: boolean,
+): Markup {
+  const day = perDiem.date.toString()
+  const isChosenFor = {
+    domestic: !isPerMeal && perDiem.isEveryMealDomestic,
+    international: !isPerMeal && perDiem.isEveryMealInternational,
+    perMeal: isPerMeal,
+  }
+  return html`<label class="checkbox">
+    <input type="radio" name="scope-${day}" value="${field}" data-day="${day}" ${isChosenFor[field] ? html`checked` : ''} />
+    ${fieldNames[field]}
+  </label>`
+}
+
+/** The choice of one meal of a day between domestic and international. */
+function mealScopeOf(perDiem: PerDiem, meal: Meal, field: 'domestic' | 'international'): Markup {
+  const day = perDiem.date.toString()
+  const isChosen = perDiem.isInternational(meal) === (field === 'international')
+  return html`<label class="checkbox">
+    <input type="radio" name="scope-${day}-${meal.name}" value="${field}" data-day="${day}"
+      data-meal="${meal.name}" ${isChosen ? html`checked` : ''} aria-label="${meal.title}, ${day}: ${fieldNames[field]}" />
+    ${fieldNames[field]}
+  </label>`
+}
+
+/**
+ * Whether a day shows domestic or international under each of its meals: once Per meal is chosen,
+ * and whenever its meals differ.
+ */
+function showsPerMeal(perDiem: PerDiem, perMeal: ReadonlySet<string>): boolean {
+  return (
+    perMeal.has(perDiem.date.toString()) ||
+    !(perDiem.isEveryMealDomestic || perDiem.isEveryMealInternational)
+  )
+}
+
+/** A meal of a day, as the step knows it while the per diems are open: 2026-10-03 lunch. */
+function reasonKeyOf(perDiem: PerDiem, meal: Meal): string {
+  return `${perDiem.date} ${meal.name}`
+}
+
+/**
+ * Whether a meal shows the field of its reason: a meal not claimed of a day with a meal claimed,
+ * once its reason is given or asked for.
+ */
+function showsReason(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>): boolean {
+  return (
+    !perDiem.isClaiming(meal) &&
+    perDiem.hasMealClaimed &&
+    (perDiem.reasonFor(meal) !== undefined || askedFor.has(reasonKeyOf(perDiem, meal)))
+  )
+}
+
+/**
+ * The reasons of the meals not claimed of a day, one under the other, their fields aligned, each
+ * with a trash can that takes it out; then Add a reason for the others of a day with a meal claimed.
+ */
+function reasonsOf(perDiem: PerDiem, askedFor: ReadonlySet<string>): Markup {
+  const day = perDiem.date.toString()
+  const shown = Meal.all.filter((meal) => showsReason(perDiem, meal, askedFor))
+  const fields = shown.map(
+    (meal) => html`<label class="reason">
+      <span>Reason for not claiming ${meal.name} (optional)</span>
+      <input type="text" name="reason" data-day="${day}" data-meal="${meal.name}"
+        value="${perDiem.reasonFor(meal) ?? ''}" aria-label="${fieldNames.reason}, ${meal.name}, ${day}" />
+    </label>
+    <button type="button" class="icon remove" data-remove-reason data-day="${day}" data-meal="${meal.name}"
+      aria-label="Remove the reason for not claiming ${meal.name}, ${day}" title="Remove">${trashCan}</button>`,
+  )
+  const offered = perDiem.hasMealClaimed
+    ? perDiem.mealsNotClaimed.filter((meal) => !shown.includes(meal))
+    : []
+  const actions = offered.map(
+    (meal) => html`<button type="button" class="quiet" data-add-reason
+      data-day="${day}" data-meal="${meal.name}">Add a reason for not claiming ${meal.name} (optional)</button>`,
+  )
+  const reasons = fields.length > 0 ? html`<div class="reasons">${fields}</div>` : html``
+  const additions = actions.length > 0 ? html`<div class="add-reasons">${actions}</div>` : html``
+  return html`${reasons}${additions}`
+}
+
+/**
+ * A meal of a day, a toggle pressed when it is claimed; under it, when the day shows them per
+ * meal, domestic or international.
+ */
+function mealOf(perDiem: PerDiem, meal: Meal, isPerMeal: boolean): Markup {
+  const day = perDiem.date.toString()
+  const scopes = isPerMeal
+    ? html`<div class="meal-scope">${mealScopeOf(perDiem, meal, 'domestic')}${mealScopeOf(perDiem, meal, 'international')}</div>`
+    : ''
+  return html`<div class="meal">
+    <label class="meal-toggle">
+      <input type="checkbox" name="meal" data-day="${day}" data-meal="${meal.name}"
+        ${perDiem.isClaiming(meal) ? html`checked` : ''} aria-label="${meal.title}, ${day}" />
+      ${meal.title}
+    </label>
+    ${scopes}
+  </div>`
+}
+
+/**
+ * The per diems of the business travel, one card per day, under its day of the week and its date:
+ * domestic, international or per meal, each meal claimed or not, domestic or international under
+ * each meal per meal, then the reasons of its meals not claimed; All domestic and All
+ * international above, Done under.
+ */
+function perDiemsFormOf(
+  report: Report,
+  askedFor: ReadonlySet<string>,
+  perMeal: ReadonlySet<string>,
+): Markup {
+  const days = report.perDiemsByDay.map((perDiem) => {
+    const isPerMeal = showsPerMeal(perDiem, perMeal)
+    const scopes = (['domestic', 'international', 'perMeal'] as const).map((field) =>
+      scopeOf(perDiem, field, isPerMeal),
+    )
+    return html`<section class="per-diem-day">
+      <div class="per-diem-heading">
+        <h3><span class="day-of-week">${perDiem.date.dayOfWeek}</span> ${perDiem.date.toString()}</h3>
+        <div class="per-diem-scope">${scopes}</div>
+      </div>
+      <div class="meal-toggles">${Meal.all.map((meal) => mealOf(perDiem, meal, isPerMeal))}</div>
+      ${reasonsOf(perDiem, askedFor)}
+    </section>`
+  })
+  return html`<h2>Per diems</h2>
+    <div class="expense-buttons">
+      <button type="button" data-action="all-domestic">All domestic</button>
+      <button type="button" data-action="all-international">All international</button>
+    </div>
+    <div class="per-diem-days">${days}</div>
+    <button type="button" class="primary" data-action="done">Done</button>`
 }
 
 /** What Remove asks of an expense: the expense, and each document that leaves with it. */
@@ -233,11 +420,23 @@ function removalOf(report: Report, expense: Expense) {
 }
 
 /**
- * Step 2: the expenses, each changed or removed, and Add an expense; or the fields of the
- * expense added or changed, until Done.
+ * Step 2: the expenses, each changed or removed, Add an expense and Manage per diems; or the
+ * fields of the expense added or changed, until Done, or Discard, which undoes every change made
+ * since they opened; or the per diems, until Done.
  */
 export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
   let opened: Opened | undefined
+  /** The report the per diems are open in, by its session; none while they are closed. */
+  let perDiemsOpenIn: number | undefined
+  /** The meals whose reason was asked for with Add a reason, while the per diems are open. */
+  const reasonsAskedFor = new Set<string>()
+  /** The days Per meal was chosen for, while the per diems are open. */
+  const perMealShownFor = new Set<string>()
+  const closePerDiems = () => {
+    perDiemsOpenIn = undefined
+    reasonsAskedFor.clear()
+    perMealShownFor.clear()
+  }
   /** The document chosen again for a file added again, by its field, while the expense is open. */
   const chosenAgain = new Map<Field, Document>()
   /**
@@ -251,8 +450,9 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     broken.clear()
   }
 
-  const open = (context: Context, index: number | undefined) => {
-    opened = index === undefined ? undefined : { session: context.session, index }
+  const open = (context: Context, index: number | undefined, isAdded = false) => {
+    const before = isAdded || index === undefined ? undefined : context.report.expenses[index]
+    opened = index === undefined ? undefined : { session: context.session, index, before }
     forget()
     context.refresh()
   }
@@ -299,16 +499,127 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     panel
       .querySelector('[data-action="done"]')
       ?.addEventListener('click', () => open(context, undefined))
+    panel.querySelector('[data-action="discard"]')?.addEventListener('click', () => {
+      const expense = opened === undefined ? undefined : context.report.expenses[opened.index]
+      if (opened !== undefined && expense !== undefined) {
+        context.change(context.report.afterPuttingBack(expense, opened.before))
+      }
+      open(context, undefined)
+    })
     listenToDocumentFields(panel, context, readFile, fields, (field, document) => {
       chosenAgain.set(field.field, document)
     })
   }
 
+  const renderPerDiems = (panel: HTMLElement, context: Context) => {
+    panel.innerHTML = perDiemsFormOf(context.report, reasonsAskedFor, perMealShownFor).text
+    const perDiemOf = (element: HTMLElement) => {
+      const day = CalendarDate.parse(element.dataset.day ?? '')
+      return day === undefined ? undefined : context.report.perDiemOn(day)
+    }
+    const changing = (element: HTMLElement, change: (perDiem: PerDiem) => PerDiem) => {
+      const perDiem = perDiemOf(element)
+      if (perDiem !== undefined) {
+        context.change(context.report.afterChangingPerDiem(change(perDiem)))
+      }
+    }
+    /**
+     * Renders the step again, then focuses the control that stands where the one used was, or
+     * the one given instead when it is gone, so that the keyboard goes on from there.
+     */
+    const refreshFocusing = (selector: string, instead?: string) => {
+      context.refresh()
+      const document = panel.ownerDocument
+      const control =
+        document.querySelector<HTMLElement>(selector) ??
+        (instead === undefined ? null : document.querySelector<HTMLElement>(instead))
+      control?.focus()
+    }
+    for (const radio of panel.querySelectorAll<HTMLInputElement>('input[type="radio"]')) {
+      radio.addEventListener('change', () => {
+        const day = radio.dataset.day ?? ''
+        const meal = Meal.named(radio.dataset.meal ?? '')
+        const isInternational = radio.value === 'international'
+        if (radio.value === 'perMeal') {
+          perMealShownFor.add(day)
+        } else if (meal === undefined) {
+          perMealShownFor.delete(day)
+          changing(radio, (perDiem) => perDiem.afterMakingEveryMeal(isInternational))
+        } else {
+          changing(radio, (perDiem) => perDiem.afterMaking(meal, isInternational))
+        }
+        refreshFocusing(
+          `input[type="radio"][name="${radio.name}"][value="${radio.value}"]`,
+          `input[type="radio"][name="scope-${day}"]:checked`,
+        )
+      })
+    }
+    for (const box of panel.querySelectorAll<HTMLInputElement>('input[name="meal"]')) {
+      box.addEventListener('change', () => {
+        const meal = Meal.named(box.dataset.meal ?? '')
+        if (meal !== undefined) changing(box, (perDiem) => perDiem.afterClaiming(meal, box.checked))
+        if (box.checked) reasonsAskedFor.delete(`${box.dataset.day} ${box.dataset.meal}`)
+        refreshFocusing(
+          `input[name="meal"][data-day="${box.dataset.day}"][data-meal="${box.dataset.meal}"]`,
+        )
+      })
+    }
+    for (const field of panel.querySelectorAll<HTMLInputElement>('input[name="reason"]')) {
+      field.addEventListener('input', () => {
+        const meal = Meal.named(field.dataset.meal ?? '')
+        const reason = textOrAbsent(field.value)
+        if (meal !== undefined)
+          changing(field, (perDiem) => perDiem.afterGivingReason(meal, reason))
+        context.refreshActions()
+      })
+    }
+    for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-remove-reason]')) {
+      button.addEventListener('click', () => {
+        const meal = Meal.named(button.dataset.meal ?? '')
+        if (meal !== undefined)
+          changing(button, (perDiem) => perDiem.afterGivingReason(meal, undefined))
+        reasonsAskedFor.delete(`${button.dataset.day} ${button.dataset.meal}`)
+        refreshFocusing(
+          `[data-add-reason][data-day="${button.dataset.day}"][data-meal="${button.dataset.meal}"]`,
+        )
+      })
+    }
+    for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-add-reason]')) {
+      button.addEventListener('click', () => {
+        const { day, meal } = button.dataset
+        reasonsAskedFor.add(`${day} ${meal}`)
+        refreshFocusing(`input[name="reason"][data-day="${day}"][data-meal="${meal}"]`)
+      })
+    }
+    for (const [action, isInternational] of [
+      ['all-domestic', false],
+      ['all-international', true],
+    ] as const) {
+      panel.querySelector(`[data-action="${action}"]`)?.addEventListener('click', () => {
+        perMealShownFor.clear()
+        context.change(
+          context.report.afterChangingEveryPerDiem({
+            internationalMeals: isInternational ? Meal.all : [],
+          }),
+        )
+        refreshFocusing(`[data-action="${action}"]`)
+      })
+    }
+    panel.querySelector('[data-action="done"]')?.addEventListener('click', () => {
+      closePerDiems()
+      context.refresh()
+    })
+  }
+
   const renderList = (panel: HTMLElement, context: Context) => {
     panel.innerHTML = listOf(context.report, linksAnew(links)).text
+    panel.querySelector('[data-action="manage-per-diems"]')?.addEventListener('click', () => {
+      perDiemsOpenIn = context.session
+      context.refresh()
+    })
     panel.querySelector('[data-action="add-expense"]')?.addEventListener('click', () => {
       context.change(context.report.afterAdding(new Expense()))
-      open(context, context.report.expenses.length - 1)
+      open(context, context.report.expenses.length - 1, true)
     })
     for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-change]')) {
       button.addEventListener('click', () => open(context, Number(button.dataset.change)))
@@ -335,9 +646,14 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         opened?.session === context.session ? context.report.expenses[opened.index] : undefined
       if (opened !== undefined && expense !== undefined) {
         renderForm(panel, context, opened.index, expense)
+        return
+      }
+      opened = undefined
+      forget()
+      if (perDiemsOpenIn === context.session && context.report.asksForPerDiems) {
+        renderPerDiems(panel, context)
       } else {
-        opened = undefined
-        forget()
+        closePerDiems()
         renderList(panel, context)
       }
     },
@@ -347,7 +663,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     },
 
     offersContinue(): boolean {
-      return opened === undefined
+      return opened === undefined && perDiemsOpenIn === undefined
     },
 
     holdsSteps(): boolean {
@@ -356,6 +672,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
 
     leave(): void {
       opened = undefined
+      closePerDiems()
       forget()
     },
   }

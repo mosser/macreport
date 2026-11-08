@@ -18,6 +18,8 @@ import {
   requiredWording,
 } from './findings.ts'
 import { Kind } from './kind.ts'
+import { Meal } from './meal.ts'
+import { PerDiem } from './per-diem.ts'
 import { Report } from './report.ts'
 
 const wordings = (findings: readonly { wording: string }[]) => findings.map((f) => f.wording)
@@ -30,6 +32,7 @@ const complete = new Report({
   isBusinessTravel: true,
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
+  locations: 'Rio de Janeiro, Brazil',
   account: '20-123-456',
 })
 
@@ -43,10 +46,15 @@ describe('findings of the Report step', () => {
       'Account is required.',
     ])
     expect(findingsOfReportStep(complete.afterChanging({ isBusinessTravel: false }))).toEqual([])
-    const undated = complete.afterChanging({ firstDay: undefined, lastDay: undefined })
+    const undated = complete.afterChanging({
+      firstDay: undefined,
+      lastDay: undefined,
+      locations: undefined,
+    })
     expect(wordings(findingsOfReportStep(undated))).toEqual([
       'First day is required.',
       'Last day is required.',
+      'Location(s) is required.',
     ])
   })
 
@@ -79,10 +87,19 @@ describe('findings of the Report step', () => {
 })
 
 describe('findings of the Expenses step', () => {
-  it('finds that no expense is claimed', () => {
+  it('finds that no expense or per diem is claimed; a per diem with a meal claimed is enough', () => {
     expect(findingsOfExpensesStep(complete)).toEqual([
-      { step: 'Expenses', wording: 'No expense is claimed.' },
+      { step: 'Expenses', wording: 'No expense or per diem is claimed.' },
     ])
+    const day = new CalendarDate(2026, 10, 4)
+    const nothing = complete.afterChangingPerDiem(
+      new PerDiem(day, { internationalMeals: Meal.all }),
+    )
+    expect(wordings(findingsOfExpensesStep(nothing))).toEqual([
+      'No expense or per diem is claimed.',
+    ])
+    const dinner = complete.afterChangingPerDiem(new PerDiem(day, { mealsClaimed: [Meal.dinner] }))
+    expect(findingsOfExpensesStep(dinner)).toEqual([])
   })
 
   it('names the expense, by its date and description, and the rule', () => {

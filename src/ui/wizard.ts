@@ -164,7 +164,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   /**
    * Offers Continue, Back and the steps of the stepper as the step allows: none while it holds
    * them, nor the steps ahead while a file is being added. What a step marks `data-held` waits
-   * for both.
+   * for both, what it marks `data-held-while-adding` for the file only.
    */
   function refreshActions(): void {
     const isAdding = additions.size > 0
@@ -187,6 +187,9 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     }
     for (const element of root.querySelectorAll<HTMLButtonElement>('[data-held]')) {
       element.disabled = isAdding || isHeld
+    }
+    for (const element of root.querySelectorAll<HTMLButtonElement>('[data-held-while-adding]')) {
+      element.disabled = isAdding
     }
   }
 

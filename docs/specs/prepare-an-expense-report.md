@@ -37,7 +37,8 @@ field's rule is shown with that rule, and kept once it does.
 
 The fields are grouped in sections: **Claimant** (name of claimant, position,
 email), **Supervisor** or **Host** when the position asks for one,
-**Purpose** (purpose, business travel, and its first and last day) and
+**Purpose** (purpose, business travel, its first and last day and its
+locations) and
 **Account**.
 
 | Field | Rule |
@@ -52,11 +53,13 @@ email), **Supervisor** or **Host** when the position asks for one,
 | Business travel | Ticked for a report whose purpose took the claimant away. Unticked, the report has no dates. |
 | First day | Asked of a business travel, and then required: a calendar date. |
 | Last day | Asked of a business travel, and then required: a calendar date, not before the first day. |
+| Location(s) | Asked of a business travel, and then required: where it took the claimant, as free text. |
 | Account | Required, free text. |
 
 Choosing another position takes the supervisor or the host out of the
-report; unticking business travel takes the dates and the travel
-justifications out. Continue is offered once every required field is valid.
+report; unticking business travel takes the dates, the locations, the per
+diems and the travel justifications out. Changing the dates takes out the per
+diems of the days no longer between them. Continue is offered once every required field is valid.
 
 ### 2. Expenses
 
@@ -66,15 +69,25 @@ receipt or that its receipt is missing, its bank statement or that it was
 paid in cash, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
-**Remove**, a trash can. **Add an expense** stands above them.
+**Remove**, a trash can. **Add an expense** stands above them, and, for a
+business travel whose dates are valid, **Manage per diems**, next to it.
+When a meal is claimed, the per diems stand above the expenses: on one line,
+the number of days with a meal claimed and their total, in Canadian dollars
+then in US dollars; then each of those days, by date, as on the cover of the
+report document: its meals claimed, domestic then international, then its
+meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
 **Change** opens the fields of an expense, filled in. Every change is kept as
 it is typed, as on any step. While they are open, Continue is not offered:
 **Done** closes them and shows the expenses. Leaving the step closes them
-too. A value typed that breaks its rule, which the expense does not keep,
-stays shown with its rule, and holds Done, Back and the other steps until it
-follows the rule or is cleared.
+too. **Discard** closes them and undoes every change made since they
+opened: an expense just added leaves the report, an expense changed is as it
+was, its documents and their names included; nothing else of the report
+changes, a file added meanwhile on another step included. A value typed that breaks its
+rule, which the expense does not keep, stays shown with its rule, and holds
+Done, Back and the other steps until it follows the rule or is cleared, or
+the expense is discarded.
 
 | Field | Rule |
 |---|---|
@@ -99,8 +112,22 @@ that leave the report with the expense. Removing an expense, or a document
 from an expense, takes out of the report any receipt or bank statement no
 expense refers to any more.
 
-Continue is offered once there is at least one expense and every expense
-follows the rules above.
+**Manage per diems** opens the per diems of the business travel, one card
+per day, from its first day to its last, each under its day of the week and
+its date: domestic, international or per meal, then its three meals, each
+a toggle pressed when claimed, then the reasons of its meals not claimed.
+**Per meal** shows domestic or international under each of its meals; a
+card whose meals differ has Per meal chosen. As with an expense's fields, Continue is
+not offered while they are open, and **Done** closes them.
+
+| Field | Rule |
+|---|---|
+| Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows Per meal. **All domestic** and **All international**, above the days, set every meal at once, and every day to Domestic or International, a day on Per meal included. |
+| Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
+| Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. The trash can next to the field takes the reason out, and Add a reason back. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
+
+Continue is offered once there is at least one expense or a meal claimed,
+and every expense follows the rules above.
 
 ### 3. Additional documents
 
@@ -138,8 +165,8 @@ there already is replaced only once it is removed.
 
 Files are read in the browser, which may take a while for a large one. While
 a file is being added, Continue and the steps ahead are not offered: the
-report is not reviewed, nor saved, without it. Nor are Done and Remove on the
-Expenses step: the file goes to the expense it was added to.
+report is not reviewed, nor saved, without it. Nor are Done, Discard and
+Remove on the Expenses step: the file goes to the expense it was added to.
 
 ### Naming a document
 
@@ -159,9 +186,13 @@ Continue is not offered.
 
 ### 4. Review
 
-The report as it will be written: the cover, with the table of the expenses
-and its total, each expense on two lines as in the report document, then
-each section with its documents, their labels and their names, every table
+The report as it will be written: the cover, with the table of the
+expenses, each on two lines as in the report document; the per diems, under
+their own heading, one row per day with a meal claimed, with its numbers on
+the cover, its date, domestic, international or both, each meal claimed with
+its rate in its currency or not claimed with its reason, and the day's
+total, one amount per currency; then the total of the report, as on the
+cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added. The Entered boxes are
 the report document's alone. Then the findings, if any.
@@ -169,11 +200,11 @@ the report document's alone. Then the findings, if any.
 | Finding | Wording |
 |---|---|
 | A required field of the Report step is missing or invalid | The field, and what it needs. |
-| No expense | No expense is claimed. |
+| No expense, and no meal claimed | No expense or per diem is claimed. |
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
 | A business travel has no travel justification | At least one travel justification is required. |
 | A document has the name of a document before it | The document, by its file name, and its name. |
-| A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a name: the document, by its kind and file name. |
+| A text holds a character the report document cannot write | The field, the expense or the per diem when it is one, and the character. For a name: the document, by its kind and file name. |
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as

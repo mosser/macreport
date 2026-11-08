@@ -1,5 +1,7 @@
-import { findingsOf } from '../domain/findings.ts'
-import { type Layout, layoutOf, type Section } from '../domain/layout.ts'
+import { fieldNames, findingsOf } from '../domain/findings.ts'
+import { type ExpenseRow, type Layout, layoutOf, type Section } from '../domain/layout.ts'
+import { Meal } from '../domain/meal.ts'
+import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
 import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
 import { html, type Markup } from './html.ts'
@@ -8,25 +10,75 @@ import type { Context, Step } from './step.ts'
 /** Writes the report document of a report without findings and hands it to the browser; gives its file name. */
 export type SaveReport = (report: Report) => Promise<string>
 
-/** The cover: its fields, then each expense on two lines, the second its documents, and the total. */
+/**
+ * The cover: its fields, then each expense on two lines, the second its documents; the per diems,
+ * under their own heading; then the total of the report.
+ */
 function coverOf(layout: Layout, linkOf: LinkOf): Markup {
   const fields = layout.coverFields.map(
     (field) => html`<tr><th scope="row">${field.name}</th><td>${field.value}</td></tr>`,
   )
-  const rows = layout.expenses.map((row) => {
-    const documents = row.supportingDocuments.map((supporting) => supporting.document)
-    return html`<tr class="expense">
+  const rows = layout.expenses
+    .filter((row) => row.perDiem === undefined)
+    .map((row) => {
+      const documents = row.supportingDocuments.map((supporting) => supporting.document)
+      return html`<tr class="expense">
         <td>${row.number}</td><td>${row.date}</td><td class="description">${row.description}</td>
         <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
       </tr>
       <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`
-  })
+    })
   return html`<table class="cover-fields">${fields}</table>
     <table class="expenses">
       <thead><tr>
         <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th>
       </tr></thead>
-      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total.map((line) => html`<div>${line}</div>`)}</td></tr></tbody>
+      <tbody>${rows}</tbody>
+    </table>
+    ${perDiemsOf(layout.expenses)}
+    <table class="report-total">
+      <tr class="total"><th scope="row">Total</th><td>${layout.total.map((line) => html`<div>${line}</div>`)}</td></tr>
+    </table>`
+}
+
+/**
+ * The per diems, one row per day with a meal claimed: its numbers on the cover, its date, domestic
+ * or international, each meal claimed with its rate or not claimed with its reason, and its total,
+ * one amount per currency.
+ */
+function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
+  const numbers = new Map<PerDiem, number[]>()
+  for (const { perDiem, number } of rows) {
+    if (perDiem !== undefined) numbers.set(perDiem, [...(numbers.get(perDiem) ?? []), number])
+  }
+  if (numbers.size === 0) {
+    return html``
+  }
+  const lines = [...numbers].map(([perDiem, numbered]) => {
+    const meals = Meal.all.map((meal) => {
+      if (perDiem.isClaiming(meal)) {
+        return html`<td>${perDiem.rateTextOf(meal)}</td>`
+      }
+      const reason = perDiem.reasonFor(meal)
+      const why = reason === undefined ? html`` : html`<div>${reason}</div>`
+      return html`<td class="not-claimed">Not claimed${why}</td>`
+    })
+    const scopes = [
+      ...(perDiem.mealsClaimedThat(false).length > 0 ? [fieldNames.domestic] : []),
+      ...(perDiem.mealsClaimedThat(true).length > 0 ? [fieldNames.international] : []),
+    ]
+    return html`<tr>
+      <td>${numbered.join(', ')}</td><td>${perDiem.date.toString()}</td>
+      <td>${scopes.join(', ')}</td>
+      ${meals}<td>${perDiem.amountTexts.map((amount) => html`<div>${amount}</div>`)}</td>
+    </tr>`
+  })
+  return html`<h3>Per diems</h3>
+    <table class="per-diems">
+      <thead><tr>
+        <th>#</th><th>Date</th><th></th>${Meal.all.map((meal) => html`<th>${meal.title}</th>`)}<th>Total</th>
+      </tr></thead>
+      <tbody>${lines}</tbody>
     </table>`
 }
 

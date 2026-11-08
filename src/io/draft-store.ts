@@ -4,6 +4,8 @@ import { Currency } from '../domain/currency.ts'
 import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
+import { Meal } from '../domain/meal.ts'
+import { PerDiem } from '../domain/per-diem.ts'
 import { positions, Report } from '../domain/report.ts'
 import { isEmailAddress, textOrAbsent } from '../domain/text.ts'
 
@@ -38,6 +40,17 @@ interface ExpenseRecord {
   readonly currency?: string
   readonly receipts: readonly string[]
   readonly bankStatements: readonly string[]
+}
+
+/**
+ * What IndexedDB keeps of a per diem: its international meals and its meals claimed by their
+ * names, its reasons by meal.
+ */
+interface PerDiemRecord {
+  readonly date: string
+  readonly internationalMeals: readonly string[]
+  readonly mealsClaimed: readonly string[]
+  readonly reasons: Readonly<Record<string, string>>
 }
 
 /**
@@ -177,14 +190,18 @@ class IndexedDraftStore implements DraftStore {
     try {
       transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       const store = transaction.objectStore(documentStore)
+      /** The identifiers of the documents kept before this transaction. */
+      const stored = new Set(await result(store.getAllKeys()))
       /** The identifier of each content this transaction keeps, and refers to. */
       const chosen = new Map<Uint8Array, string>()
       /** Contents written by this transaction: their identifiers hold once it commits. */
       const written = new Map<Uint8Array, string>()
       for (const document of report.documents) {
-        let identifier = this.identifiers.get(document.content) ?? chosen.get(document.content)
-        if (identifier === undefined) {
-          identifier = crypto.randomUUID()
+        if (chosen.has(document.content)) continue
+        const known = this.identifiers.get(document.content)
+        const identifier = known ?? crypto.randomUUID()
+        // A document taken out, then put back, by Discard, is known but no longer kept: written again.
+        if (known === undefined || !stored.has(known)) {
           written.set(document.content, identifier)
           const record: DocumentRecord = {
             letter: document.kind.letter,
@@ -196,7 +213,7 @@ class IndexedDraftStore implements DraftStore {
         chosen.set(document.content, identifier)
       }
       const kept = new Set(chosen.values())
-      for (const key of await result(store.getAllKeys())) {
+      for (const key of stored) {
         if (typeof key !== 'string' || !kept.has(key)) store.delete(key)
       }
       transaction.objectStore(draftStore).put(recordOf(report, chosen), draftKey)
@@ -264,6 +281,12 @@ function recordOf(
     receipts: expense.receipts.map(identifier),
     bankStatements: expense.bankStatements.map(identifier),
   }))
+  const perDiems: PerDiemRecord[] = report.perDiems.map((perDiem) => ({
+    date: perDiem.date.toString(),
+    internationalMeals: perDiem.internationalMeals.map((meal) => meal.name),
+    mealsClaimed: perDiem.mealsClaimed.map((meal) => meal.name),
+    reasons: Object.fromEntries([...perDiem.reasons].map(([meal, reason]) => [meal.name, reason])),
+  }))
   const names = Object.fromEntries(
     report.documents
       .filter((document) => document.name !== document.afterNaming('').name)
@@ -281,8 +304,10 @@ function recordOf(
     isBusinessTravel: report.isBusinessTravel,
     firstDay: report.firstDay?.toString(),
     lastDay: report.lastDay?.toString(),
+    locations: report.locations,
     account: report.account,
     expenses,
+    perDiems,
     travelJustifications: report.travelJustifications.map(identifier),
     additionalDocuments: report.additionalDocuments.map(identifier),
     names,
@@ -328,6 +353,7 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
     })
   })
   const isBusinessTravel = fields.isBusinessTravel === true
+  const perDiems = (Array.isArray(fields.perDiems) ? fields.perDiems : []).flatMap(perDiemOf)
   return new Report({
     claimantName: text(fields.claimantName),
     position: positions.find((choice) => choice === fields.position),
@@ -340,11 +366,41 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
     isBusinessTravel,
     firstDay: isBusinessTravel ? date(fields.firstDay) : undefined,
     lastDay: isBusinessTravel ? date(fields.lastDay) : undefined,
+    locations: text(fields.locations),
     account: text(fields.account),
     expenses,
+    perDiems,
     travelJustifications: documentsAmong(fields.travelJustifications, Kind.additionalDocument),
     additionalDocuments: documentsAmong(fields.additionalDocuments, Kind.additionalDocument),
   }).afterChanging({})
+}
+
+/**
+ * The per diem a record holds, its international meals, its meals claimed and its reasons by the
+ * meals' names, a reason kept only for a meal
+ * not claimed; none when its date is not a calendar date.
+ */
+function perDiemOf(value: unknown): PerDiem[] {
+  const record = (typeof value === 'object' && value !== null ? value : {}) as Record<
+    string,
+    unknown
+  >
+  const day = date(record.date)
+  if (day === undefined) return []
+  const mealsOf = (value: unknown) => identifiers(value).flatMap((name) => Meal.named(name) ?? [])
+  const mealsClaimed = mealsOf(record.mealsClaimed)
+  const internationalMeals = mealsOf(record.internationalMeals)
+  const given = typeof record.reasons === 'object' && record.reasons !== null ? record.reasons : {}
+  const reasons = new Map(
+    Object.entries(given).flatMap(([name, reason]) => {
+      const meal = Meal.named(name)
+      const kept = text(reason)
+      return meal === undefined || kept === undefined || mealsClaimed.includes(meal)
+        ? []
+        : [[meal, kept] as const]
+    }),
+  )
+  return [new PerDiem(day, { internationalMeals, mealsClaimed, reasons })]
 }
 
 /** The browser's IndexedDB, or nothing when the browser does not give access to it. */

@@ -398,6 +398,143 @@ footer p {
   margin-bottom: 1rem;
 }
 
+/* Add an expense and Manage per diems side by side; All domestic and All international too. */
+.expense-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.expense-buttons .add-expense {
+  margin-bottom: 0;
+}
+
+/* The per diems claimed, on one line above the expenses. */
+.per-diems-line {
+  font-weight: 600;
+}
+
+/* A day of the per diems: its day and date beside domestic or international, then its meals. */
+.per-diem-day {
+  border: 1px solid var(--color-rule);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.per-diem-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.per-diem-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.per-diem-scope {
+  display: flex;
+  gap: 1rem;
+}
+
+.per-diem-scope .checkbox {
+  margin-bottom: 0;
+}
+
+/* Each meal a toggle, tinted when claimed, domestic or international under it when asked for. */
+.meal-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.meal-scope {
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.meal-scope .checkbox {
+  margin-bottom: 0.15rem;
+}
+
+.meal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.meal-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+.meal-toggle:has(input:checked) {
+  background: var(--color-tint);
+  font-weight: 600;
+}
+
+/*
+ * The reasons of the meals not claimed, their names in one column and their fields aligned in the
+ * next; Add a reason, quiet until wanted.
+ */
+.reasons {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 32rem) auto;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.reasons .reason {
+  display: contents;
+}
+
+@media (max-width: 40rem) {
+  .reasons {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .reasons .reason > span {
+    grid-column: 1 / -1;
+  }
+}
+
+button.quiet {
+  display: inline-block;
+  margin: 0.5rem 1.25rem 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-link);
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+td.not-claimed {
+  color: var(--color-secondary-text);
+}
+
+/* The total of the report, under the expenses and the per diems. */
+table.report-total th {
+  width: 8rem;
+}
+
+table.report-total td {
+  font-weight: 600;
+}
+
 /* What an expense still lacks, under its documents in the list of expenses. */
 .lacks {
   margin: 0.25rem 0 0;

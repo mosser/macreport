@@ -14,20 +14,25 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the account, the expenses, the travel justifications and the additional documents. There is one report at a time. |
+| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its locations, the account, the expenses, the per diems, the travel justifications and the additional documents. There is one report at a time. |
 | Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. The report of a student or a postdoctoral fellow names their supervisor, a visitor's their host. |
 | Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
 | Purpose | What the expenses were made for, in the Claimant's words: a conference, a workshop, a visit, equipment. A report is not necessarily for an event. |
-| Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates and travel justifications. |
+| Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates, locations, per diems and travel justifications. |
 | Dates | The first and the last day of a business travel. One day when they are the same. |
+| Locations | Where a business travel took the claimant, in the Claimant's words: Paris, France; Lyon, France. |
 | Account | The account the Claimant suggests the expenses be charged to, as free text. |
 | Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipt or the reason it has none, and its bank statement unless it was paid in cash. |
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |
 | Claimed amount | The amount in Canadian dollars asked back for an expense, more than zero, to the cent. An expense paid in another currency may have none: McSCert then works it out from the foreign amount. |
 | Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt: more than zero, to the cent. The system converts nothing and asks for no exchange rate. |
 | Currency | A currency other than the Canadian dollar, by its three-letter ISO 4217 code and its name in English: EUR, Euro. |
-| Total | What the report claims: the sum of the claimed amounts, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount. |
+| Per diem | What a business travel claims for the meals of one of its days, at their rates rather than on receipts: each meal domestic or international, the meals claimed, and, for a meal not claimed, the reason when the Claimant gives one. A business travel has one per day, from its first day to its last. |
+| Meal | Breakfast, lunch or dinner, the three meals of a per diem. |
+| Domestic, international | What the Claimant says a meal of a per diem is. It decides the currency of its rate: the Canadian dollar for a domestic meal, the US dollar for an international one. The meals of a day, and of a business travel, are most often all one or all the other. |
+| Rate | What a meal claimed is worth, in Canadian dollars for a domestic meal, in US dollars for an international one. The rates are configured, one for each meal and each of domestic and international, in `config/per-diems.json`: today breakfast 28.40, lunch 27.40 and dinner 57.70, either way. |
+| Total | What the report claims: the sum of the claimed amounts and of the domestic meals claimed, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount, and, in US dollars, of the international meals claimed. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
@@ -45,10 +50,10 @@ document.
 | New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position and email are kept. |
 | Finding | Something that stands between the draft and its report document, worded for the Claimant: a missing field, an expense without a bank statement, a character the report document cannot write. A draft with a finding cannot be saved as a report document. |
 | Report document | The single PDF the system writes from a report without findings: the cover, then one section per kind of document. It is the only thing that counts once the report is done. |
-| Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
+| Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses and the per diems numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
 | Save | The system hands the report document to the browser, which writes it on the Claimant's computer. The document is built in the browser: nothing is fetched or sent over a network. |
-| Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and their total. |
-| Entered | The box of an expense on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense. |
+| Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and the per diems, and their total. |
+| Entered | The box of an expense or a per diem on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense. |
 | Section | The part of the report document holding the documents of one kind, opened by its section pages. |
 | Section page | A page that opens a section: its title and the list of its documents, each with its label, its name, its pages and the expenses it supports, by their description. The list continues on as many section pages as it needs. |
 | Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the name of an additional document, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |
@@ -70,6 +75,7 @@ The order of this table is the order of the sections in the report document.
 ```mermaid
 classDiagram
   Report "1" *-- "*" Expense : claims
+  Report "1" *-- "*" PerDiem : claims
   Report "1" *-- "*" Document : travel justifications
   Report "1" *-- "*" Document : additional documents
   Expense "*" --> "0..1" Document : receipt
@@ -86,3 +92,8 @@ classDiagram
   none.
 - Travel justifications and additional documents belong to the report, not to
   an expense.
+- A business travel has one per diem per day, from its first day to its last;
+  another report has none. A per diem claims each meal once at most, and is
+  supported by no document.
+- A per diem without a meal claimed claims nothing: the report document
+  leaves it out.

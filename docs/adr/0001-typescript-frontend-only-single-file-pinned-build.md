@@ -43,7 +43,8 @@ build and a type error fails the build.
 The system is a **front-end only web application**. It runs entirely in the
 browser, and the production build is **one self-contained HTML file**,
 `dist/macreport-vX.Y.Z.html` (the `version` of `package.json`): all JavaScript,
-CSS, fonts and images are inlined into it. That file works when opened
+CSS, fonts and images are inlined into it, and so is the configuration, JSON
+files under `config/` (the per diem rates) imported when the system is built. That file works when opened
 directly from disk (`file://`), and equally from any static file host: the
 release workflow serves that same file, unchanged, as the `index.html` of the
 project's GitHub Pages site (ADR 0003).
@@ -110,7 +111,8 @@ A dependency bump is its own commit, touching `package.json` and
 
 A change is compliant with this ADR when:
 
-- `src/` contains only `.ts` files besides `style.css` and imported assets, and
+- `src/` contains only `.ts` files besides `style.css` and imported assets,
+  configuration lives in JSON files under `config/`, imported, and
   `tsconfig.base.json` keeps `"strict": true`;
 - the repository contains no server-side code and no deployment manifest for
   one;

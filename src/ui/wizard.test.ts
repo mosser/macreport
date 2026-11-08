@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
 import type { Kind } from '../domain/kind.ts'
 import { Report } from '../domain/report.ts'
@@ -91,6 +92,14 @@ function fillReport(): void {
   type('account', '20-123-456')
 }
 
+/** Ticks business travel, from October 3 to 7, 2026, to Rio de Janeiro. */
+function travel(): void {
+  tick('businessTravel', true)
+  type('firstDay', '2026-10-03')
+  type('lastDay', '2026-10-07')
+  type('locations', 'Rio de Janeiro, Brazil')
+}
+
 function tick(name: string, isTicked: boolean): void {
   const box = root.querySelector<HTMLInputElement>(`input[type="checkbox"][name="${name}"]`)
   if (box === null) throw new TypeError(`No checkbox ${name}`)
@@ -119,6 +128,24 @@ async function fillExpense(): Promise<void> {
   type('claimedAmount', '1012.35')
   await add('receipts', 'air-canada.pdf')
   await add('bankStatements', 'statement.pdf')
+}
+
+/** Gives a file to a file input, read only once the function it returns is called. */
+function giveSlowly(name: string, fileName: string): () => void {
+  let finish = () => {}
+  readings.set(
+    fileName,
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
+  const input = root.querySelector<HTMLInputElement>(`input[name="${name}"]`)
+  Object.defineProperty(input, 'files', {
+    value: [new File([`%PDF-1.7 ${fileName}`], fileName)],
+    configurable: true,
+  })
+  input?.dispatchEvent(new Event('change'))
+  return finish
 }
 
 beforeEach(() => {
@@ -167,19 +194,25 @@ describe('the wizard', () => {
     )
   })
 
-  it('asks the dates of a business travel only, and then requires them', () => {
+  it('asks the dates and the locations of a business travel only, and then requires them', () => {
     fillReport()
     expect(continueButton()?.disabled).toBe(false)
     tick('businessTravel', true)
     expect(root.querySelector('[name="firstDay"]')).not.toBeNull()
+    expect(root.querySelector('#name-of-locations')?.textContent?.trim()).toBe('Location(s) *')
     expect(continueButton()?.disabled).toBe(true)
     type('firstDay', '2026-10-03')
     type('lastDay', '2026-10-07')
+    expect(continueButton()?.disabled).toBe(true)
+    type('locations', ' Rio de Janeiro, Brazil ')
     expect(continueButton()?.disabled).toBe(false)
+    expect(kept.at(-1)?.locations).toBe('Rio de Janeiro, Brazil')
     tick('businessTravel', false)
     expect(root.querySelector('[name="firstDay"]')).toBeNull()
+    expect(root.querySelector('[name="locations"]')).toBeNull()
     tick('businessTravel', true)
     expect(root.querySelector<HTMLInputElement>('[name="firstDay"]')?.value).toBe('')
+    expect(root.querySelector<HTMLInputElement>('[name="locations"]')?.value).toBe('')
   })
 
   it('opens on the draft kept, and keeps every change at once', () => {
@@ -513,24 +546,8 @@ describe('the wizard', () => {
   })
 
   /** Gives a file to a field, its reading finishing when the function it gives back is called. */
-  function giveSlowly(name: string, fileName: string): () => void {
-    let finish = () => {}
-    readings.set(
-      fileName,
-      new Promise((resolve) => {
-        finish = resolve
-      }),
-    )
-    const input = root.querySelector<HTMLInputElement>(`input[name="${name}"]`)
-    Object.defineProperty(input, 'files', {
-      value: [new File([`%PDF-1.7 ${fileName}`], fileName)],
-      configurable: true,
-    })
-    input?.dispatchEvent(new Event('change'))
-    return finish
-  }
 
-  it('holds Done and Remove while a file is being added to an expense', async () => {
+  it('holds Done, Discard and Remove while a file is being added to an expense', async () => {
     fillReport()
     proceed()
     await fillExpense()
@@ -539,6 +556,7 @@ describe('the wizard', () => {
     openExpense()
     const finish = giveSlowly('receipts', 'late.pdf')
     expect(button('[data-action="done"]')?.disabled).toBe(true)
+    expect(button('[data-action="discard"]')?.disabled).toBe(true)
     finish()
     await vi.waitFor(() => expect(root.textContent).toContain('late.pdf'))
     expect(button('[data-action="done"]')?.disabled).toBe(false)
@@ -806,9 +824,7 @@ describe('the wizard', () => {
 
   it('asks a business travel for a travel justification before it continues', async () => {
     fillReport()
-    tick('businessTravel', true)
-    type('firstDay', '2026-10-03')
-    type('lastDay', '2026-10-07')
+    travel()
     proceed()
     await fillExpense()
     proceed()
@@ -1006,13 +1022,404 @@ describe('the Expenses step', () => {
     expect(rows()[0]?.slice(2, 4)).toEqual(['EUR 640.00', ''])
     proceed()
     proceed()
-    const total = [...root.querySelectorAll('tr.total td')].map((cell) => cell.textContent)
-    expect(total).toEqual(['', '', 'Total', '', 'EUR 640.00'])
+    const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
+    expect(total).toEqual(['Total', 'EUR 640.00'])
     button('[data-step="1"]')?.click()
     button('[data-change="0"]')?.click()
     expect(root.querySelector<HTMLInputElement>('[name="foreignAmount"]')?.value).toBe('640.00')
     tick('paidInAnotherCurrency', false)
     expect(kept.at(-1)?.expenses[0]?.foreignAmount).toBeUndefined()
     expect(continueButton()?.disabled).toBe(true)
+  })
+})
+
+describe('Discard', () => {
+  const descriptions = () => kept.at(-1)?.expenses.map((expense) => expense.description)
+
+  it('takes an expense just added out of the report, its documents with it', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    button('[data-action="discard"]')?.click()
+    expect(root.querySelector('[name="date"]')).toBeNull()
+    expect(kept.at(-1)?.expenses).toEqual([])
+    expect(kept.at(-1)?.documents).toEqual([])
+    expect(continueButton()?.hidden).toBe(false)
+  })
+
+  it('puts an expense changed back as it was when its fields opened, its documents and their names included', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    button('[data-action="done"]')?.click()
+    const before = kept.at(-1)
+    button('[data-change="0"]')?.click()
+    type('description', 'Air Transat')
+    type('claimedAmount', '12,50')
+    expect(button('[data-action="done"]')?.disabled).toBe(true)
+    expect(button('[data-action="discard"]')?.disabled).toBe(false)
+    const name = root.querySelector<HTMLInputElement>('input[name="documentName"]')
+    if (name === null) throw new TypeError('No name')
+    name.value = 'Booking'
+    name.dispatchEvent(new Event('input'))
+    button('[data-action="discard"]')?.click()
+    expect(kept.at(-1)?.expenses).toEqual(before?.expenses)
+    expect(descriptions()).toEqual(['Air Canada, YYZ–CDG return'])
+    expect(kept.at(-1)?.documents.map((document) => document.name)).toEqual([
+      'air-canada',
+      'statement',
+    ])
+    expect(button('[data-step="0"]')?.disabled).toBe(false)
+    button('[data-change="0"]')?.click()
+    expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('1012.35')
+  })
+
+  it('keeps a file added meanwhile on another step', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    proceed()
+    const finish = giveSlowly('additionalDocuments', 'poster.pdf')
+    button('[data-step="1"]')?.click()
+    button('[data-change="0"]')?.click()
+    type('description', 'Air Transat')
+    finish()
+    await vi.waitFor(() =>
+      expect(kept.at(-1)?.additionalDocuments.map((document) => document.fileName)).toEqual([
+        'poster.pdf',
+      ]),
+    )
+    await vi.waitFor(() => expect(button('[data-action="discard"]')?.disabled).toBe(false))
+    button('[data-action="discard"]')?.click()
+    expect(descriptions()).toEqual(['Air Canada, YYZ–CDG return'])
+    expect(kept.at(-1)?.additionalDocuments.map((document) => document.fileName)).toEqual([
+      'poster.pdf',
+    ])
+  })
+})
+
+describe('the per diems', () => {
+  const meal = (day: string, name: string) =>
+    root.querySelector<HTMLInputElement>(
+      `input[name="meal"][data-day="${day}"][data-meal="${name}"]`,
+    )
+
+  function claim(day: string, name: string, isClaimed = true): void {
+    const box = meal(day, name)
+    if (box === null) throw new TypeError(`No ${name} on ${day}`)
+    box.checked = isClaimed
+    box.dispatchEvent(new Event('change'))
+  }
+
+  function scope(day: string, value: 'domestic' | 'international' | 'perMeal'): void {
+    const radio = root.querySelector<HTMLInputElement>(
+      `input[type="radio"][data-day="${day}"][value="${value}"]`,
+    )
+    if (radio === null) throw new TypeError(`No ${value} on ${day}`)
+    radio.checked = true
+    radio.dispatchEvent(new Event('change'))
+  }
+
+  function reason(day: string, name: string, value: string): void {
+    const field = root.querySelector<HTMLInputElement>(
+      `input[name="reason"][data-day="${day}"][data-meal="${name}"]`,
+    )
+    if (field === null) throw new TypeError(`No reason for ${name} on ${day}`)
+    field.value = value
+    field.dispatchEvent(new Event('input'))
+  }
+
+  const days = () =>
+    [...root.querySelectorAll('.per-diem-day h3')].map((heading) =>
+      heading.textContent?.replace(/\s+/g, ' ').trim(),
+    )
+  /** The amount of each per diem with a meal claimed, as the draft keeps it. */
+  const amounts = () =>
+    kept.at(-1)?.claimedPerDiems.map((perDiem) => perDiem.amountTexts.join(', '))
+
+  it('are managed for a business travel whose dates are given, one row per day', () => {
+    fillReport()
+    proceed()
+    expect(button('[data-action="manage-per-diems"]')).toBeNull()
+    button('[data-step="0"]')?.click()
+    travel()
+    type('lastDay', '2026-10-01')
+    proceed()
+    expect(button('[data-action="manage-per-diems"]')).toBeNull()
+    button('[data-step="0"]')?.click()
+    type('lastDay', '2026-10-05')
+    proceed()
+    expect(continueButton()?.disabled).toBe(true)
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(root.querySelector('h2')?.textContent).toBe('Per diems')
+    expect(days()).toEqual(['Saturday 2026-10-03', 'Sunday 2026-10-04', 'Monday 2026-10-05'])
+    expect(meal('2026-10-03', 'lunch')?.closest('.meal-toggle')?.textContent?.trim()).toBe('Lunch')
+    expect(continueButton()?.hidden).toBe(true)
+    expect(meal('2026-10-03', 'breakfast')?.checked).toBe(false)
+    expect(
+      root.querySelector<HTMLInputElement>('input[data-day="2026-10-03"][value="domestic"]')
+        ?.checked,
+    ).toBe(true)
+    expect(root.querySelector('.per-diem-days')?.textContent).not.toContain('$')
+  })
+
+  it('claim each meal at its rate, domestic in Canadian dollars, international in US dollars, set all at once', () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-04')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    claim('2026-10-03', 'breakfast')
+    claim('2026-10-03', 'dinner')
+    expect(amounts()).toEqual(['$86.10'])
+    scope('2026-10-04', 'international')
+    claim('2026-10-04', 'lunch')
+    expect(amounts()).toEqual(['$86.10', 'USD 27.40'])
+    button('[data-action="all-international"]')?.click()
+    expect(amounts()).toEqual(['USD 86.10', 'USD 27.40'])
+    button('[data-action="all-domestic"]')?.click()
+    expect(amounts()).toEqual(['$86.10', '$27.40'])
+    claim('2026-10-03', 'dinner', false)
+    expect(amounts()).toEqual(['$28.40', '$27.40'])
+    expect(root.querySelector('.per-diem-days')?.textContent).not.toMatch(/\$|USD/)
+  })
+
+  it('ask a reason only once Add a reason is clicked, under a meal not claimed of a day with a meal claimed', () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-04')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(root.querySelectorAll('input[name="reason"], [data-add-reason]')).toHaveLength(0)
+    claim('2026-10-03', 'dinner')
+    expect(root.querySelectorAll('input[name="reason"]')).toHaveLength(0)
+    expect(
+      [...root.querySelectorAll<HTMLElement>('[data-add-reason]')].map(
+        (each) => `${each.dataset.day} ${each.dataset.meal}`,
+      ),
+    ).toEqual(['2026-10-03 breakfast', '2026-10-03 lunch'])
+    expect(button('[data-add-reason][data-meal="lunch"]')?.textContent?.trim()).toBe(
+      'Add a reason for not claiming lunch (optional)',
+    )
+    button('[data-add-reason][data-meal="lunch"]')?.click()
+    const typed = root.querySelector('input[name="reason"][data-meal="lunch"]')
+    expect(typed?.closest('label')?.textContent?.trim()).toBe(
+      'Reason for not claiming lunch (optional)',
+    )
+    expect(document.activeElement).toBe(typed)
+    expect(button('[data-add-reason][data-meal="lunch"]')).toBeNull()
+    reason('2026-10-03', 'lunch', ' provided by the conference ')
+    expect(root.querySelector('input[name="reason"][data-meal="lunch"]')).toBe(typed)
+    expect([...(kept.at(-1)?.perDiems[0]?.reasons.values() ?? [])]).toEqual([
+      'provided by the conference',
+    ])
+    claim('2026-10-04', 'lunch')
+    expect(
+      root.querySelector<HTMLInputElement>('input[name="reason"][data-day="2026-10-03"]')?.value,
+    ).toBe('provided by the conference')
+    button('[data-remove-reason][data-day="2026-10-03"][data-meal="lunch"]')?.click()
+    expect(root.querySelector('input[name="reason"][data-day="2026-10-03"]')).toBeNull()
+    expect(kept.at(-1)?.perDiemOn(new CalendarDate(2026, 10, 3)).reasons.size).toBe(0)
+    expect(button('[data-add-reason][data-day="2026-10-03"][data-meal="lunch"]')).not.toBeNull()
+    button('[data-add-reason][data-day="2026-10-03"][data-meal="lunch"]')?.click()
+    reason('2026-10-03', 'lunch', 'provided by the conference')
+    claim('2026-10-03', 'lunch')
+    expect(root.querySelector('input[name="reason"][data-day="2026-10-03"]')).toBeNull()
+    claim('2026-10-03', 'lunch', false)
+    expect(button('[data-add-reason][data-day="2026-10-03"][data-meal="lunch"]')).not.toBeNull()
+    claim('2026-10-03', 'lunch')
+    claim('2026-10-03', 'dinner', false)
+    claim('2026-10-03', 'lunch', false)
+    expect(root.querySelectorAll('[data-day="2026-10-03"][data-add-reason]')).toHaveLength(0)
+  })
+
+  it('forget the reasons asked for and left empty once Done is clicked', () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-03')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    claim('2026-10-03', 'dinner')
+    button('[data-add-reason][data-meal="lunch"]')?.click()
+    button('[data-action="done"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(root.querySelector('input[name="reason"]')).toBeNull()
+  })
+
+  it('show above the expenses once a meal is claimed, which is enough to continue, and in their own section on review', async () => {
+    fillReport()
+    travel()
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    claim('2026-10-04', 'breakfast')
+    scope('2026-10-05', 'international')
+    claim('2026-10-05', 'dinner')
+    button('[data-add-reason][data-day="2026-10-05"][data-meal="lunch"]')?.click()
+    reason('2026-10-05', 'lunch', 'provided by the conference')
+    button('[data-action="done"]')?.click()
+    expect(root.querySelector('.per-diems-line')?.textContent).toBe(
+      'Per diems: 2 days · $28.40 · USD 57.70',
+    )
+    const listed = [...root.querySelectorAll('table.per-diem-list tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
+    )
+    expect(listed).toEqual([
+      ['2026-10-04', 'Per diem, domestic: breakfast'],
+      ['', 'Not claimed: lunch, dinner'],
+      ['2026-10-05', 'Per diem, international: dinner'],
+      ['', 'Not claimed: breakfast, lunch (provided by the conference)'],
+    ])
+    expect(continueButton()?.disabled).toBe(false)
+    await fillExpense()
+    proceed()
+    await add('travelJustifications', 'invitation.pdf')
+    proceed()
+    const expenses = [...root.querySelectorAll('table.expenses tbody tr.expense')]
+    expect(expenses).toHaveLength(1)
+    expect(root.textContent).not.toContain('Per diem, domestic')
+    const perDiems = [...root.querySelectorAll('table.per-diems tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent?.replace(/\s+/g, ' ').trim()),
+    )
+    expect(perDiems).toEqual([
+      ['2', '2026-10-04', 'Domestic', '$28.40', 'Not claimed', 'Not claimed', '$28.40'],
+      [
+        '3',
+        '2026-10-05',
+        'International',
+        'Not claimed',
+        'Not claimedprovided by the conference',
+        'USD 57.70',
+        'USD 57.70',
+      ],
+    ])
+    const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
+    expect(total).toEqual(['Total', '$1,040.75USD 57.70'])
+  })
+
+  it('make one meal domestic or international, once Per meal is chosen, and whenever the meals of the day differ', async () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-04')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    const mealScope = (day: string, name: string) =>
+      root.querySelector<HTMLInputElement>(
+        `input[type="radio"][data-day="${day}"][data-meal="${name}"][value="international"]`,
+      )
+    const dayScopes = (day: string) =>
+      [
+        ...root.querySelectorAll<HTMLInputElement>(
+          `input[type="radio"][name="scope-${day}"]:checked`,
+        ),
+      ].map((radio) => radio.value)
+    expect(mealScope('2026-10-03', 'dinner')).toBeNull()
+    expect(dayScopes('2026-10-03')).toEqual(['domestic'])
+    scope('2026-10-03', 'perMeal')
+    expect(dayScopes('2026-10-03')).toEqual(['perMeal'])
+    expect(mealScope('2026-10-03', 'dinner')?.checked).toBe(false)
+    expect(mealScope('2026-10-04', 'dinner')).toBeNull()
+    claim('2026-10-03', 'breakfast')
+    claim('2026-10-03', 'dinner')
+    const dinner = mealScope('2026-10-03', 'dinner')
+    if (dinner === null) throw new TypeError('No dinner scope')
+    dinner.checked = true
+    dinner.dispatchEvent(new Event('change'))
+    expect(dayScopes('2026-10-03')).toEqual(['perMeal'])
+    expect(amounts()).toEqual(['$28.40, USD 57.70'])
+    button('[data-action="done"]')?.click()
+    expect(
+      [...root.querySelectorAll('table.per-diem-list td.description')].map(
+        (cell) => cell.textContent,
+      ),
+    ).toEqual(['Per diem, domestic: breakfast\nPer diem, international: dinner'])
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(dayScopes('2026-10-03')).toEqual(['perMeal'])
+    expect(mealScope('2026-10-03', 'dinner')?.checked).toBe(true)
+    expect(mealScope('2026-10-04', 'dinner')).toBeNull()
+    scope('2026-10-03', 'domestic')
+    expect(dayScopes('2026-10-03')).toEqual(['domestic'])
+    expect(mealScope('2026-10-03', 'dinner')).toBeNull()
+    scope('2026-10-04', 'perMeal')
+    expect(mealScope('2026-10-04', 'dinner')).not.toBeNull()
+    button('[data-action="all-international"]')?.click()
+    expect(dayScopes('2026-10-03')).toEqual(['international'])
+    expect(dayScopes('2026-10-04')).toEqual(['international'])
+    expect(mealScope('2026-10-04', 'dinner')).toBeNull()
+    scope('2026-10-04', 'perMeal')
+    button('[data-action="all-domestic"]')?.click()
+    expect(dayScopes('2026-10-04')).toEqual(['domestic'])
+    button('[data-action="all-international"]')?.click()
+    button('[data-action="done"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(mealScope('2026-10-03', 'dinner')).toBeNull()
+    claim('2026-10-03', 'dinner', false)
+    claim('2026-10-03', 'breakfast', false)
+    expect(kept.at(-1)?.claimedPerDiems).toEqual([])
+  })
+
+  it('keep the focus where the keyboard was, as each change renders the step again', () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-03')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    const focused = () => document.activeElement as HTMLElement | null
+    scope('2026-10-03', 'international')
+    expect(focused()?.getAttribute('name')).toBe('scope-2026-10-03')
+    expect(focused()?.getAttribute('value')).toBe('international')
+    scope('2026-10-03', 'perMeal')
+    expect(focused()?.getAttribute('value')).toBe('perMeal')
+    const lunch = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="lunch"][value="domestic"]',
+    )
+    if (lunch === null) throw new TypeError('No lunch scope')
+    lunch.checked = true
+    lunch.dispatchEvent(new Event('change'))
+    expect(focused()?.dataset.meal).toBe('lunch')
+    claim('2026-10-03', 'dinner')
+    expect(focused()?.getAttribute('name')).toBe('meal')
+    expect(focused()?.dataset.meal).toBe('dinner')
+    button('[data-add-reason][data-meal="breakfast"]')?.click()
+    button('[data-remove-reason][data-meal="breakfast"]')?.click()
+    expect(focused()?.dataset.addReason).toBe('')
+    expect(focused()?.dataset.meal).toBe('breakfast')
+    button('[data-action="all-domestic"]')?.click()
+    expect(focused()?.dataset.action).toBe('all-domestic')
+    expect(root.querySelector('[data-meal="lunch"][type="radio"]')).toBeNull()
+    scope('2026-10-03', 'perMeal')
+    const dinner = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="dinner"][value="domestic"]',
+    )
+    if (dinner === null) throw new TypeError('No dinner scope')
+    dinner.checked = true
+    dinner.dispatchEvent(new Event('change'))
+    expect(focused()?.dataset.meal).toBe('dinner')
+    const international = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="dinner"][value="international"]',
+    )
+    if (international === null) throw new TypeError('No dinner scope')
+    international.checked = true
+    international.dispatchEvent(new Event('change'))
+    button('[data-action="done"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    const back = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="dinner"][value="domestic"]',
+    )
+    if (back === null) throw new TypeError('No dinner scope')
+    back.checked = true
+    back.dispatchEvent(new Event('change'))
+    expect(root.querySelector('[data-meal="dinner"][type="radio"]')).toBeNull()
+    expect(focused()?.getAttribute('name')).toBe('scope-2026-10-03')
+    expect(focused()?.getAttribute('value')).toBe('domestic')
+  })
+
+  it('leave the step closed, and are closed with Done', () => {
+    fillReport()
+    travel()
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    button('[data-step="0"]')?.click()
+    button('[data-step="1"]')?.click()
+    expect(root.querySelector('h2')?.textContent).toBe('Expenses')
   })
 })

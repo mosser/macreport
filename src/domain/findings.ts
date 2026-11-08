@@ -12,8 +12,8 @@ export interface Finding {
 }
 
 /**
- * The name of each field of the report, of an expense and of a document, as the interface and
- * findings say it.
+ * The name of each field of the report, of an expense, of a document and of a per diem, as the
+ * interface and findings say it.
  */
 export const fieldNames = {
   claimantName: 'Name of claimant',
@@ -27,6 +27,7 @@ export const fieldNames = {
   businessTravel: 'Business travel',
   firstDay: 'First day',
   lastDay: 'Last day',
+  locations: 'Location(s)',
   account: 'Account',
   date: 'Date',
   description: 'Description',
@@ -39,9 +40,13 @@ export const fieldNames = {
   travelJustifications: 'Travel justification(s)',
   additionalDocuments: 'Additional document(s)',
   documentName: 'Name',
+  domestic: 'Domestic',
+  international: 'International',
+  perMeal: 'Per meal',
+  reason: 'Reason',
 } as const
 
-/** A field of the report, of an expense or of a document. */
+/** A field of the report, of an expense, of a document or of a per diem. */
 export type Field = keyof typeof fieldNames
 
 /** What a field needs besides being filled in, shown next to it; absent when nothing more. */
@@ -82,6 +87,10 @@ const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'paidInAnotherCurrency',
   'additionalDocuments',
   'documentName',
+  'domestic',
+  'international',
+  'perMeal',
+  'reason',
 ])
 
 /**
@@ -130,8 +139,8 @@ function missing(step: FindingStep, field: Field, expense?: Expense): Finding {
 }
 
 /**
- * The required fields of the Report step that are missing, the dates of a business travel among
- * them, and a last day before the first.
+ * The required fields of the Report step that are missing, the dates and the locations of a
+ * business travel among them, and a last day before the first.
  */
 export function findingsOfReportStep(report: Report): readonly Finding[] {
   const required: [Field, unknown][] = [
@@ -150,7 +159,11 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
   }
   required.push(['purpose', report.purpose])
   if (report.isBusinessTravel) {
-    required.push(['firstDay', report.firstDay], ['lastDay', report.lastDay])
+    required.push(
+      ['firstDay', report.firstDay],
+      ['lastDay', report.lastDay],
+      ['locations', report.locations],
+    )
   }
   required.push(['account', report.account])
   const findings = required
@@ -163,10 +176,10 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
   return findings
 }
 
-/** No expense, or an expense that breaks a rule of the Expenses step. */
+/** No expense and no meal claimed, or an expense that breaks a rule of the Expenses step. */
 export function findingsOfExpensesStep(report: Report): readonly Finding[] {
-  if (report.expenses.length === 0) {
-    return [{ step: 'Expenses', wording: 'No expense is claimed.' }]
+  if (report.expenses.length === 0 && report.claimedPerDiems.length === 0) {
+    return [{ step: 'Expenses', wording: 'No expense or per diem is claimed.' }]
   }
   const rules = report.expenses.flatMap((expense) =>
     missingFieldsOf(expense).map((field) => missing('Expenses', field, expense)),
