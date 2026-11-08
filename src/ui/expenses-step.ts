@@ -291,10 +291,10 @@ function reasonOf(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>): 
   const reason = perDiem.reasonFor(meal)
   if (reason === undefined && !askedFor.has(reasonKeyOf(perDiem, meal))) {
     return html`<button type="button" class="add-reason" data-add-reason
-      data-day="${day}" data-meal="${meal.name}">Add a reason: ${meal.name}</button>`
+      data-day="${day}" data-meal="${meal.name}">Add a reason for not claiming ${meal.name} (optional)</button>`
   }
   return html`<label class="field reason">
-      ${meal.title} not claimed
+      Reason for not claiming ${meal.name} (optional)
       <input type="text" name="reason" data-day="${day}" data-meal="${meal.name}"
         value="${reason ?? ''}" aria-label="${fieldNames.reason}, ${meal.name}, ${day}" />
     </label>`

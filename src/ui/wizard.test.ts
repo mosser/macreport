@@ -1171,8 +1171,14 @@ describe('the per diems', () => {
         (each) => `${each.dataset.day} ${each.dataset.meal}`,
       ),
     ).toEqual(['2026-10-03 breakfast', '2026-10-03 lunch'])
+    expect(button('[data-add-reason][data-meal="lunch"]')?.textContent?.trim()).toBe(
+      'Add a reason for not claiming lunch (optional)',
+    )
     button('[data-add-reason][data-meal="lunch"]')?.click()
     const typed = root.querySelector('input[name="reason"][data-meal="lunch"]')
+    expect(typed?.closest('label')?.textContent?.trim()).toBe(
+      'Reason for not claiming lunch (optional)',
+    )
     expect(document.activeElement).toBe(typed)
     expect(button('[data-add-reason][data-meal="lunch"]')).toBeNull()
     reason('2026-10-03', 'lunch', ' provided by the conference ')

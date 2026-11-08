@@ -17,7 +17,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   international** set every day at once), with breakfast (28.40), lunch
   (27.40) and dinner (57.70) to tick, in Canadian dollars for a domestic day
   and in US dollars for an international one. On a day with a meal claimed,
-  **Add a reason** under a meal not claimed says why, optionally. Above the
+  **Add a reason for not claiming** a meal says why, optionally. Above the
   expenses, the days claimed and their total, then each of those days with
   its meals claimed and its meals not claimed; a report may claim per diems
   only. The

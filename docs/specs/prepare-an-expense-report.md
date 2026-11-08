@@ -121,7 +121,7 @@ not offered while they are open, and **Done** closes them.
 |---|---|
 | Domestic, international | One of them, for each day. A per diem starts domestic. **All domestic** and **All international**, above the days, set every day at once. |
 | Breakfast, lunch, dinner | Each ticked when claimed, at its rate: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic per diem, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
-| Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason**, under the meals, opens the field of one; a reason given stays shown in it. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
+| Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
 
 Continue is offered once there is at least one expense or a meal claimed,
 and every expense follows the rules above.
