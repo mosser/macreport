@@ -4,6 +4,7 @@ import {
   PDFDict,
   type PDFDocument,
   PDFName,
+  PDFNumber,
   PDFRawStream,
   type PDFRef,
 } from '@cantoo/pdf-lib'
@@ -216,8 +217,11 @@ function addSegment(path: PathInProgress, operator: string, operands: readonly n
     const [left, bottom] = [x - path.x, y - path.y]
     path.xs.push(left, left + width)
     path.ys.push(bottom, bottom + height)
+    // Its size comes from its corners as written, so that the far one keeps to 0.01 point too.
+    const sizeOfSide = (from: number, length: number) =>
+      numberText(Number(numberText(from + length)) - Number(numberText(from)))
     path.segments.push(
-      `${numberText(left)} ${numberText(bottom)} ${numberText(width)} ${numberText(height)} re`,
+      `${numberText(left)} ${numberText(bottom)} ${sizeOfSide(left, width)} ${sizeOfSide(bottom, height)} re`,
     )
     return
   }
@@ -228,6 +232,12 @@ function addSegment(path: PathInProgress, operator: string, operands: readonly n
     return numberText(moved)
   })
   path.segments.push(`${relative.join(' ')} ${operator}`)
+}
+
+/** Whether a page's unit makes it larger than its points, so that 0.01 point would become more. */
+function isEnlargedPage(page: ScannedPage['node']): boolean {
+  const unit = page.lookupMaybe(PDFName.of('UserUnit'), PDFNumber)?.asNumber()
+  return unit !== undefined && unit > 1
 }
 
 /** The decoded bytes of a page's content, its streams one after the other; nothing if unreadable. */
@@ -258,6 +268,7 @@ function concatenatedBytes(parts: readonly Uint8Array[]): Uint8Array {
 /** The pages of a PDF that can be read, with their shapes. */
 function scannedPagesOf(pdf: PDFDocument): ScannedPage[] {
   return pdf.getPages().flatMap(({ node }) => {
+    if (isEnlargedPage(node)) return []
     try {
       const content = contentOf(node, pdf)
       const shapes = content === undefined ? undefined : new ShapeFinder(content).find()
@@ -347,8 +358,8 @@ function contentWithForms(
 /**
  * Keeps once each shape a PDF fills more than once, as a form drawn from each place it was, within
  * 0.01 point of it. What it cannot rewrite safely stays as it is: a page holding an inline image,
- * a shape under a transform that enlarges, a shape filled with a pattern, and whatever is not a
- * shape, its text among it.
+ * a page its unit enlarges, a shape under a transform that enlarges, a shape filled with a pattern,
+ * a shape in a path another operator interrupts, and whatever is not a shape, its text among it.
  */
 export function shareShapes(pdf: PDFDocument): void {
   const pages = scannedPagesOf(pdf)

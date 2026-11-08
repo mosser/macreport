@@ -101,6 +101,30 @@ describe('shareShapes', () => {
     expect(form?.dict.lookup(PDFName.of('BBox'))?.toString()).toBe('[ -1 -2.25 6.5 3.5 ]')
   })
 
+  it('keeps the far corner of a rectangle in a path within 0.01 point', async () => {
+    const shape = (y: number) =>
+      `100.0049 ${y} m 101.5 ${y + 2.5} l 103.25 ${y + 4.75} l h 110.0098 ${y} 20.0049 5 re f`
+    const pdf = await pdfDrawing(`${shape(50)} ${shape(150)}`)
+    shareShapes(pdf)
+    const [form] = [...formsOf(pdf, 0).values()]
+    if (form === undefined) throw new TypeError('No form')
+    const rectangle = /(\S+) \S+ (\S+) \S+ re/.exec(textOf(decodePDFRawStream(form).decode()))
+    const [drawn] = drawingsOf(contentOf(pdf, 0))
+    const farCorner = (drawn?.x ?? 0) + Number(rectangle?.[1]) + Number(rectangle?.[2])
+    expect(Math.abs(farCorner - 130.0147)).toBeLessThanOrEqual(0.0101)
+  })
+
+  it('leaves the shapes of a page its unit enlarges on it, and shares those of others', async () => {
+    const shapes = `${outline(10, 20)} ${outline(30, 40)}`
+    const pdf = await pdfDrawing(shapes, shapes, shapes)
+    pdf.getPage(0).node.set(PDFName.of('UserUnit'), pdf.context.obj(100))
+    pdf.getPage(1).node.set(PDFName.of('UserUnit'), pdf.context.obj(1))
+    shareShapes(pdf)
+    expect(contentOf(pdf, 0)).toBe(shapes)
+    expect(drawingsOf(contentOf(pdf, 1))).toHaveLength(2)
+    expect(drawingsOf(contentOf(pdf, 2))).toHaveLength(2)
+  })
+
   it('shares a shape across pages, and only adds it to the pages that draw it', async () => {
     const pdf = await pdfDrawing(outline(10, 20), outline(30, 40), 'BT ET')
     shareShapes(pdf)

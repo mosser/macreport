@@ -58,9 +58,9 @@ R1, R2, and so on.
   side above 2200 pixels is encoded by the rule above, an RGB one keeping its
   colour space. A shape filled and drawn more than once is kept once and drawn
   from there, within 0.01 point of where it was, unless the document is a bank
-  statement. A page holding an inline image, a shape under a transform that
-  enlarges, a shape filled with a pattern and a shape in a path another operator
-  interrupts stay as they are.
+  statement. A page holding an inline image, a page its unit enlarges, a shape
+  under a transform that enlarges, a shape filled with a pattern and a shape in a
+  path another operator interrupts stay as they are.
 
 ## Cover
 

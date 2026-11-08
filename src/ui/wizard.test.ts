@@ -1528,6 +1528,43 @@ describe('the per diems', () => {
       await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
     })
 
+    /** The Review step while its sizes are worked out, and what lets them come. */
+    async function reviewWhileWeighing(): Promise<() => void> {
+      receiptWeighing({ addedSize: 10, size: 10 })
+      let finish = () => {}
+      weighing = new Promise((resolve) => {
+        finish = resolve
+      })
+      await review()
+      return finish
+    }
+
+    it('keeps the focus on Save the report when the sizes come', async () => {
+      const finish = await reviewWhileWeighing()
+      button('[data-action="save"]')?.focus()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(document.activeElement).toBe(button('[data-action="save"]'))
+    })
+
+    it('keeps the focus on a link to a document when the sizes come', async () => {
+      const finish = await reviewWhileWeighing()
+      const links = () => [...root.querySelectorAll('a')]
+      const position = links().length - 1
+      links()[position]?.focus()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(document.activeElement).toBe(links()[position])
+    })
+
+    it('takes no focus when the sizes come and it was elsewhere', async () => {
+      const finish = await reviewWhileWeighing()
+      ;(document.activeElement as HTMLElement | null)?.blur()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(document.activeElement).toBe(document.body)
+    })
+
     it('shows no size for a document that is not heavy', async () => {
       receiptWeighing({ addedSize: 2 * megabyte, size: 2 * megabyte })
       await review()

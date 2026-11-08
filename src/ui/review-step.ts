@@ -161,6 +161,28 @@ function sectionsOf(layout: Layout, linkOf: LinkOf, sizeOf: SizeOf): Markup[] {
   })
 }
 
+/**
+ * Renders a panel anew, the focus staying on the control it was on, for a change the Claimant did
+ * not ask for: a link is found again by its place among the links, a button by what it does.
+ */
+function keepingFocus(panel: HTMLElement, render: () => void): void {
+  const focused = panel.ownerDocument.activeElement
+  if (!(focused instanceof HTMLElement) || !panel.contains(focused)) {
+    render()
+    return
+  }
+  const link = [...panel.querySelectorAll<HTMLElement>('a')].indexOf(focused)
+  const { action, document } = focused.dataset
+  render()
+  const again =
+    link >= 0
+      ? panel.querySelectorAll('a')[link]
+      : [...panel.querySelectorAll<HTMLElement>('[data-action]')].find(
+          ({ dataset }) => dataset.action === action && dataset.document === document,
+        )
+  again?.focus({ preventScroll: true })
+}
+
 /** What became of the last save: the report it was for, and its file name or that it failed. */
 type Outcome =
   | { readonly report: Report; readonly fileName: string }
@@ -209,7 +231,8 @@ export function reviewStep(
       .then((weights) => {
         started.weights = weights
         if (weighing === started && shown?.panel.isConnected) {
-          step.render(shown.panel, shown.context)
+          const { panel, context } = shown
+          keepingFocus(panel, () => step.render(panel, context))
         }
       })
   }
