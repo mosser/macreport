@@ -286,6 +286,20 @@ describe('the wizard', () => {
     expect(root.querySelector('[name="hostName"]')).not.toBeNull()
   })
 
+  it('keeps Bitwarden from taking an email address for a login', () => {
+    fillReport()
+    for (const position of ['Student', 'Visitor']) {
+      choose('position', position)
+      const emails = [...root.querySelectorAll<HTMLInputElement>('input[type="email"]')]
+      expect(emails).toHaveLength(2)
+      for (const email of emails) {
+        expect(email.hasAttribute('data-bwignore')).toBe(true)
+        expect(email.autocomplete).toBe('off')
+      }
+    }
+    expect(root.querySelector('[name="claimantName"]')?.hasAttribute('data-bwignore')).toBe(false)
+  })
+
   it('goes from the report to its expense, its receipt and bank statement, then reviews and saves it', async () => {
     fillReport()
     proceed()

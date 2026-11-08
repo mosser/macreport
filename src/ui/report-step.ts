@@ -34,10 +34,16 @@ function typed(report: Report, field: string, value: string): Typed {
   return { changes: { [field]: text }, isBroken: false }
 }
 
+/**
+ * An email address of this form is no login: `data-bwignore` keeps Bitwarden from
+ * offering to fill it with a username or a password, as `autocomplete="off"` does not.
+ */
+const notALogin = html`autocomplete="off" data-bwignore`
+
 function input(field: Field, value: string, type: string): Markup {
   return html`<label class="field">
     ${fieldName(field)}
-    <input name="${field}" type="${type}" value="${value}" />
+    <input name="${field}" type="${type}" value="${value}" ${type === 'email' ? notALogin : ''} />
     ${fieldRule(field)}
   </label>`
 }
