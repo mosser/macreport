@@ -1060,7 +1060,7 @@ describe('the Expenses step', () => {
     proceed()
     proceed()
     const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
-    expect(total).toEqual(['Total', 'EUR 640.00'])
+    expect(total).toEqual(['Total', 'EUR640.00'])
     button('[data-step="1"]')?.click()
     button('[data-change="0"]')?.click()
     expect(root.querySelector<HTMLInputElement>('[name="foreignAmount"]')?.value).toBe('640.00')
@@ -1336,7 +1336,7 @@ describe('the per diems', () => {
       ],
     ])
     const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
-    expect(total).toEqual(['Total', '$1,040.75USD 57.70'])
+    expect(total).toEqual(['Total', 'CAD1,040.75USD57.70'])
     expect(root.querySelector('tr.empty')).toBeNull()
   })
 

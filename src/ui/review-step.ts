@@ -58,7 +58,10 @@ function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Mar
     </table>
     ${isBusinessTravel ? perDiemsOf(layout.expenses) : ''}
     <table class="report-total">
-      <tr class="total"><th scope="row">Total</th><td>${layout.total.map((line) => html`<div>${line}</div>`)}</td></tr>
+      <tr class="total"><th scope="row">Total</th><td><div class="total-lines">${layout.total.map(
+        ({ currencyCode, amount }) =>
+          html`<span>${currencyCode}</span><span class="amount">${amount}</span>`,
+      )}</div></td></tr>
     </table>`
 }
 

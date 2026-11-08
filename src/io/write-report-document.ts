@@ -30,6 +30,7 @@ import type {
   Layout,
   Section,
   StampedExpense,
+  TotalLine,
 } from '../domain/layout.ts'
 import type { DocumentsAsWritten } from './documents-as-written.ts'
 import { formatOf } from './format.ts'
@@ -432,8 +433,37 @@ class Writer {
         row.mealsNotClaimed === '' ? row.supportingDocuments : [{ name: row.mealsNotClaimed }]
       this.documentsLine(flow, under, columns)
     }
-    this.tableRow(flow, columns, ['', '', 'Total', '', layout.total.join('\n'), ''], this.bold)
+    this.totalRow(flow, columns, layout.total)
     flow.stopContinuing()
+  }
+
+  /**
+   * The last row of the cover: Total under the descriptions, then, in the column of the claimed
+   * amounts, each line of the total, the codes on the left and the amounts on the right. An amount
+   * too wide for the column runs on into the empty Entered cell.
+   */
+  private totalRow(flow: Flow, columns: readonly Column[], total: readonly TotalLine[]): void {
+    const widths = columns.map((column) => column.width)
+    const description = margin + (widths[0] ?? 0) + (widths[1] ?? 0) + cellPadding
+    const left = description + (widths[2] ?? 0) + (widths[3] ?? 0)
+    const widthOf = (text: string) => this.bold.widthOfTextAtSize(text, tableSize)
+    const needed =
+      Math.max(...total.map(({ currencyCode }) => widthOf(currencyCode))) +
+      widthOf(' ') +
+      Math.max(...total.map(({ amount }) => widthOf(amount)))
+    const right = left + Math.max((widths[4] ?? 0) - 2 * cellPadding, needed)
+    const lineHeight = tableSize * leading
+    flow.ensure(total.length * lineHeight + 2 * cellPadding)
+    flow.down(cellPadding)
+    const { black } = this.palette
+    flow.text('Total', description, this.bold, tableSize, black)
+    for (const { currencyCode, amount } of total) {
+      flow.text(currencyCode, left, this.bold, tableSize, black)
+      flow.text(amount, right - widthOf(amount), this.bold, tableSize, black)
+      flow.down(lineHeight)
+    }
+    flow.down(cellPadding)
+    flow.rule(this.palette.rule, 0.5)
   }
 
   /**

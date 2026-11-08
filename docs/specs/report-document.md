@@ -97,7 +97,7 @@ the template's fields and its table, so that nothing else needs filling in.
   | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch | | $55.80 | ☐ |
   | | | | | | |
   | 5 | 2026-10-06 | Per diem, international: dinner | USD 57.70 | | ☐ |
-  | | | **Total** | | **$1,068.15**<br>**EUR 55.00**<br>**USD 143.80** | |
+  | | | **Total** | | **CAD 1,068.15**<br>**EUR 55.00**<br>**USD 143.80** | |
 
   A description keeps its line breaks. The foreign amount is the currency
   code then the amount, empty for an expense paid in Canadian dollars;
@@ -115,7 +115,9 @@ the template's fields and its table, so that nothing else needs filling in.
   of the claimed amounts and of the domestic meals claimed, when there is
   one, then, one per line and by currency in alphabetical order, the sum of
   the foreign amounts of the expenses without a claimed amount, US dollars
-  including the international meals claimed.
+  including the international meals claimed. Each line is the currency's code
+  then the amount, CAD included, the codes aligned on the left of the column
+  and the amounts on its right.
 
   A per diem row's description is *Per diem*, *domestic* or *international*,
   then its meals claimed, in the order breakfast, lunch, dinner. Its amount

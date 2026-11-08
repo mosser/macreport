@@ -27,6 +27,16 @@ export interface SupportingDocument {
   readonly document: Document
 }
 
+/** A line of the total, in one currency. */
+export interface TotalLine {
+  /** CAD, or the code of another currency. */
+  readonly currencyCode: string
+  /** The amount as 1,012.35, without its currency. */
+  readonly amount: string
+  /** The line as any amount is written elsewhere: $1,012.35, or EUR 55.00. */
+  readonly text: string
+}
+
 /** A row of the cover's table of expenses: an expense, or a per diem with a meal claimed. */
 export interface ExpenseRow {
   readonly number: number
@@ -114,7 +124,7 @@ export interface Layout {
    * when there is one, then, by currency in alphabetical order, the sum of the foreign amounts of
    * the expenses without a claimed amount, US dollars including the international per diems.
    */
-  readonly total: readonly string[]
+  readonly total: readonly TotalLine[]
   readonly sections: readonly Section[]
 }
 
@@ -451,7 +461,7 @@ export function mealsNotClaimedOf(perDiem: PerDiem): string {
 export function totalOf(
   expenses: readonly Expense[],
   perDiems: readonly PerDiem[],
-): readonly string[] {
+): readonly TotalLine[] {
   const claimed = expenses.flatMap((expense) => expense.claimedAmount ?? [])
   const foreign = new Map<Currency, Amount[]>()
   const addForeign = (currency: Currency, amount: Amount) =>
@@ -473,8 +483,18 @@ export function totalOf(
   }
   const sum = (amounts: readonly Amount[]) => amounts.reduce((total, amount) => total.plus(amount))
   const currencies = [...foreign.keys()].sort((one, other) => one.code.localeCompare(other.code))
+  const inCanadianDollars = (amount: Amount): TotalLine => ({
+    currencyCode: 'CAD',
+    amount: amount.grouped,
+    text: amount.toString(),
+  })
+  const inCurrency = (currency: Currency, amount: Amount): TotalLine => ({
+    currencyCode: currency.code,
+    amount: amount.grouped,
+    text: amount.inCurrency(currency),
+  })
   return [
-    ...(claimed.length > 0 ? [sum(claimed).toString()] : []),
-    ...currencies.map((currency) => sum(foreign.get(currency) ?? []).inCurrency(currency)),
+    ...(claimed.length > 0 ? [inCanadianDollars(sum(claimed))] : []),
+    ...currencies.map((currency) => inCurrency(currency, sum(foreign.get(currency) ?? []))),
   ]
 }

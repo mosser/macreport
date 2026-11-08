@@ -495,14 +495,32 @@ describe('writeReportDocument', () => {
     const places = placesOf(pdf, pdf.getPage(0))
     const place = (text: string) => places.find((each) => each.text === text)
     expect(place('EUR 55.00')).toBeDefined()
-    const [cad, euro] = places
-      .filter((each) => ['$1,012.35', 'EUR 55.00'].includes(each.text))
-      .slice(-2)
-    expect(cad?.text).toBe('$1,012.35')
-    expect(euro?.text).toBe('EUR 55.00')
+    const [cad, euro] = [place('CAD'), place('EUR')]
     expect(euro?.x).toBe(cad?.x)
     expect(euro?.y).toBeLessThan(cad?.y ?? 0)
     expect(place('Total')?.y).toBe(cad?.y)
+    // Right-aligned: digits are of one width in Noto Sans, so the shorter amount starts further on.
+    expect(place('1,012.35')?.y).toBe(cad?.y)
+    expect(place('55.00')?.y).toBe(euro?.y)
+    expect(place('55.00')?.x).toBeGreaterThan(place('1,012.35')?.x ?? 0)
+  })
+
+  it('keeps an amount of the total too wide for its column clear of its currency', async () => {
+    const report = await reportOf('A very large claim')
+    const expense = report.expenses[0] ?? new Expense()
+    const pdf = await written(
+      report.afterReplacing(
+        expense,
+        expense.afterChanging({ claimedAmount: new Amount(12_345_678_900) }),
+      ),
+    )
+    const places = placesOf(pdf, pdf.getPage(0))
+    const [code, amount] = [
+      places.find((place) => place.text === 'CAD'),
+      places.find((place) => place.text === '123,456,789.00'),
+    ]
+    expect(amount?.y).toBe(code?.y)
+    expect(amount?.x).toBeGreaterThan((code?.x ?? 0) + 18)
   })
 
   it('itemizes each per diem with a meal claimed on the cover, its meals not claimed under it, with an Entered box', async () => {
@@ -541,7 +559,8 @@ describe('writeReportDocument', () => {
     ]) {
       expect(at(text), text).toBeDefined()
     }
-    expect(places.filter((place) => place.text === 'USD 86.10')).toHaveLength(2)
+    expect(at('USD 86.10')).toBeDefined()
+    expect(at('86.10')?.y).toBe(at('USD')?.y)
     expect(at('Not claimed: lunch (provided by the conference)')?.x).toBeCloseTo(
       at('Per diem, international: breakfast, dinner')?.x ?? 0,
     )

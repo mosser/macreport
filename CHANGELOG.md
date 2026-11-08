@@ -24,6 +24,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - The Expenses step lists the expenses first, then the per diems, and shows each
   date on one line with its day of the week, as *Sat 2026-10-03*.
+- The total of the report, on the Review step and on the cover of the report
+  document, writes every line with its currency's code, as *CAD 1,068.15*, the
+  codes and the amounts aligned.
 - An image above 1 MB, also set in `config/document-sizes.json`, is written with
   a long side of at most 2200 pixels: a 5 MB phone photo weighs well under 1 MB
   in the report document, and its small print stays readable. A PNG stays a PNG

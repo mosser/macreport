@@ -5,7 +5,18 @@ import { Currency } from './currency.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
-import { layoutOf, mealsNotClaimedOf, perDiemDescriptionsOf, totalOf } from './layout.ts'
+import {
+  layoutOf,
+  mealsNotClaimedOf,
+  perDiemDescriptionsOf,
+  type TotalLine,
+  totalOf,
+} from './layout.ts'
+
+/** The lines of a total, each its currency's code then its amount. */
+const linesOf = (total: readonly TotalLine[]) =>
+  total.map(({ currencyCode, amount }) => `${currencyCode} ${amount}`)
+
 import { Meal } from './meal.ts'
 import { PerDiem } from './per-diem.ts'
 import { Report } from './report.ts'
@@ -136,7 +147,7 @@ describe('layoutOf', () => {
         mealsNotClaimed: '',
       },
     ])
-    expect(layout.total).toEqual(['$1,012.35'])
+    expect(linesOf(layout.total)).toEqual(['CAD 1,012.35'])
   })
 
   it('itemizes each per diem with a meal claimed among the expenses, by date, after the expenses of its day', () => {
@@ -179,7 +190,7 @@ describe('layoutOf', () => {
     ])
     expect(layout.expenses[1]?.perDiem).toBe(domestic)
     expect(layout.expenses[1]?.supportingDocuments).toEqual([])
-    expect(layout.total).toEqual(['$2,138.20', 'USD 86.10'])
+    expect(linesOf(layout.total)).toEqual(['CAD 2,138.20', 'USD 86.10'])
     const receipts = layout.sections.find((section) => section.kind === Kind.receipt)
     expect(receipts?.documents[0]?.expenseNumbers).toEqual([1, 3])
     expect(receipts?.documents[0]?.expenses[1]?.name).toBe('Expense 3: Taxi')
@@ -214,7 +225,7 @@ describe('layoutOf', () => {
         true,
       ],
     ])
-    expect(layout.total).toEqual(['$1,040.75', 'USD 57.70'])
+    expect(linesOf(layout.total)).toEqual(['CAD 1,040.75', 'USD 57.70'])
     expect(perDiemDescriptionsOf(mixed)).toEqual([
       'Per diem, domestic: breakfast',
       'Per diem, international: dinner',
@@ -240,7 +251,7 @@ describe('layoutOf', () => {
       claimedAmount: undefined,
     })
     const dinner = new PerDiem(day, { internationalMeals: Meal.all, mealsClaimed: [Meal.dinner] })
-    expect(totalOf([paid], [dinner])).toEqual(['USD 67.70'])
+    expect(totalOf([paid], [dinner]).map((line) => line.text)).toEqual(['USD 67.70'])
     expect(totalOf([], [new PerDiem(day)])).toEqual([])
   })
 
@@ -268,9 +279,10 @@ describe('layoutOf', () => {
       ['EUR 10.00', ''],
       ['EUR 640.00', '$87.10'],
     ])
-    expect(layout.total).toEqual(['$1,099.45', 'EUR 65.00', 'JPY 3,000.00'])
+    expect(linesOf(layout.total)).toEqual(['CAD 1,099.45', 'EUR 65.00', 'JPY 3,000.00'])
+    expect(layout.total[0]?.text).toBe('$1,099.45')
     const foreignOnly = report.afterReplacing(flight, paid(5500, euro))
-    expect(layoutOf(foreignOnly).total).toEqual(['EUR 55.00'])
+    expect(linesOf(layoutOf(foreignOnly).total)).toEqual(['EUR 55.00'])
   })
 
   it('names a document as the Claimant named it, on the cover', () => {
@@ -371,7 +383,7 @@ describe('layoutOf', () => {
       [1, 'Taxi', ['R1', 'S1']],
       [2, 'Air Canada, YYZ–CDG return', ['R2', 'S1']],
     ])
-    expect(layout.total).toEqual(['$1,099.45'])
+    expect(linesOf(layout.total)).toEqual(['CAD 1,099.45'])
     expect(layout.sections[2]?.documents).toEqual([
       {
         label: 'S1',

@@ -251,7 +251,7 @@ function perDiemsLineOf(report: Report): Markup {
     return html``
   }
   const days = claimed.length === 1 ? '1 day' : `${claimed.length} days`
-  const line = [days, ...totalOf([], claimed)].join(' · ')
+  const line = [days, ...totalOf([], claimed).map((total) => total.text)].join(' · ')
   const rows = claimed.map(
     (perDiem) => html`<tr class="expense">
         <td class="date">${perDiem.date.withDayOfWeek}</td>

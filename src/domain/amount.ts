@@ -41,16 +41,16 @@ export class Amount {
 
   /** The amount in Canadian dollars, as $1,012.35. */
   toString(): string {
-    return `$${this.grouped()}`
+    return `$${this.grouped}`
   }
 
   /** The amount in a currency other than the Canadian dollar, as EUR 1,012.35. */
   inCurrency(currency: Currency): string {
-    return `${currency.code} ${this.grouped()}`
+    return `${currency.code} ${this.grouped}`
   }
 
   /** The amount as 1,012.35, its thousands grouped. */
-  private grouped(): string {
+  get grouped(): string {
     const dollars = Math.floor(this.cents / 100)
     const cents = String(this.cents % 100).padStart(2, '0')
     const digits = [...String(dollars)]
