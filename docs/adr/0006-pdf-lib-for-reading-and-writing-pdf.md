@@ -74,7 +74,10 @@ Options considered for the fonts:
   in `src/assets/fonts/` with their licence and a note of how they were cut
   down, and inlined by the build. The report document embeds the subset of
   the glyphs it uses. Whether a text can be written is decided against the
-  same font, so the domain's finding and the writer cannot disagree.
+  same font, so the domain's finding and the writer cannot disagree: the
+  domain, which imports no PDF library, holds the characters of the font in
+  `src/domain/writable-characters.ts`, and a test under `src/io/` compares them
+  with both fonts.
 - **Stamping a copied page** first wraps its own content in a saved graphics
   state, so that the stamp is drawn in the page's coordinates whatever the
   content left behind, and places the stamp and its links according to the

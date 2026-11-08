@@ -364,12 +364,12 @@ function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
 }
 
 /**
- * A text as a stamp keeps it, on one line: its line breaks as spaces, then its first 30
+ * A text as a stamp keeps it, on one line: its line breaks and tabs as spaces, then its first 30
  * characters, an ellipsis when it is longer.
  */
 function cut(text: string): string {
   const oneLine = text
-    .split('\n')
+    .split(/\r\n|[\n\r\t]/)
     .map((line) => line.trim())
     .join(' ')
   const characters = [...oneLine]

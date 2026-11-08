@@ -1,6 +1,8 @@
 import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
+import { Kind } from './kind.ts'
 import type { Report } from './report.ts'
+import { charactersNotWritableIn } from './writable-characters.ts'
 
 /** The step of the wizard a finding is about. */
 export type FindingStep = 'Report' | 'Expenses' | 'Additional documents'
@@ -231,11 +233,100 @@ export function findingsOfAdditionalDocumentsStep(report: Report): readonly Find
   return [...justification, ...namesTaken('Additional documents', report, documents)]
 }
 
+/** A character as a finding names it: itself, and its code, as an invisible one has nothing else. */
+function characterWording(character: string): string {
+  const code = (character.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')
+  return `${character} (U+${code})`
+}
+
+/** A text the report document writes: what it is, as a finding names it, and its value. */
+interface WrittenText {
+  readonly step: FindingStep
+  /** The expense, the per diem or the document the text is of, followed by a colon; empty otherwise. */
+  readonly subject: string
+  readonly field: Field
+  readonly value: string | undefined
+}
+
+/** The fields of the report the report document writes as the Claimant typed them. */
+const writtenReportFields = [
+  'claimantName',
+  'email',
+  'supervisorName',
+  'supervisorEmail',
+  'hostName',
+  'hostEmail',
+  'purpose',
+  'locations',
+  'accountName',
+  'accountCode',
+] as const
+
+/**
+ * Every text the Claimant gave that the report document writes: the fields of the report, the
+ * description of each expense, the reason of each meal not claimed of a day with a meal claimed,
+ * and the name of each document.
+ */
+function writtenTextsOf(report: Report): readonly WrittenText[] {
+  return [
+    ...writtenReportFields.map(
+      (field): WrittenText => ({ step: 'Report', subject: '', field, value: report[field] }),
+    ),
+    ...report.expensesByDate.map(
+      (expense): WrittenText => ({
+        step: 'Expenses',
+        subject: `${expenseWording(expense)}: `,
+        field: 'description',
+        value: expense.description,
+      }),
+    ),
+    ...report.claimedPerDiems.flatMap((perDiem) =>
+      perDiem.mealsNotClaimed.map(
+        (meal): WrittenText => ({
+          step: 'Expenses',
+          subject: `Per diem ${perDiem.date}, ${meal.name}: `,
+          field: 'reason',
+          value: perDiem.reasonFor(meal),
+        }),
+      ),
+    ),
+    ...report.documents.map(
+      (document): WrittenText => ({
+        step: document.kind === Kind.additionalDocument ? 'Additional documents' : 'Expenses',
+        subject: `${document.kind.name} ${document.fileName}: `,
+        field: 'documentName',
+        value: document.name,
+      }),
+    ),
+  ]
+}
+
+/**
+ * The texts holding a character the report document cannot write: never replaced silently, the
+ * Claimant decides how to write it. Each stands between the report and its report document, and
+ * holds no step: it is found on the Review step.
+ */
+export function findingsOfCharacters(report: Report): readonly Finding[] {
+  return writtenTextsOf(report).flatMap(({ step, subject, field, value }) => {
+    const characters = charactersNotWritableIn(value ?? '')
+    if (characters.length === 0) return []
+    const holds = characters.length === 1 ? 'a character' : 'characters'
+    const named = characters.map(characterWording).join(', ')
+    return [
+      {
+        step,
+        wording: `${subject}${fieldNames[field]} holds ${holds} the report document cannot write: ${named}.`,
+      },
+    ]
+  })
+}
+
 /** Every finding of the report: a report with none can be saved as a report document. */
 export function findingsOf(report: Report): readonly Finding[] {
   return [
     ...findingsOfReportStep(report),
     ...findingsOfExpensesStep(report),
     ...findingsOfAdditionalDocumentsStep(report),
+    ...findingsOfCharacters(report),
   ]
 }

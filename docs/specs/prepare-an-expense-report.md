@@ -189,7 +189,8 @@ Continue is not offered.
 
 ### 4. Review
 
-The report as it will be written: the cover, with the table of the
+With a finding, the step shows its findings, as errors, and nothing else. Without
+one, it shows the report as it will be written: the cover, with the table of the
 expenses, each on two lines as in the report document, its documents by their
 names, or *No expense entered* in grey; the per diems of a business travel, under their own
 heading, one row per day with a meal claimed, or *No per diem entered* in
@@ -200,10 +201,9 @@ total, one amount per currency; then the total of the report, as on the
 cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added, or from its reduced file
-once reduced. The Entered boxes are the report document's alone. Then the
-findings, if any.
+once reduced. The Entered boxes are the report document's alone.
 
-With no finding, the sizes stand at the top of the step: the size of the report
+The sizes stand at the top of the step: the size of the report
 document, or *Working out the sizes…* until the sizes are known, Save the report
 staying offered meanwhile; then each document heavy or reduced, by its label and
 its name, with its size. A heavy PDF document that reducing makes at least 10 %
@@ -220,7 +220,7 @@ document on offer, when there is more than one.
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
 | A business travel has no travel justification | At least one travel justification is required. |
 | A document has the name of a document before it | The document, by its file name, and its name. |
-| A text holds a character the report document cannot write | The field, the expense or the per diem when it is one, and the character. For a name: the document, by its kind and file name. |
+| A text holds a character the report document cannot write | The field, the expense or the per diem when it is one, and each character with its code, as *日 (U+65E5)*. For a name: the document, by its kind and file name. It holds no step: it is found here. |
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as

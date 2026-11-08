@@ -512,6 +512,28 @@ describe('the wizard', () => {
     expect(root.querySelector('h2')?.textContent).toBe('Report')
   })
 
+  it('reaches the Review step with a character the report document cannot write, which holds the save until it is corrected', async () => {
+    fillReport()
+    type('purpose', 'ICSE 日')
+    expect(continueButton()?.disabled).toBe(false)
+    proceed()
+    await fillExpense()
+    proceed()
+    proceed()
+    const findings = () =>
+      [...root.querySelectorAll('.findings li')].map((finding) => finding.textContent)
+    expect(findings()).toEqual([
+      'Purpose holds a character the report document cannot write: 日 (U+65E5).',
+    ])
+    expect(button('[data-action="save"]')).toBeNull()
+    expect(root.querySelector('table.expenses')).toBeNull()
+    button('[data-step="0"]')?.click()
+    type('purpose', 'ICSE 2026')
+    button('[data-step="3"]')?.click()
+    expect(findings()).toEqual([])
+    expect(button('[data-action="save"]')).not.toBeNull()
+  })
+
   it('reviews the findings of a report reached with something missing', async () => {
     fillReport()
     proceed()

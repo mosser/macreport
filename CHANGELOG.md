@@ -51,6 +51,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- A character the report document cannot write, such as Chinese, Japanese or an
+  emoji, no longer vanishes from it silently: it is a finding on the Review step,
+  naming the field and the character, and the report cannot be saved until it is
+  corrected.
 - The lines between the expenses, and between the rows of every table of the
   report document, show at normal zoom: they were too pale to be seen.
 - A photo's Exif data, the location it was taken at among it, no longer reaches

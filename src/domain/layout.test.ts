@@ -285,6 +285,18 @@ describe('layoutOf', () => {
     expect(linesOf(layoutOf(foreignOnly).total)).toEqual(['EUR 55.00'])
   })
 
+  it('keeps a stamp on one line, whatever separates the lines of a description', () => {
+    const flight = report.expenses[0]
+    if (flight === undefined) throw new TypeError('No expense')
+    const stamped = report.afterReplacing(
+      flight,
+      flight.afterChanging({ description: 'Dinner\twith\r\nAda' }),
+    )
+    expect(layoutOf(stamped).sections[1]?.documents[0]?.expenses[0]?.description).toBe(
+      'Dinner with Ada',
+    )
+  })
+
   it('calls a document by its kind on the cover, whatever the Claimant named it', () => {
     const named = report.afterRenaming(statement, 'Visa, October')
     expect(
