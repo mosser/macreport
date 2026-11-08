@@ -30,11 +30,14 @@ export function separated(pieces: readonly Markup[]): Markup[] {
 
 /**
  * What supports an expense, one after the other: each of its documents by its name, a link to it,
- * and Paid in cash where its bank statement would be.
+ * Missing receipt where its receipt would be, and Paid in cash where its bank statement would be.
  */
 export function supportOf(expense: Expense, linkOf: LinkOf): Markup[] {
+  const linked = (documents: readonly Document[]) => documents.map((document) => linkOf(document))
   return separated([
-    ...expense.documents.map((document) => linkOf(document)),
+    ...linked(expense.receipts),
+    ...(expense.missingReceipt === undefined ? [] : [html`${fieldNames.missingReceipt}`]),
+    ...linked(expense.bankStatements),
     ...(expense.isPaidInCash ? [html`${fieldNames.paidInCash}`] : []),
   ])
 }

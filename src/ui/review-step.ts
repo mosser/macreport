@@ -37,7 +37,7 @@ function emptyRow(columns: number, wording: string): Markup {
 
 /**
  * The cover: its fields, then, under Itemized expenses, each expense on two lines, the second its
- * documents and Paid in cash, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
+ * documents, Missing receipt and Paid in cash, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
  * report.
  */
 function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Markup {
@@ -251,6 +251,19 @@ function keepingFocus(panel: HTMLElement, render: () => void): void {
   again?.focus({ preventScroll: true })
 }
 
+/**
+ * What the step says of each missing receipt authorization, when there is one: it is to be signed,
+ * once the bank statements, when there are some, are redacted: a change may invalidate a signature.
+ */
+function signatureReminderOf(report: Report): Markup {
+  if (report.lastMissingReceipt === undefined) return html``
+  const when =
+    report.documentsOf(Kind.bankStatement).length > 0
+      ? 'once the bank statements are redacted'
+      : 'before you submit the report document'
+  return html`<p class="status reminder">Sign each missing receipt authorization, ${when}.</p>`
+}
+
 /** What became of the last save: the report it was for, and its file name or that it failed. */
 type Outcome =
   | { readonly report: Report; readonly fileName: string }
@@ -271,7 +284,7 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
     report.documentsOf(Kind.bankStatement).length > 0
       ? html`<p class="status reminder">Redact the bank statements in the report document before you submit it.</p>`
       : html``
-  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${redaction}${draft}`
+  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${redaction}${signatureReminderOf(report)}${draft}`
 }
 
 /**

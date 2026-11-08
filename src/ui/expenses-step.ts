@@ -15,6 +15,7 @@ import {
 import { Kind } from '../domain/kind.ts'
 import { mealsNotClaimedOf, perDiemDescriptionsOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
+import type { MissingReceiptFields } from '../domain/missing-receipt.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
 import { textOrAbsent } from '../domain/text.ts'
@@ -30,6 +31,7 @@ import { type DocumentLinks, type LinkOf, linksAnew, supportOf } from './documen
 import { fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
+import { statedMissingReceipt } from './missing-receipt-dialog.ts'
 import type { Context, Step } from './step.ts'
 
 /**
@@ -77,8 +79,9 @@ function afterChanging(
 
 /**
  * The receipt and the bank statement of the expense of a rank: one each, added from a file or
- * chosen among those already in the report, and taken out of this expense only; Paid in cash,
- * stated in place of the bank statement.
+ * chosen among those already in the report, and taken out of this expense only; a missing receipt
+ * and Paid in cash, stated in their place. The dialog of an expense without a missing receipt
+ * starts with the job title and the extension of the last expense added that has one.
  */
 function documentFieldsOf(index: number): readonly DocumentField[] {
   const expenseIn = (report: Report) => report.expenses[index] ?? new Expense()
@@ -103,14 +106,37 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
         .filter((document) => !expenseIn(report).documents.includes(document)),
     ...(statedInstead === undefined ? {} : { statedInstead }),
   })
-  const paidInCash = (isPaidInCash: boolean) => (report: Report) =>
-    afterChanging(report, index, (expense) => expense.afterChanging({ isPaidInCash }))
+  const changing = (context: Context, changes: ExpenseFields) =>
+    context.change(
+      afterChanging(context.report, index, (expense) => expense.afterChanging(changes)),
+    )
+  const startOf = (report: Report): Partial<MissingReceiptFields> => {
+    const own = expenseIn(report).missingReceipt
+    if (own !== undefined) return own
+    const last = report.lastMissingReceipt
+    return { jobTitle: last?.jobTitle ?? '', extension: last?.extension }
+  }
   return [
     fieldOf(
       'receipts',
       Kind.receipt,
       (expense) => expense.receipts,
       (receipts) => ({ receipts }),
+      {
+        wording: fieldNames.missingReceipt,
+        isChangeable: true,
+        isStatedIn: (report) => expenseIn(report).missingReceipt !== undefined,
+        state: async (context, page) => {
+          const missingReceipt = await statedMissingReceipt(page, startOf(context.report))
+          if (missingReceipt === undefined) return false
+          changing(context, { missingReceipt })
+          return true
+        },
+        afterTakingBack: (report) =>
+          afterChanging(report, index, (expense) =>
+            expense.afterChanging({ missingReceipt: undefined }),
+          ),
+      },
     ),
     fieldOf(
       'bankStatements',
@@ -119,9 +145,14 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
       (bankStatements) => ({ bankStatements }),
       {
         wording: fieldNames.paidInCash,
+        isChangeable: false,
         isStatedIn: (report) => expenseIn(report).isPaidInCash,
-        afterStating: paidInCash(true),
-        afterTakingBack: paidInCash(false),
+        state: async (context) => {
+          changing(context, { isPaidInCash: true })
+          return true
+        },
+        afterTakingBack: (report) =>
+          afterChanging(report, index, (expense) => expense.afterChanging({ isPaidInCash: false })),
       },
     ),
   ]

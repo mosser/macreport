@@ -9,7 +9,7 @@ import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
 import { html, type Markup } from './html.ts'
-import { cross, trashCan } from './icons.ts'
+import { cross, pen, trashCan } from './icons.ts'
 import type { Context } from './step.ts'
 
 /** Reads a file the Claimant adds into a document of a kind. */
@@ -17,15 +17,20 @@ export type ReadFile = (file: File, kind: Kind) => Promise<Document>
 
 /**
  * What the Claimant may state of a field that holds no document, which then takes its place: Paid
- * in cash, of a bank statement.
+ * in cash, of a bank statement; a missing receipt, of a receipt.
  */
 export interface StatedInstead {
   /** What is offered, and said once stated. */
   readonly wording: string
   /** Whether the report states it. */
   isStatedIn(report: Report): boolean
-  /** The report, stating it. */
-  afterStating(report: Report): Report
+  /** Whether what is stated can be changed, with a pen, by stating it again. */
+  readonly isChangeable: boolean
+  /**
+   * States it, asking the Claimant what it takes when it takes something; gives whether it is
+   * stated, which it is not when they cancel.
+   */
+  state(context: Context, page: globalThis.Document): Promise<boolean>
   /** The report, no longer stating it: the field asks for its document again. */
   afterTakingBack(report: Report): Report
 }
@@ -95,12 +100,17 @@ function choicesOf(field: DocumentField, report: Report): Markup {
   </label>`
 }
 
-/** What is stated in place of a field, and Take back, a cross. */
-function statedOf(field: DocumentField, { wording }: StatedInstead): Markup {
+/** What is stated in place of a field, Change, a pen, when it can be changed, and Take back, a cross. */
+function statedOf(field: DocumentField, { wording, isChangeable }: StatedInstead): Markup {
+  const change = isChangeable
+    ? html`<button type="button" class="icon" data-change-stated="${field.field}"
+        aria-label="Change: ${wording}" title="Change">${pen}</button>`
+    : ''
   return html`<div class="field" data-field="${field.field}">
     ${fieldName(field.field, false)}
     <div class="stated">
       <span class="stated-wording">${wording}</span>
+      ${change}
       <button type="button" class="icon remove" data-take-back="${field.field}"
         aria-label="Take back: ${wording}" title="Take back">${cross}</button>
     </div>
@@ -286,13 +296,15 @@ export function listenToDocumentFields(
     context.refresh()
     panel.ownerDocument.querySelector<HTMLElement>(selector)?.focus()
   }
-  for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-state]')) {
-    button.addEventListener('click', () => {
-      const name = button.dataset.state
+  for (const button of panel.querySelectorAll<HTMLButtonElement>(
+    '[data-state], [data-change-stated]',
+  )) {
+    button.addEventListener('click', async () => {
+      const name = button.dataset.state ?? button.dataset.changeStated
       const stated = fieldNamed(name)?.statedInstead
-      if (stated === undefined) return
-      context.change(stated.afterStating(context.report))
-      refreshFocusing(`[data-take-back="${name}"]`)
+      if (await stated?.state(context, panel.ownerDocument)) {
+        refreshFocusing(`[data-take-back="${name}"]`)
+      }
     })
   }
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-take-back]')) {
