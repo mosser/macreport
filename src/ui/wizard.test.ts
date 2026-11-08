@@ -319,6 +319,13 @@ describe('the wizard', () => {
       expect(kept.at(-1)?.lastDay?.toString()).toBe('2027-01-01')
     })
 
+    it('takes no last day after the last date a field takes', () => {
+      type('firstDay', '9999-12-31')
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('')
+      expect(kept.at(-1)?.lastDay).toBeUndefined()
+    })
+
     it('counts a last day taken that way for Continue', () => {
       type('locations', 'Rio de Janeiro, Brazil')
       type('firstDay', '2026-10-03')

@@ -166,6 +166,8 @@ export const reportStep: Step = {
     panel.querySelector('[name="firstDay"]')?.addEventListener('blur', () => {
       const { firstDay, lastDay: last } = context.report
       if (firstDay === undefined || last !== undefined || lastDay === null) return
+      // The day after the last date a field takes is not a date of four digits: it would not be kept.
+      if (firstDay.toString() === latestDate) return
       lastDay.value = firstDay.dayAfter.toString()
       context.change(context.report.afterChanging({ lastDay: firstDay.dayAfter }))
       context.refreshActions()
