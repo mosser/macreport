@@ -280,8 +280,8 @@ function reasonKeyOf(perDiem: PerDiem, meal: Meal): string {
 }
 
 /**
- * Under a meal not claimed of a day with a meal claimed, its reason, once given or asked for with
- * Add a reason; nothing under a meal claimed, nor on a day that claims nothing.
+ * A meal not claimed of a day with a meal claimed: its reason, once given or asked for, or Add a
+ * reason; nothing for a meal claimed, nor on a day that claims nothing.
  */
 function reasonOf(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>): Markup {
   if (perDiem.isClaiming(meal) || !perDiem.hasMealClaimed) {
@@ -291,53 +291,47 @@ function reasonOf(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>): 
   const reason = perDiem.reasonFor(meal)
   if (reason === undefined && !askedFor.has(reasonKeyOf(perDiem, meal))) {
     return html`<button type="button" class="add-reason" data-add-reason
-      data-day="${day}" data-meal="${meal.name}" aria-label="Add a reason, ${meal.name}, ${day}">Add a reason</button>`
+      data-day="${day}" data-meal="${meal.name}">Add a reason: ${meal.name}</button>`
   }
   return html`<label class="field reason">
-      ${fieldNames.reason}
+      ${meal.title} not claimed
       <input type="text" name="reason" data-day="${day}" data-meal="${meal.name}"
         value="${reason ?? ''}" aria-label="${fieldNames.reason}, ${meal.name}, ${day}" />
     </label>`
 }
 
-/** A meal of a day: ticked when claimed; not claimed, with its reason. */
-function mealOf(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>): Markup {
+/** A meal of a day, a toggle pressed when it is claimed. */
+function mealOf(perDiem: PerDiem, meal: Meal): Markup {
   const day = perDiem.date.toString()
-  const isClaimed = perDiem.isClaiming(meal)
-  const reason = reasonOf(perDiem, meal, askedFor)
-  return html`<td class="meal">
-    <label class="checkbox">
-      <input type="checkbox" name="meal" data-day="${day}" data-meal="${meal.name}"
-        ${isClaimed ? html`checked` : ''} aria-label="${meal.title}, ${day}" />
-    </label>
-    ${reason}
-  </td>`
+  return html`<label class="meal-toggle">
+    <input type="checkbox" name="meal" data-day="${day}" data-meal="${meal.name}"
+      ${perDiem.isClaiming(meal) ? html`checked` : ''} aria-label="${meal.title}, ${day}" />
+    ${meal.title}
+  </label>`
 }
 
 /**
- * The per diems of the business travel, one row per day, by its date and its day of the week:
- * domestic or international, each meal
- * claimed or not, and the day's total; All domestic and All international above, Done under.
+ * The per diems of the business travel, one card per day, under its day of the week and its date:
+ * domestic or international, each meal claimed or not, then the reasons of its meals not claimed;
+ * All domestic and All international above, Done under.
  */
 function perDiemsFormOf(report: Report, askedFor: ReadonlySet<string>): Markup {
-  const rows = report.perDiemsByDay.map(
-    (perDiem) => html`<tr>
-      <th scope="row">${perDiem.date.toString()}<span class="day-of-week">${perDiem.date.dayOfWeek}</span></th>
-      <td>${scopeOf(perDiem, 'domestic')}${scopeOf(perDiem, 'international')}</td>
-      ${Meal.all.map((meal) => mealOf(perDiem, meal, askedFor))}
-    </tr>`,
+  const days = report.perDiemsByDay.map(
+    (perDiem) => html`<section class="per-diem-day">
+      <div class="per-diem-heading">
+        <h3><span class="day-of-week">${perDiem.date.dayOfWeek}</span> ${perDiem.date.toString()}</h3>
+        <div class="per-diem-scope">${scopeOf(perDiem, 'domestic')}${scopeOf(perDiem, 'international')}</div>
+      </div>
+      <div class="meal-toggles">${Meal.all.map((meal) => mealOf(perDiem, meal))}</div>
+      ${Meal.all.map((meal) => reasonOf(perDiem, meal, askedFor))}
+    </section>`,
   )
   return html`<h2>Per diems</h2>
     <div class="expense-buttons">
       <button type="button" data-action="all-domestic">All domestic</button>
       <button type="button" data-action="all-international">All international</button>
     </div>
-    <table class="per-diems">
-      <thead><tr>
-        <th>Date</th><th></th>${Meal.all.map((meal) => html`<th class="meal">${meal.title}</th>`)}
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div class="per-diem-days">${days}</div>
     <button type="button" class="primary" data-action="done">Done</button>`
 }
 

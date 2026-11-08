@@ -410,40 +410,84 @@ footer p {
   margin-bottom: 0;
 }
 
-/* The day of the week of a per diem, under its date. */
-.day-of-week {
-  display: block;
-  font-weight: 400;
-  color: var(--color-secondary-text);
-}
-
 /* The per diems claimed, on one line above the expenses. */
 .per-diems-line {
   font-weight: 600;
 }
 
-/* A day's meals: each ticked or not, with its rate, a meal not claimed with its reason under it. */
-table.per-diems .checkbox {
-  margin-bottom: 0.25rem;
+/* A day of the per diems: its day and date beside domestic or international, then its meals. */
+.per-diem-day {
+  border: 1px solid var(--color-rule);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
 }
 
-/* A meal's tick box, its heading and Add a reason centred in its column. */
-table.per-diems .meal {
-  text-align: center;
+.per-diem-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
 }
 
-table.per-diems td.meal .checkbox {
-  justify-content: center;
+.per-diem-heading h3 {
+  margin: 0;
+  font-size: 1rem;
 }
 
-table.per-diems .reason {
+.per-diem-scope {
+  display: flex;
+  gap: 1rem;
+}
+
+.per-diem-scope .checkbox {
   margin-bottom: 0;
-  font-size: 0.9rem;
-  text-align: left;
 }
 
-/* Add a reason, under a meal not claimed: quiet until it is wanted. */
+/* Each meal a toggle, tinted when claimed. */
+.meal-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.meal-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0;
+  padding: 0.35rem 0.75rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.meal-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+.meal-toggle:has(input:checked) {
+  background: var(--color-tint);
+  font-weight: 600;
+}
+
+/* The reason of a meal not claimed, at the width of its day; Add a reason, quiet until wanted. */
+.per-diem-day .reason {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.per-diem-day .reason input {
+  max-width: 32rem;
+}
+
 button.add-reason {
+  display: inline-block;
+  margin: 0.5rem 1.25rem 0 0;
   padding: 0;
   border: none;
   background: none;

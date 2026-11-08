@@ -1104,8 +1104,8 @@ describe('the per diems', () => {
   }
 
   const days = () =>
-    [...root.querySelectorAll('table.per-diems tbody tr')].map(
-      (row) => row.querySelector('th')?.textContent,
+    [...root.querySelectorAll('.per-diem-day h3')].map((heading) =>
+      heading.textContent?.replace(/\s+/g, ' ').trim(),
     )
   /** The amount of each per diem with a meal claimed, as the draft keeps it. */
   const amounts = () => kept.at(-1)?.claimedPerDiems.map((perDiem) => perDiem.amountText)
@@ -1125,15 +1125,15 @@ describe('the per diems', () => {
     expect(continueButton()?.disabled).toBe(true)
     button('[data-action="manage-per-diems"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Per diems')
-    expect(days()).toEqual(['2026-10-03Saturday', '2026-10-04Sunday', '2026-10-05Monday'])
-    expect(root.querySelector('table.per-diems .day-of-week')?.textContent).toBe('Saturday')
+    expect(days()).toEqual(['Saturday 2026-10-03', 'Sunday 2026-10-04', 'Monday 2026-10-05'])
+    expect(meal('2026-10-03', 'lunch')?.closest('.meal-toggle')?.textContent?.trim()).toBe('Lunch')
     expect(continueButton()?.hidden).toBe(true)
     expect(meal('2026-10-03', 'breakfast')?.checked).toBe(false)
     expect(
       root.querySelector<HTMLInputElement>('input[data-day="2026-10-03"][value="domestic"]')
         ?.checked,
     ).toBe(true)
-    expect(root.querySelector('table.per-diems')?.textContent).not.toContain('$')
+    expect(root.querySelector('.per-diem-days')?.textContent).not.toContain('$')
   })
 
   it('claim each meal at its rate, domestic in Canadian dollars, international in US dollars, set all at once', () => {
@@ -1154,7 +1154,7 @@ describe('the per diems', () => {
     expect(amounts()).toEqual(['$86.10', '$27.40'])
     claim('2026-10-03', 'dinner', false)
     expect(amounts()).toEqual(['$28.40', '$27.40'])
-    expect(root.querySelector('table.per-diems')?.textContent).not.toMatch(/\$|USD/)
+    expect(root.querySelector('.per-diem-days')?.textContent).not.toMatch(/\$|USD/)
   })
 
   it('ask a reason only once Add a reason is clicked, under a meal not claimed of a day with a meal claimed', () => {
