@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-07
+
 ### Fixed
 
 - Bitwarden no longer takes the email fields of the Report step for a login
