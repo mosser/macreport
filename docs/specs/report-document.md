@@ -99,7 +99,9 @@ the template's fields and its table, so that nothing else needs filling in.
   | | | **Total** | | **CAD 1,068.15**<br>**EUR 55.00**<br>**USD 143.80** | |
 
   The titles *Claimed (CAD)* and *Entered (Mosaic)* each stand on two lines,
-  centred in their columns. A description keeps its line breaks. The foreign amount is the currency
+  centred in their columns. An amount is always written with two decimals, as
+  *$10.00*. The claimed amounts stand on the right of their column, ending with
+  those of the total. A description keeps its line breaks. The foreign amount is the currency
   code then the amount, empty for an expense paid in Canadian dollars;
   nothing is converted. The claimed amount is empty for an expense that has
   none, McSCert working it out from the foreign amount. The supporting documents are

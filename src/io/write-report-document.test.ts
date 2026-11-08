@@ -597,6 +597,22 @@ describe('writeReportDocument', () => {
     expect(mosaic?.x).toBeLessThan(enteredColumn + 48 / 2)
   })
 
+  it('writes the claimed amounts on the right of their column, ending with those of the total', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const flight = report.expenses[0] ?? new Expense()
+    const pdf = await written(
+      report.afterAdding(flight.afterChanging({ claimedAmount: new Amount(1000) })),
+    )
+    const places = placesOf(pdf, pdf.getPage(0))
+    const at = (text: string) => places.find((place) => place.text === text)
+    const [large, small, total] = [at('$1,012.35'), at('$10.00'), at('1,022.35')]
+    expect(small?.x).toBeGreaterThan(large?.x ?? 0)
+    // Bold digits are of one width too: the same text ends at the same place in either font.
+    const column = 54 + 22 + 62 + 220 + 76
+    expect(large?.x).toBeGreaterThan(column + 4)
+    expect(total?.x).toBeGreaterThan(large?.x ?? 0)
+  })
+
   it('keeps an amount of the total too wide for its column clear of its currency', async () => {
     const report = await reportOf('A very large claim')
     const expense = report.expenses[0] ?? new Expense()

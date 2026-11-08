@@ -26,6 +26,9 @@ describe('Amount', () => {
   it('adds and writes itself in dollars', () => {
     expect(new Amount(101235).plus(new Amount(8710)).toString()).toBe('$1,099.45')
     expect(new Amount(5).toString()).toBe('$0.05')
+    expect(Amount.parse('10')?.toString()).toBe('$10.00')
+    expect(Amount.parse('10.5')?.toString()).toBe('$10.50')
+    expect(Amount.parse('10')?.grouped).toBe('10.00')
     expect(new Amount(123456789).toString()).toBe('$1,234,567.89')
   })
 

@@ -82,6 +82,8 @@ interface Column {
   readonly width: number
   /** Whether each line of its title is centred in the column; at its left otherwise. */
   readonly isTitleCentred?: boolean
+  /** Whether each line of its rows ends at the right of the column; starts at its left otherwise. */
+  readonly isRightAligned?: boolean
 }
 
 /** A text of a table that is a link: to a document, or to an expense's row on the cover. */
@@ -429,7 +431,7 @@ class Writer {
       { title: 'Date', width: 62 },
       { title: 'Description', width: 220 },
       { title: 'Foreign amount', width: 76 },
-      { title: 'Claimed\n(CAD)', width: 76, isTitleCentred: true },
+      { title: 'Claimed\n(CAD)', width: 76, isTitleCentred: true, isRightAligned: true },
       { title: 'Entered\n(Mosaic)', width: 48, isTitleCentred: true },
     ]
     this.table(flow, columns, [])
@@ -840,11 +842,8 @@ class Writer {
       let x = margin
       for (const [index, column] of columns.entries()) {
         const cell = wrapped[index]?.[line]
-        const left =
-          isHeader && column.isTitleCentred
-            ? x + (column.width - font.widthOfTextAtSize(cell?.text ?? '', tableSize)) / 2
-            : x + padding
-        this.cellLine(flow, cell, left, { font, colour })
+        const width = font.widthOfTextAtSize(cell?.text ?? '', tableSize)
+        this.cellLine(flow, cell, x + cellOffsetOf(column, width, isHeader), { font, colour })
         x += column.width
       }
       flow.down(lineHeight)
@@ -956,6 +955,13 @@ class Writer {
 /** The label of a stamp: a link only for a document supporting no expense to go back to. */
 function stampedLabelOf({ label, expenses }: LabelledDocument): StampPiece {
   return expenses.length === 0 ? { text: label, label } : { text: label }
+}
+
+/** How far from the left of its column a line of a cell of this width starts. */
+function cellOffsetOf(column: Column, width: number, isHeader: boolean): number {
+  if (isHeader && column.isTitleCentred) return (column.width - width) / 2
+  if (!isHeader && column.isRightAligned) return column.width - cellPadding - width
+  return cellPadding
 }
 
 /** What a piece of a stamp is a link to, when it is one. */
