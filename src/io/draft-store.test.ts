@@ -256,6 +256,22 @@ describe('the draft store', () => {
     expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
   })
 
+  it('writes again a document taken out of the draft, then put back as it was', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    const expense = report.expenses[0] ?? new Expense()
+    expect(await store.keep(report)).toBe(true)
+    expect(await store.keep(report.afterRemovingExpense(expense))).toBe(true)
+    expect(await store.keep(report)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual([
+      'reçu.pdf',
+    ])
+    expect(restored.expenses[0]?.bankStatements.map((document) => document.fileName)).toEqual([
+      'october.png',
+    ])
+  })
+
   it('keeps all of a report or nothing, and writes again a document a failed write left out', async () => {
     const factory = new IDBFactory()
     const store = await openDraftStore(factory)

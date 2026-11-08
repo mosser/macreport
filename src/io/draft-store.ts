@@ -190,14 +190,18 @@ class IndexedDraftStore implements DraftStore {
     try {
       transaction = this.database.transaction([draftStore, documentStore], 'readwrite')
       const store = transaction.objectStore(documentStore)
+      /** The identifiers of the documents kept before this transaction. */
+      const stored = new Set(await result(store.getAllKeys()))
       /** The identifier of each content this transaction keeps, and refers to. */
       const chosen = new Map<Uint8Array, string>()
       /** Contents written by this transaction: their identifiers hold once it commits. */
       const written = new Map<Uint8Array, string>()
       for (const document of report.documents) {
-        let identifier = this.identifiers.get(document.content) ?? chosen.get(document.content)
-        if (identifier === undefined) {
-          identifier = crypto.randomUUID()
+        if (chosen.has(document.content)) continue
+        const known = this.identifiers.get(document.content)
+        const identifier = known ?? crypto.randomUUID()
+        // A document taken out, then put back, by Discard, is known but no longer kept: written again.
+        if (known === undefined || !stored.has(known)) {
           written.set(document.content, identifier)
           const record: DocumentRecord = {
             letter: document.kind.letter,
@@ -209,7 +213,7 @@ class IndexedDraftStore implements DraftStore {
         chosen.set(document.content, identifier)
       }
       const kept = new Set(chosen.values())
-      for (const key of await result(store.getAllKeys())) {
+      for (const key of stored) {
         if (typeof key !== 'string' || !kept.has(key)) store.delete(key)
       }
       transaction.objectStore(draftStore).put(recordOf(report, chosen), draftKey)
