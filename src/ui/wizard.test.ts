@@ -279,6 +279,60 @@ describe('the wizard', () => {
     )
   })
 
+  describe('the dates of a business travel', () => {
+    const field = (name: string) => root.querySelector<HTMLInputElement>(`[name="${name}"]`)
+    const leave = (name: string) => field(name)?.dispatchEvent(new Event('blur'))
+
+    beforeEach(() => {
+      fillReport()
+      tick('businessTravel', true)
+    })
+
+    it('ends every date on a year of four digits, after which the browser moves on by itself', () => {
+      expect(field('firstDay')?.max).toBe('9999-12-31')
+      expect(field('lastDay')?.max).toBe('9999-12-31')
+    })
+
+    it('offers no last day before the first day, as soon as it is typed and when shown again', () => {
+      expect(field('lastDay')?.min).toBe('')
+      type('firstDay', '2026-10-03')
+      expect(field('lastDay')?.min).toBe('2026-10-03')
+      type('locations', 'Rio de Janeiro, Brazil')
+      leave('firstDay')
+      proceed()
+      button('[data-step="0"]')?.click()
+      expect(field('lastDay')?.min).toBe('2026-10-03')
+      type('firstDay', '')
+      expect(field('lastDay')?.min).toBe('')
+    })
+
+    it('takes the day after the first day as the last day on leaving the first day, not while it is typed', () => {
+      type('firstDay', '2026-12-31')
+      expect(field('lastDay')?.value).toBe('')
+      expect(kept.at(-1)?.lastDay).toBeUndefined()
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('2027-01-01')
+      expect(kept.at(-1)?.lastDay?.toString()).toBe('2027-01-01')
+    })
+
+    it('counts a last day taken that way for Continue', () => {
+      type('locations', 'Rio de Janeiro, Brazil')
+      type('firstDay', '2026-10-03')
+      expect(continueButton()?.disabled).toBe(true)
+      leave('firstDay')
+      expect(continueButton()?.disabled).toBe(false)
+    })
+
+    it('leaves a last day already there, and takes none without a first day', () => {
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('')
+      type('firstDay', '2026-10-03')
+      type('lastDay', '2026-10-03')
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('2026-10-03')
+    })
+  })
+
   it('asks a student or a postdoctoral fellow for their supervisor, and takes them out for another position', () => {
     fillReport()
     choose('position', 'Student')

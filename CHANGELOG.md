@@ -24,6 +24,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 - The Expenses step lists the expenses first, then the per diems, and shows each
   date on one line with its day of the week, as *Sat 2026-10-03*.
+- Typing a date moves on from the year by itself, as it does from the month,
+  with no Tab to press in between.
+- **Last day**, left empty, takes the day after **First day**, and its picker
+  offers no date before the first day.
 - The total of the report, on the Review step and on the cover of the report
   document, writes every line with its currency's code, as *CAD 1,068.15*, the
   codes and the amounts aligned.

@@ -2,7 +2,7 @@ import { CalendarDate } from '../domain/calendar-date.ts'
 import { type Field, findingsOfReportStep } from '../domain/findings.ts'
 import { type Position, positions, type Report, type ReportFields } from '../domain/report.ts'
 import { isEmailAddress, textOrAbsent } from '../domain/text.ts'
-import { fieldName, fieldRule } from './field.ts'
+import { fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import type { Context, Step } from './step.ts'
 
@@ -44,6 +44,22 @@ function input(field: Field, value: string, type: string): Markup {
   return html`<label class="field">
     ${fieldName(field)}
     <input name="${field}" type="${type}" value="${value}" ${type === 'email' ? notALogin : ''} />
+    ${fieldRule(field)}
+  </label>`
+}
+
+/**
+ * A date of a business travel. The last day offers no date before the first day, once there is
+ * one, and its picker opens on the date it holds.
+ */
+function dateInput(field: 'firstDay' | 'lastDay', report: Report): Markup {
+  const earliest =
+    field === 'lastDay' && report.firstDay !== undefined
+      ? html`min="${report.firstDay.toString()}"`
+      : ''
+  return html`<label class="field">
+    ${fieldName(field)}
+    <input name="${field}" type="date" value="${report[field]?.toString() ?? ''}" max="${latestDate}" ${earliest} />
     ${fieldRule(field)}
   </label>`
 }
@@ -102,8 +118,8 @@ export const reportStep: Step = {
         </label>`,
         report.isBusinessTravel
           ? html`<div class="dates">
-              ${input('firstDay', report.firstDay?.toString() ?? '', 'date')}
-              ${input('lastDay', report.lastDay?.toString() ?? '', 'date')}
+              ${dateInput('firstDay', report)}
+              ${dateInput('lastDay', report)}
             </div>
             ${input('locations', report.locations ?? '', 'text')}`
           : html``,
@@ -130,6 +146,7 @@ export const reportStep: Step = {
         context.change(context.report.afterChanging({ isBusinessTravel }))
         context.refresh()
       })
+    const lastDay = panel.querySelector<HTMLInputElement>('[name="lastDay"]')
     for (const element of panel.querySelectorAll<HTMLInputElement>(
       'input:not([type="checkbox"])',
     )) {
@@ -139,9 +156,20 @@ export const reportStep: Step = {
         panel
           .querySelector(`[data-rule-of="${element.name}"]`)
           ?.classList.toggle('is-broken', isBroken)
+        if (element.name === 'firstDay' && lastDay !== null) {
+          lastDay.min = context.report.firstDay?.toString() ?? ''
+        }
         context.refreshActions()
       })
     }
+    // Only on leaving: while its parts are typed, the first day is already a date, not yet the one meant.
+    panel.querySelector('[name="firstDay"]')?.addEventListener('blur', () => {
+      const { firstDay, lastDay: last } = context.report
+      if (firstDay === undefined || last !== undefined || lastDay === null) return
+      lastDay.value = firstDay.dayAfter.toString()
+      context.change(context.report.afterChanging({ lastDay: firstDay.dayAfter }))
+      context.refreshActions()
+    })
   },
 
   canContinue(report: Report): boolean {

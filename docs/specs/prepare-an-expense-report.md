@@ -31,7 +31,9 @@ kept in the draft as soon as it is made, incomplete as it may be: a required
 field left empty, an expense whose receipt is still to come. A required
 field is marked with an asterisk (*) next to its name; what it needs besides
 being filled in is shown next to it. A value typed that does not follow its
-field's rule is shown with that rule, and kept once it does.
+field's rule is shown with that rule, and kept once it does. A date is typed
+in its parts, moving on from one to the next by itself, with no key to press
+between them.
 
 ### 1. Report
 
@@ -52,7 +54,7 @@ locations) and
 | Purpose | Required. |
 | Business travel | Ticked for a report whose purpose took the claimant away. Unticked, the report has no dates. |
 | First day | Asked of a business travel, and then required: a calendar date. |
-| Last day | Asked of a business travel, and then required: a calendar date, not before the first day. |
+| Last day | Asked of a business travel, and then required: a calendar date, not before the first day. Its picker offers no date before the first day. Left empty, it takes the day after the first day once the Claimant leaves First day; it may be changed, to the first day for a travel of one day. |
 | Location(s) | Asked of a business travel, and then required: where it took the claimant, as free text. |
 | Account name | Required, free text. |
 | Account code | Optional, free text. Written after the account's name, in parentheses. |

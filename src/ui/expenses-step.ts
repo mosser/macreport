@@ -26,7 +26,7 @@ import {
   type ReadFile,
 } from './document-field.ts'
 import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
-import { fieldName, fieldRule } from './field.ts'
+import { fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
 import type { Context, Step } from './step.ts'
@@ -167,7 +167,7 @@ function formOf(
   return html`<h2>Expense</h2>
     <label class="field">
       ${fieldName('date')}
-      <input name="date" type="date" value="${shown('date', expense.date?.toString())}" />
+      <input name="date" type="date" value="${shown('date', expense.date?.toString())}" max="${latestDate}" />
       ${fieldRule('date')}
     </label>
     <label class="field">
