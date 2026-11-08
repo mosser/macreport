@@ -32,31 +32,33 @@ function jpegOf(size: number): Uint8Array {
 const outline = (x: number, y: number) =>
   `${x} ${y} m ${x + 1.5} ${y + 2.5} l ${x + 3} ${y + 2} ${x + 4} ${y + 1} ${x + 5} ${y} c ${x + 2.5} ${y - 1.25} l h f`
 
-/** A heavy PDF of many repeated shapes, which reducing makes much smaller. */
+/** Bytes no compression makes smaller. */
+function noise(size: number): Uint8Array {
+  let seed = 7
+  return new Uint8Array(size).map(() => {
+    seed = (seed * 1664525 + 1013904223) % 2 ** 32
+    return seed >>> 24
+  })
+}
+
+/** A heavy PDF that reducing makes much smaller: a thumbnail no reader shows, and repeated shapes. */
 async function heavyPdf(): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const page = pdf.addPage([612, 792])
-  const outlines: string[] = []
-  for (let index = 0; index < 150_000; index += 1) {
-    outlines.push(outline(((index * 7919) % 60000) / 100, ((index * 104729) % 79000) / 100))
-  }
-  const content = pdf.context.flateStream(outlines.join('\n'))
+  const content = pdf.context.flateStream(`${outline(10, 20)}\n${outline(30, 40)}`)
   page.node.set(PDFName.of('Contents'), pdf.context.register(content))
+  const thumbnail = pdf.context.flateStream(noise(3 * megabyte))
+  page.node.set(PDFName.of('Thumb'), pdf.context.register(thumbnail))
   return pdf.save()
 }
 
 const heavy = heavyPdf()
 
-/** A heavy PDF that nothing can reduce: noise, drawn by nothing, but referred to by the page. */
+/** A heavy PDF that nothing can reduce: noise the page refers to, and no reader rule covers. */
 async function heavyPdfOfNoise(): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
   const page = pdf.addPage([612, 792])
-  let seed = 7
-  const noise = new Uint8Array(3 * megabyte).map(() => {
-    seed = (seed * 1664525 + 1013904223) % 2 ** 32
-    return seed >>> 24
-  })
-  const stream = pdf.context.flateStream(noise, { Subtype: 'Unknown' })
+  const stream = pdf.context.flateStream(noise(3 * megabyte), { Subtype: 'Unknown' })
   page.node.set(PDFName.of('Kept'), pdf.context.register(stream))
   return pdf.save()
 }
