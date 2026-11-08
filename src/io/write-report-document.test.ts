@@ -577,7 +577,7 @@ describe('writeReportDocument', () => {
     const [cad, euro] = [place('CAD'), place('EUR')]
     expect(euro?.x).toBe(cad?.x)
     expect(euro?.y).toBeLessThan(cad?.y ?? 0)
-    expect(place('Total')?.y).toBeCloseTo(((cad?.y ?? 0) + (euro?.y ?? 0)) / 2, 5)
+    expect(place('Total')?.y).toBe(cad?.y)
     // Right-aligned: digits are of one width in Noto Sans, so the shorter amount starts further on.
     expect(place('1,012.35')?.y).toBe(cad?.y)
     expect(place('55.00')?.y).toBe(euro?.y)
@@ -1009,101 +1009,6 @@ describe('writeReportDocument', () => {
     const text = covers.flat().join(' ')
     expect(text).toContain('Attendee 160 (McMaster)')
     expect(text).toContain('Total')
-  })
-})
-
-describe('the rows of a table', () => {
-  const expenseOf = (description: string, statement: Document) =>
-    new Expense({
-      date: new CalendarDate(2026, 10, 3),
-      description,
-      claimedAmount: new Amount(101235),
-      receipts: [new Document(Kind.receipt, `${description}.png`, png)],
-      bankStatements: [statement],
-    })
-  const reportWith = (...descriptions: readonly string[]) => {
-    const statement = new Document(Kind.bankStatement, 'visa.png', png)
-    return descriptions.reduce(
-      (report, description) => report.afterAdding(expenseOf(description, statement)),
-      new Report({
-        claimantName: 'Zoë Łukasiewicz',
-        position: 'Faculty',
-        email: 'zoe@mcmaster.ca',
-        purpose: 'ICSE 2026',
-        accountName: '20-123-456',
-      }),
-    )
-  }
-
-  it('centres each cell of the cover in the height of its row, the documents under its description included', async () => {
-    for (const description of ['Taxi', 'First\nSecond', 'First\nSecond\nThird\nFourth']) {
-      const pdf = await written(reportWith(description))
-      const places = placesOf(pdf, pdf.getPage(0))
-      const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
-      const top = yOf(description.split('\n')[0] ?? '')
-      const middle = (top + yOf('Receipt')) / 2
-      expect(yOf('1')).toBeCloseTo(middle, 5)
-      expect(yOf('2026-10-03')).toBeCloseTo(middle, 5)
-      expect(yOf('$1,012.35')).toBeCloseTo(middle, 5)
-      expect(top).toBeGreaterThan(yOf('2026-10-03'))
-    }
-  })
-
-  it('centres Total beside the lines of the total', async () => {
-    const pdf = await written(
-      reportWith('Taxi').afterAdding(
-        new Expense({
-          date: new CalendarDate(2026, 10, 4),
-          description: 'Bus',
-          isPaidInAnotherCurrency: true,
-          foreignAmount: new Amount(3500),
-          currency: Currency.parse('EUR'),
-          isPaidInCash: true,
-          receipts: [new Document(Kind.receipt, 'bus.png', png)],
-        }),
-      ),
-    )
-    const places = placesOf(pdf, pdf.getPage(0))
-    const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
-    expect(yOf('Total')).toBeCloseTo((yOf('CAD') + yOf('EUR')) / 2, 5)
-  })
-
-  it('centres the Entered box of a row', async () => {
-    const entered = async (description: string) => {
-      const pdf = await written(reportWith(description))
-      const box = pdf.getForm().getCheckBox('Entered, expense 1').acroField.getWidgets()[0]
-      const rectangle = box?.getRectangle()
-      const places = placesOf(pdf, pdf.getPage(0))
-      return {
-        middle: (rectangle?.y ?? 0) + (rectangle?.height ?? 0) / 2,
-        date: places.find(({ text }) => text === '2026-10-03')?.y ?? 0,
-      }
-    }
-    const short = await entered('Taxi')
-    const tall = await entered('First\nSecond\nThird\nFourth')
-    expect(tall.middle - tall.date).toBeCloseTo(short.middle - short.date, 5)
-  })
-
-  it('leaves the Entered box at the top of a row that continues on the next page', async () => {
-    const description = Array.from({ length: 120 }, (_, index) => `Line${index}`).join('\n')
-    const pdf = await written(reportWith(description))
-    const box = pdf.getForm().getCheckBox('Entered, expense 1').acroField.getWidgets()[0]
-    const places = placesOf(pdf, pdf.getPage(0))
-    const first = places.find(({ text }) => text === 'Line0')?.y ?? 0
-    expect(box?.getRectangle().y).toBeGreaterThan(first - 10)
-  })
-
-  it('centres the label of a section page beside the expenses of its document', async () => {
-    const pdf = await written(reportWith('Air Canada', 'Taxi', 'Hotel'))
-    const sectionPage = pdf
-      .getPages()
-      .find((page) => textsOf(pdf, page).includes('Bank statements') && page !== pdf.getPage(0))
-    const places = placesOf(pdf, sectionPage as PDFPage)
-    const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
-    expect(yOf('S1')).toBeCloseTo(yOf('Taxi'), 5)
-    expect(yOf('visa')).toBeCloseTo(yOf('Taxi'), 5)
-    expect(yOf('Air Canada')).toBeGreaterThan(yOf('Taxi'))
-    expect(yOf('Hotel')).toBeLessThan(yOf('Taxi'))
   })
 })
 

@@ -103,15 +103,6 @@ interface LinkedText {
   readonly isUnmarked?: boolean
 }
 
-/** The rank of the description among the columns of the cover's table of expenses. */
-const descriptionColumn = 2
-
-/** What stands under one of the columns of a row, and adds to its height: the row's documents. */
-interface UnderColumn {
-  readonly column: number
-  readonly height: number
-}
-
 /** A cell of a table: a text, or texts each on a line of its own and each a link. */
 type Cell = string | readonly LinkedText[]
 
@@ -334,15 +325,8 @@ class Flow {
     this.y = height
   }
 
-  /** A text, its top at the cursor, or lower by what is given. */
-  text(text: string, x: number, font: PDFFont, size: number, colour: Colour, lower = 0): void {
-    this.current?.drawText(text, {
-      x,
-      y: this.y - size - lower,
-      size,
-      font,
-      color: colourOf(colour),
-    })
+  text(text: string, x: number, font: PDFFont, size: number, colour: Colour): void {
+    this.current?.drawText(text, { x, y: this.y - size, size, font, color: colourOf(colour) })
   }
 
   rule(colour: Colour, thickness: number): void {
@@ -483,22 +467,18 @@ class Writer {
         row.claimedAmount,
         '',
       ]
-      const under =
-        row.mealsNotClaimed === '' ? row.supportingDocuments : [{ name: row.mealsNotClaimed }]
-      const namesLines = this.namesLinesOf(under, columns)
-      const underHeight = namesLines.length * tableSize * leading + cellPadding
-      // An expense and its documents stand on one page, unless they are taller than a page.
-      const height = this.rowHeight(columns, cells, this.regular) + underHeight
+      // An expense and the first line of its documents start on the same page, unless the
+      // expense alone is taller than a page.
+      const height = this.rowHeight(columns, cells, this.regular) + tableSize * leading + 4
       flow.ensure(Math.min(height, flow.top - 2 * margin))
-      const place = this.tableRow(flow, columns, cells, this.regular, false, false, {
-        column: descriptionColumn,
-        height: underHeight,
-      })
+      const place = this.tableRow(flow, columns, cells, this.regular, false, false)
       if (place !== undefined) {
         this.expenseRows.set(row.number, place)
-        this.enteredBox(row, place, columns, height)
+        this.enteredBox(row, place, columns)
       }
-      this.documentsLine(flow, namesLines, columns)
+      const under =
+        row.mealsNotClaimed === '' ? row.supportingDocuments : [{ name: row.mealsNotClaimed }]
+      this.documentsLine(flow, under, columns)
     }
     this.totalRow(flow, columns, layout.total)
     flow.stopContinuing()
@@ -557,15 +537,12 @@ class Writer {
       Math.max(...total.map(({ amount }) => widthOf(amount)))
     const right = left + Math.max((widths[4] ?? 0) - 2 * cellPadding, needed)
     const lineHeight = tableSize * leading
-    const height = total.length * lineHeight + 2 * cellPadding
-    flow.ensure(Math.min(height, flow.pageRoom))
+    flow.ensure(Math.min(total.length * lineHeight + 2 * cellPadding, flow.pageRoom))
     flow.down(cellPadding)
     const { black } = this.palette
-    // Total stands centred beside its lines, unless they continue on the next page.
-    const lower = height <= flow.pageRoom ? ((total.length - 1) * lineHeight) / 2 : 0
     total.forEach(({ currencyCode, amount }, index) => {
       flow.ensure(lineHeight + cellPadding)
-      if (index === 0) flow.text('Total', description, this.bold, tableSize, black, lower)
+      if (index === 0) flow.text('Total', description, this.bold, tableSize, black)
       flow.text(currencyCode, left, this.bold, tableSize, black)
       flow.text(amount, right - widthOf(amount), this.bold, tableSize, black)
       flow.down(lineHeight)
@@ -575,25 +552,16 @@ class Writer {
   }
 
   /**
-   * The Entered box of an expense, in the last column of its row, centred in its height, or at its
-   * top when the row continues on the next page: an empty form field a reader ticks on screen, or
-   * by hand on a printed copy.
+   * The Entered box of an expense, in the last column of its row: an empty form field a reader
+   * ticks on screen, or by hand on a printed copy.
    */
-  private enteredBox(
-    row: ExpenseRow,
-    place: Place,
-    columns: readonly Column[],
-    height: number,
-  ): void {
+  private enteredBox(row: ExpenseRow, place: Place, columns: readonly Column[]): void {
     const last = columns.at(-1)
     const left = margin + columns.slice(0, -1).reduce((sum, column) => sum + column.width, 0)
     const box = this.pdf.getForm().createCheckBox(`Entered, expense ${row.number}`)
     box.addToPage(place.page, {
       x: left + ((last?.width ?? 0) - enteredSize) / 2,
-      y:
-        place.top - height < margin
-          ? place.top - cellPadding - enteredSize
-          : place.top - (height + enteredSize) / 2,
+      y: place.top - 4 - enteredSize,
       width: enteredSize,
       height: enteredSize,
       textColor: colourOf(this.palette.maroon),
@@ -928,8 +896,7 @@ class Writer {
   }
 
   /**
-   * A row whose cells wrap, each centred in the height of the row, which what stands under one of
-   * its columns adds to; a row taller than what is left of the page continues on the next.
+   * A row whose cells wrap; a row taller than what is left of the page continues on the next.
    * A text that is a link starts a line of its own, each of its lines a link. A rule closes the
    * row unless something under it still belongs to it. Gives where the row starts.
    */
@@ -940,7 +907,6 @@ class Writer {
     font: PDFFont,
     isHeader = false,
     isClosed = true,
-    under: UnderColumn = { column: -1, height: 0 },
   ): Place | undefined {
     const padding = cellPadding
     const lineHeight = tableSize * leading
@@ -955,17 +921,9 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const lines = wrapped[index] ?? []
-        const added = index === under.column ? 0 : under.height / lineHeight
-        const centring = (lineCount - lines.length + added) / 2
-        const skipped = Math.min(Math.floor(centring), lineCount - lines.length)
-        const cell = lines[line - skipped]
+        const cell = wrapped[index]?.[line]
         const width = font.widthOfTextAtSize(cell?.text ?? '', tableSize)
-        this.cellLine(flow, cell, x + cellOffsetOf(column, width, isHeader), {
-          font,
-          colour,
-          lower: (centring - skipped) * lineHeight,
-        })
+        this.cellLine(flow, cell, x + cellOffsetOf(column, width, isHeader), { font, colour })
         x += column.width
       }
       flow.down(lineHeight)
@@ -995,34 +953,34 @@ class Writer {
     flow: Flow,
     line: CellLine | undefined,
     x: number,
-    {
-      font,
-      colour,
-      lower,
-    }: { readonly font: PDFFont; readonly colour: Colour; readonly lower: number },
+    { font, colour }: { readonly font: PDFFont; readonly colour: Colour },
   ): void {
     if (line === undefined || line.text === '') return
-    flow.text(line.text, x, font, tableSize, colour, lower)
+    flow.text(line.text, x, font, tableSize, colour)
     const page = flow.page
     if (page === undefined || line.target === undefined) return
     const end = x + font.widthOfTextAtSize(line.text, tableSize)
-    const baseline = flow.cursor - tableSize - lower
+    const baseline = flow.cursor - tableSize
     if (!line.isUnmarked) drawArrow(page, end, baseline, tableSize, colour)
     const width = end - x + (line.isUnmarked ? 0 : arrowRoom * tableSize)
     this.links.push({ page, x, y: baseline - 2, width, height: tableSize + 3, target: line.target })
   }
 
   /**
-   * The lines of what stands under an expense's row: its documents, one after the other, from under
-   * its description to its claimed amount; one that does not fit goes on to the next line. Under a
-   * per diem, its meals not claimed.
+   * The line under an expense's row: its documents, one after the other, from under its
+   * description to its claimed amount, each a link to its document, marked with an arrow; one that
+   * does not fit goes on to the next line. Under a per diem, its meals not claimed, a link to
+   * nothing. A rule closes the row.
    */
-  private namesLinesOf(
+  private documentsLine(
+    flow: Flow,
     documents: readonly NamedPiece[],
     columns: readonly Column[],
-  ): readonly (readonly NamePiece[])[] {
-    const padding = cellPadding
+  ): void {
+    const padding = 4
+    const lineHeight = tableSize * leading
     const widths = columns.map((column) => column.width)
+    const left = margin + (widths[0] ?? 0) + (widths[1] ?? 0) + padding
     const room = (widths[2] ?? 0) + (widths[3] ?? 0) + (widths[4] ?? 0) - 2 * padding
     const widthOf = (text: string) => this.regular.widthOfTextAtSize(text, tableSize)
     const arrow = arrowRoom * tableSize
@@ -1042,24 +1000,6 @@ class Writer {
         }
       }
     }
-    return lines
-  }
-
-  /**
-   * The lines under an expense's row, each document in them a link to it, marked with an arrow; the
-   * meals of a per diem not claimed, a link to nothing. A rule closes the row.
-   */
-  private documentsLine(
-    flow: Flow,
-    lines: readonly (readonly NamePiece[])[],
-    columns: readonly Column[],
-  ): void {
-    const padding = cellPadding
-    const lineHeight = tableSize * leading
-    const widths = columns.map((column) => column.width)
-    const left = margin + (widths[0] ?? 0) + (widths[1] ?? 0) + padding
-    const widthOf = (text: string) => this.regular.widthOfTextAtSize(text, tableSize)
-    const arrow = arrowRoom * tableSize
     for (const line of lines) {
       flow.ensure(lineHeight + padding)
       let x = left
