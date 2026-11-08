@@ -393,19 +393,48 @@ footer p {
 }
 
 /* The size of a heavy document, under its name, and what can be done of it. */
-.document-size {
-  margin-top: 0.25rem;
+/* The sizes, at the top of the Review step: the report document, then what is heavy or reduced. */
+.document-sizes {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-rule);
+}
+
+.sizes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+table.heavy-documents {
+  margin-top: 0.5rem;
+}
+
+td.size,
+td.size-action {
+  white-space: nowrap;
+  text-align: right;
+}
+
+td.size {
   color: var(--color-secondary-text);
   font-size: 0.875rem;
 }
 
-.document-size button {
-  margin-left: 0.5rem;
+button.reduce {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.15rem 0.6rem;
+}
+
+td.size-action button {
   padding: 0.15rem 0.6rem;
 }
 
 .report-size {
-  margin: 1rem 0 0.5rem;
+  margin: 0;
   font-weight: 600;
 }
 

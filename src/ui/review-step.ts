@@ -2,12 +2,19 @@ import type { Document } from '../domain/document.ts'
 import { documentSizes, type ReportWeights, sizeText } from '../domain/document-sizes.ts'
 import { fieldNames, findingsOf } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
-import { type ExpenseRow, type Layout, layoutOf, type Section } from '../domain/layout.ts'
+import {
+  type ExpenseRow,
+  type LabelledDocument,
+  type Layout,
+  layoutOf,
+  type Section,
+} from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
 import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
 import { html, type Markup } from './html.ts'
+import { reduceArrows } from './icons.ts'
 import type { Context, Step } from './step.ts'
 
 /** Writes the report document of a report without findings and hands it to the browser; gives its file name. */
@@ -21,9 +28,6 @@ interface Weighing {
   readonly report: Report
   weights?: ReportWeights
 }
-
-/** What a row of a document says of its size, and offers to change it. */
-type SizeOf = (document: Document) => Markup
 
 /** What an empty table of the Review step says, in grey, in a row across its columns. */
 function emptyRow(columns: number, wording: string): Markup {
@@ -103,28 +107,74 @@ function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
     </table>`
 }
 
-/**
- * What a row says of a document's size: its size before and after once reduced, with Restore; its
- * size when it is heavy, with Reduce when that is worth offering; nothing otherwise.
- */
-function sizesOf(report: Report, weights: ReportWeights | undefined): SizeOf {
-  return (document) => {
+/** The documents the Claimant can reduce: heavy, not reduced yet, and worth reducing. */
+function documentsToReduce(report: Report, weights: ReportWeights | undefined): Document[] {
+  return report.documents.filter((document) => {
     const weight = weights?.weights.get(document)
-    if (weight === undefined) return html``
-    const index = report.documents.indexOf(document)
-    if (document.isReduced) {
-      return html`<div class="document-size">
-        ${sizeText(weight.addedSize)} → ${sizeText(weight.size)}
-        <button data-action="restore" data-document="${index}">Restore</button>
-      </div>`
-    }
-    if (!documentSizes.isHeavy(weight.size)) return html``
-    const reduce =
-      weight.reducedSize === undefined
-        ? html``
-        : html`<button data-action="reduce" data-document="${index}">Reduce to ${sizeText(weight.reducedSize)}</button>`
-    return html`<div class="document-size">${sizeText(weight.size)} ${reduce}</div>`
+    return (
+      weight?.reducedSize !== undefined && !document.isReduced && documentSizes.isHeavy(weight.size)
+    )
+  })
+}
+
+/**
+ * A row of the sizes, for a document reduced or heavy: its size before and after once reduced, with
+ * Restore; its size when it is heavy, with Reduce when that is worth offering; none otherwise.
+ */
+function sizeRowOf(
+  { label, document }: LabelledDocument,
+  report: Report,
+  weights: ReportWeights | undefined,
+  linkOf: LinkOf,
+): Markup[] {
+  const weight = weights?.weights.get(document)
+  if (weight === undefined || !(document.isReduced || documentSizes.isHeavy(weight.size))) {
+    return []
   }
+  const index = report.documents.indexOf(document)
+  const row = (size: string, action: Markup) =>
+    html`<tr class="document-size"><td>${label}</td><td>${linkOf(document)}</td><td class="size">${size}</td><td class="size-action">${action}</td></tr>`
+  if (document.isReduced) {
+    return [
+      row(
+        `${sizeText(weight.addedSize)} → ${sizeText(weight.size)}`,
+        html`<button data-action="restore" data-document="${index}">Restore</button>`,
+      ),
+    ]
+  }
+  const reduced = weight.reducedSize === undefined ? undefined : sizeText(weight.reducedSize)
+  const reduce =
+    reduced === undefined
+      ? html``
+      : html`<button class="reduce" data-action="reduce" data-document="${index}"
+          aria-label="Reduce to ${reduced}" title="Reduce to ${reduced}">${reduceArrows}${reduced}</button>`
+  return [row(sizeText(weight.size), reduce)]
+}
+
+/**
+ * The sizes, at the top of the step: of the report document, or that they are not known yet; then
+ * each document heavy or reduced, and Reduce all when more than one can be reduced.
+ */
+function sizesOf(
+  layout: Layout,
+  report: Report,
+  weights: ReportWeights | undefined,
+  linkOf: LinkOf,
+): Markup {
+  const rows = layout.sections.flatMap((section) =>
+    section.documents.flatMap((entry) => sizeRowOf(entry, report, weights, linkOf)),
+  )
+  const reportSize = reportSizeOf(weights)
+  if (rows.length === 0 && reportSize.text === '') return html``
+  const reduceAll =
+    documentsToReduce(report, weights).length > 1
+      ? html`<button class="reduce" data-action="reduce-all">${reduceArrows}Reduce all</button>`
+      : html``
+  const table = rows.length > 0 ? html`<table class="heavy-documents">${rows}</table>` : html``
+  return html`<div class="document-sizes">
+    <div class="sizes-heading">${reportSize}${reduceAll}</div>
+    ${table}
+  </div>`
 }
 
 /** The size of the report document, or that the sizes are not known yet. */
@@ -137,7 +187,7 @@ function reportSizeOf(weights: ReportWeights | undefined): Markup {
     : html`<p class="report-size">Report document: ${sizeText(weights.reportDocumentSize)}</p>`
 }
 
-function sectionsOf(layout: Layout, linkOf: LinkOf, sizeOf: SizeOf): Markup[] {
+function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
   return layout.sections.map((section) => {
     const expenses = (cell: Markup) => (section.listsExpenses ? cell : '')
     const table = (documents: Section['documents']) => {
@@ -146,7 +196,7 @@ function sectionsOf(layout: Layout, linkOf: LinkOf, sizeOf: SizeOf): Markup[] {
           ({ description }) => html`<div>${description}</div>`,
         )
         const numbers = html`<td>${descriptions}</td>`
-        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}${sizeOf(entry.document)}</td>${expenses(numbers)}</tr>`
+        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}</td>${expenses(numbers)}</tr>`
       })
       return html`<table class="documents">
         <colgroup><col class="label" /><col />${expenses(html`<col />`)}</colgroup>
@@ -166,7 +216,8 @@ function sectionsOf(layout: Layout, linkOf: LinkOf, sizeOf: SizeOf): Markup[] {
 
 /**
  * Renders a panel anew, the focus staying on the control it was on, for a change the Claimant did
- * not ask for: a link is found again by its place among the links, a button by what it does.
+ * not ask for: a link is found again by its place among the links of the report, which the sizes
+ * coming above them do not change, a button by what it does.
  */
 function keepingFocus(panel: HTMLElement, render: () => void): void {
   const focused = panel.ownerDocument.activeElement
@@ -174,12 +225,16 @@ function keepingFocus(panel: HTMLElement, render: () => void): void {
     render()
     return
   }
-  const link = [...panel.querySelectorAll<HTMLElement>('a')].indexOf(focused)
+  const linksOfReport = () =>
+    [...panel.querySelectorAll<HTMLElement>('a')].filter(
+      (link) => link.closest('.document-sizes') === null,
+    )
+  const link = linksOfReport().indexOf(focused)
   const { action, document } = focused.dataset
   render()
   const again =
     link >= 0
-      ? panel.querySelectorAll('a')[link]
+      ? linksOfReport()[link]
       : [...panel.querySelectorAll<HTMLElement>('[data-action]')].find(
           ({ dataset }) => dataset.action === action && dataset.document === document,
         )
@@ -210,9 +265,8 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
 }
 
 /**
- * Step 4: the report as it will be written, each document's name opening it in a new tab, a heavy
- * document's size with what can be done of it, then its findings, the size of the report document,
- * and Save the report.
+ * Step 4: the sizes, with what can be done of a heavy document, then the report as it will be
+ * written, each document's name opening it in a new tab, and Save the report; or its findings.
  */
 export function reviewStep(
   saveReport: SaveReport,
@@ -259,9 +313,9 @@ export function reviewStep(
       const layout = layoutOf(report)
       const linkOf = linksAnew(links)
       panel.innerHTML = html`<h2>Review</h2>
+        ${sizesOf(layout, report, weights, linkOf)}
         ${coverOf(layout, linkOf, report.isBusinessTravel)}
-        ${sectionsOf(layout, linkOf, sizesOf(report, weights))}
-        ${reportSizeOf(weights)}
+        ${sectionsOf(layout, linkOf)}
         <button class="primary save" data-action="save">Save the report</button>
         ${statusOf(outcome, report, isDraftKept())}`.text
       const changeOn = (action: string, changed: (document: Document) => Report) => {
@@ -279,6 +333,15 @@ export function reviewStep(
       }
       changeOn('reduce', (document) => report.afterReducing(document))
       changeOn('restore', (document) => report.afterRestoring(document))
+      panel.querySelector('[data-action="reduce-all"]')?.addEventListener('click', () => {
+        context.change(
+          documentsToReduce(report, weights).reduce(
+            (reduced, document) => reduced.afterReducing(document),
+            report,
+          ),
+        )
+        context.refresh()
+      })
       panel.querySelector('[data-action="save"]')?.addEventListener('click', () => {
         saveReport(report)
           .then((fileName) => {

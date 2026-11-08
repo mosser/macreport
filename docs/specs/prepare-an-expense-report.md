@@ -203,15 +203,15 @@ tab of the browser, from the file the Claimant added, or from its reduced file
 once reduced. The Entered boxes are the report document's alone. Then the
 findings, if any.
 
-A heavy document shows its size next to its name. A heavy PDF document that
-reducing makes at least 10 % smaller also offers **Reduce to** its size once
-reduced, as *Reduce to 545 KB*. Once reduced, it shows its size before and after,
-as *9.4 MB → 545 KB*, even when no longer heavy, and offers **Restore**, which
-brings back the file added.
-
-With no finding, the step shows the size of the report document above Save the
-report. It says *Working out the sizes…* until the sizes are known; Save the
-report stays offered meanwhile.
+With no finding, the sizes stand at the top of the step: the size of the report
+document, or *Working out the sizes…* until the sizes are known, Save the report
+staying offered meanwhile; then each document heavy or reduced, by its label and
+its name, with its size. A heavy PDF document that reducing makes at least 10 %
+smaller also offers **Reduce**, an icon and its size once reduced, as *545 KB*,
+named *Reduce to 545 KB*. Once reduced, it shows its size before and after, as
+*9.4 MB → 545 KB*, even when no longer heavy, and offers **Restore**, which
+brings back the file added. **Reduce all**, an icon and its name, reduces every
+document on offer, when there is more than one.
 
 | Finding | Wording |
 |---|---|

@@ -1636,8 +1636,9 @@ describe('the per diems', () => {
       receiptWeighing({ addedSize: 3 * megabyte, size: 3 * megabyte })
       await review()
       await vi.waitFor(() => expect(root.querySelector('.document-size')).not.toBeNull())
-      expect(root.querySelector('.document-size')?.textContent?.trim()).toBe('3.0 MB')
+      expect(root.querySelector('.document-size .size')?.textContent).toBe('3.0 MB')
       expect(button('[data-action="reduce"]')).toBeNull()
+      expect(button('[data-action="reduce-all"]')).toBeNull()
     })
 
     it('offers to reduce a heavy document, keeps the choice, and takes it back with Restore', async () => {
@@ -1655,18 +1656,46 @@ describe('the per diems', () => {
       await review()
       await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
       const row = () =>
-        root.querySelector('.document-size')?.textContent?.replace(/\s+/g, ' ').trim()
-      expect(row()).toBe('9.4 MB Reduce to 500 KB')
+        root.querySelector('.document-size .size')?.textContent?.replace(/\s+/g, ' ').trim()
+      expect(row()).toBe('9.4 MB')
+      const reduce = button('[data-action="reduce"]')
+      expect(reduce?.textContent?.trim()).toBe('500 KB')
+      expect(reduce?.getAttribute('aria-label')).toBe('Reduce to 500 KB')
+      expect(reduce?.querySelector('svg')).not.toBeNull()
+      expect(root.querySelector('.document-sizes')?.previousElementSibling?.tagName).toBe('H2')
 
       button('[data-action="reduce"]')?.click()
       expect(kept.at(-1)?.documents[0]?.isReduced).toBe(true)
       expect(kept.at(-1)?.documents[1]?.isReduced).toBe(false)
       await vi.waitFor(() => expect(button('[data-action="restore"]')).not.toBeNull())
-      expect(row()).toBe('9.4 MB → 500 KB Restore')
+      expect(row()).toBe('9.4 MB → 500 KB')
 
       button('[data-action="restore"]')?.click()
       expect(kept.at(-1)?.documents[0]?.isReduced).toBe(false)
       await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
+    })
+
+    it('offers Reduce all when more than one document can be reduced, and reduces them all', async () => {
+      weigh = (report) => ({
+        reportDocumentSize: 4 * megabyte,
+        weights: new Map(
+          report.documents.map((document) => [
+            document,
+            document.isReduced
+              ? { addedSize: 9 * megabyte, size: megabyte }
+              : { addedSize: 9 * megabyte, size: 9 * megabyte, reducedSize: megabyte },
+          ]),
+        ),
+      })
+      await review()
+      await vi.waitFor(() => expect(button('[data-action="reduce-all"]')).not.toBeNull())
+      expect(button('[data-action="reduce-all"]')?.querySelector('svg')).not.toBeNull()
+      button('[data-action="reduce-all"]')?.click()
+      expect(kept.at(-1)?.documents.map((document) => document.isReduced)).toEqual(
+        kept.at(-1)?.documents.map(() => true),
+      )
+      await vi.waitFor(() => expect(button('[data-action="restore"]')).not.toBeNull())
+      expect(button('[data-action="reduce-all"]')).toBeNull()
     })
 
     it('stops saying the report was saved once a document is reduced', async () => {

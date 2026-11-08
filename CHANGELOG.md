@@ -8,11 +8,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- The Review step shows the size of the report document above **Save the
-  report**, and the size of each heavy document: above 2 MB, a size set in
+- The Review step shows at its top the size of the report document, and the
+  size of each heavy document: above 2 MB, a size set in
   `config/document-sizes.json`.
-- **Reduce to** a size, on the Review step, makes a heavy PDF document smaller
-  when that saves at least 10 %: its large JPEG images are written with fewer
+- **Reduce**, an icon and the size it reaches, at the top of the Review step,
+  makes a heavy PDF document smaller when that saves at least 10 %, and **Reduce
+  all** does so for every document on offer: its large JPEG images are written with fewer
   pixels and each shape it draws repeatedly is kept once, its pages, text, links
   and form fields staying as they are. A conference programme of 8 pages printed
   from a web page goes from 9.4 MB to 545 KB and looks the same. The document's
