@@ -88,9 +88,14 @@ export function alreadyInReportWording(document: Document): string {
   return `Already in the report, as ${document.name}: chosen.`
 }
 
-/** What the Claimant is told before stating a missing receipt: what follows from it. */
-export const missingReceiptNotice =
-  "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it. Accounts Payable may not accept it, and may return the report."
+/**
+ * What the Claimant is told before stating a missing receipt: what follows from it, and, stressed,
+ * what may come of it.
+ */
+export const missingReceiptNotice = {
+  text: "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it in the final PDF.",
+  stressed: 'Accounts Payable may not accept it, and may return the report.',
+} as const
 
 /** What is said under the name of a document that a document before it already has. */
 export const nameTakenWording = 'Another document already has this name.'

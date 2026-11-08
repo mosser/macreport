@@ -1345,7 +1345,10 @@ describe('a missing receipt', () => {
     await openDialog()
     expect(dialog()?.querySelector('h2')?.textContent).toBe('Missing receipt')
     expect(dialog()?.querySelector('.notice')?.textContent).toBe(
-      "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it. Accounts Payable may not accept it, and may return the report.",
+      "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it in the final PDF. Accounts Payable may not accept it, and may return the report.",
+    )
+    expect(dialog()?.querySelector('.notice strong')?.textContent).toBe(
+      'Accounts Payable may not accept it, and may return the report.',
     )
     expect(
       [...(dialog()?.querySelectorAll('.field-name') ?? [])].map((name) => name.textContent),

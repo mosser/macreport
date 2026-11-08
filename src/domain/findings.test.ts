@@ -377,9 +377,10 @@ describe('findings of the Additional documents step', () => {
   })
 
   it('tells the Claimant what follows from a missing receipt', () => {
-    expect(missingReceiptNotice).toBe(
-      "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it. Accounts Payable may not accept it, and may return the report.",
-    )
+    expect(missingReceiptNotice).toEqual({
+      text: "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it in the final PDF.",
+      stressed: 'Accounts Payable may not accept it, and may return the report.',
+    })
   })
 
   it('requires a travel justification, but neither an additional document nor a name', () => {

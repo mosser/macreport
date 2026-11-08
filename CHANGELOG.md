@@ -12,7 +12,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   The expense list, the Review step and the cover of the report document all say
   *Paid in cash*. Its cross takes it back, and the bank statement is asked for again.
 - **Missing receipt**, offered under an empty Receipt, opens a dialog that says the form
-  will be written on your behalf, that you will have to sign it, and that Accounts Payable
+  will be written on your behalf, that you will have to sign it in the final PDF, and that Accounts Payable
   may not accept it and may return the report. It asks for the reason, who was paid, the
   job title and, optionally, the phone extension. The job title and the phone extension
   are prefilled from the last missing receipt of the report. The expense list, the Review

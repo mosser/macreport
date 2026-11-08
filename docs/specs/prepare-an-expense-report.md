@@ -118,8 +118,8 @@ being added.
 
 **Missing receipt** opens a dialog over the step, under the heading *Missing
 receipt*, which states: *McMaster's official Missing Receipt Authorization Form
-will be written on your behalf. You will have to sign it. Accounts Payable may not
-accept it, and may return the report.* **Cancel**, or Escape, leaves the expense as it was. **Done**, offered
+will be written on your behalf. You will have to sign it in the final PDF.* and, in
+bold, *Accounts Payable may not accept it, and may return the report.* **Cancel**, or Escape, leaves the expense as it was. **Done**, offered
 once what is required is filled in, closes it: what it holds is kept then, not as
 it is typed. *Missing receipt* then takes the place of the field and of its name, with **Change**,
 a pen, which opens the dialog filled in, and **Take back**, a cross.

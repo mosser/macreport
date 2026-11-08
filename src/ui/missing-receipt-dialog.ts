@@ -29,7 +29,7 @@ export function statedMissingReceipt(
   dialog.className = 'missing-receipt'
   dialog.setAttribute('aria-labelledby', 'missing-receipt-heading')
   dialog.innerHTML = html`<h2 id="missing-receipt-heading">${fieldNames.missingReceipt}</h2>
-    <p class="notice">${missingReceiptNotice}</p>
+    <p class="notice">${missingReceiptNotice.text} <strong>${missingReceiptNotice.stressed}</strong></p>
     <label class="field">
       ${fieldName('reasonForMissingReceipt')}
       <textarea name="reasonForMissingReceipt" autofocus>${start.reason ?? ''}</textarea>
