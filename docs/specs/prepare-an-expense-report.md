@@ -68,18 +68,17 @@ diems of the days no longer between them. Continue is offered once every require
 
 The expenses, under the heading *Itemized expenses* once there is one, sorted
 by date, then in the order they were added. Each shows
-its day of the week and its date on one line, as *Sat 2026-10-03*, its description, its foreign amount, its claimed amount, its
+its date, on one line, its description, its foreign amount, its claimed amount, its
 receipt or that its receipt is missing, its bank statement or that it was
 paid in cash, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them, and, for a
 business travel whose dates are valid, **Manage per diems**, next to it.
-When a meal is claimed, the per diems stand under the expenses: on one line,
-the number of days with a meal claimed and their total, in Canadian dollars
-then in US dollars; then each of those days, by its day of the week and its
-date, in a column as wide as the dates of the expenses, as on the cover of the
-report document: its meals claimed, domestic then international, then its
+When a meal is claimed, the per diems stand under the expenses, under the
+heading *Per diems*: each of those days, by its day of the week in full, on a
+line of its own, and its date, in a column as wide as the dates of the expenses,
+as on the cover of the report document: its meals claimed, domestic then international, then its
 meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
@@ -128,7 +127,7 @@ not offered while they are open, and **Done** closes them.
 | Field | Rule |
 |---|---|
 | Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows Per meal. **All domestic** and **All international**, above the days, set every meal at once, and every day to Domestic or International, a day on Per meal included. |
-| Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
+| Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the Review step and the report document give them. |
 | Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. The trash can next to the field takes the reason out, and Add a reason back. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
 
 Continue is offered once there is at least one expense or a meal claimed,

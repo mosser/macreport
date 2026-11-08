@@ -1007,9 +1007,9 @@ describe('the Expenses step', () => {
     type('description', 'Taxi')
     button('[data-action="done"]')?.click()
     expect(rows()).toEqual([
-      ['Thu 2026-10-01', 'Taxi', '', '', ''],
+      ['2026-10-01', 'Taxi', '', '', ''],
       ['', 'Claimed amount (CAD) is required.Receipt is required.Bank statement is required.'],
-      ['Sat 2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', ''],
+      ['2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', ''],
       ['', 'air-canada · statement'],
     ])
     expect([...root.querySelectorAll('.lacks li')].map((lack) => lack.textContent)).toEqual([
@@ -1381,26 +1381,33 @@ describe('the per diems', () => {
     button('[data-add-reason][data-day="2026-10-05"][data-meal="lunch"]')?.click()
     reason('2026-10-05', 'lunch', 'provided by the conference')
     button('[data-action="done"]')?.click()
-    expect(root.querySelector('.per-diems-line')?.textContent).toBe(
-      'Per diems: 2 days · $28.40 · USD 57.70',
+    expect(root.querySelector('table.per-diem-list')?.previousElementSibling?.outerHTML).toBe(
+      '<h3>Per diems</h3>',
     )
+    expect(root.textContent).not.toContain('2 days')
+    expect(root.textContent).not.toContain('$28.40')
     const listed = [...root.querySelectorAll('table.per-diem-list tbody tr')].map((row) =>
       [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
     )
+    expect(
+      [...root.querySelectorAll('table.per-diem-list td.date')].map((cell) =>
+        [...cell.querySelectorAll('div')].map((line) => line.textContent),
+      )[0],
+    ).toEqual(['Sunday', '2026-10-04'])
     expect(listed).toEqual([
-      ['Sun 2026-10-04', 'Per diem, domestic: breakfast'],
-      ['', 'Not claimed: lunch, dinner'],
-      ['Mon 2026-10-05', 'Per diem, international: dinner'],
-      ['', 'Not claimed: breakfast, lunch (provided by the conference)'],
+      ['Sunday2026-10-04', 'Per diem, domestic: breakfast'],
+      ['Not claimed: lunch, dinner'],
+      ['Monday2026-10-05', 'Per diem, international: dinner'],
+      ['Not claimed: breakfast, lunch (provided by the conference)'],
     ])
     expect(continueButton()?.disabled).toBe(false)
     await fillExpense()
     button('[data-action="done"]')?.click()
     expect(
-      [...root.querySelectorAll('table.expense-list, .per-diems-line, table.per-diem-list')].map(
+      [...root.querySelectorAll('table.expense-list, table.per-diem-list')].map(
         (element) => element.className,
       ),
-    ).toEqual(['expenses expense-list', 'per-diems-line', 'expenses per-diem-list'])
+    ).toEqual(['expenses expense-list', 'expenses per-diem-list'])
     expect(
       [...root.querySelectorAll('table.expense-list th, table.per-diem-list th')]
         .filter((heading) => heading.textContent === 'Date')

@@ -13,7 +13,7 @@ import {
   lacksOf,
 } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
-import { mealsNotClaimedOf, perDiemDescriptionsOf, totalOf } from '../domain/layout.ts'
+import { mealsNotClaimedOf, perDiemDescriptionsOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
@@ -206,7 +206,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
     const lacks = lacksOf(report, expense).map((lack) => html`<li>${lack}</li>`)
     const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
-        <td class="date">${expense.date?.withDayOfWeek ?? ''}</td>
+        <td class="date">${expense.date?.toString() ?? ''}</td>
         <td class="description">${expense.description ?? ''}</td>
         <td>${expense.foreignAmountText}</td>
         <td>${expense.claimedAmount?.toString() ?? ''}</td>
@@ -238,30 +238,27 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
       ${managePerDiems}
     </div>
     ${table}
-    ${perDiemsLineOf(report)}`
+    ${perDiemsOf(report)}`
 }
 
 /**
- * The per diems, when a meal is claimed: on one line, the number of days with a meal claimed and
- * their total, in Canadian dollars then in US dollars; then each of those days, by date: its meals
- * claimed, domestic then international, then its meals not claimed and their reasons. No amount
- * but the total.
+ * The per diems, when a meal is claimed, under their title: each of those days, by the day of the
+ * week on a line of its own and its date: its meals claimed, domestic then international, then its
+ * meals not claimed and their reasons. No amount.
  */
-function perDiemsLineOf(report: Report): Markup {
+function perDiemsOf(report: Report): Markup {
   const claimed = report.claimedPerDiems
   if (claimed.length === 0) {
     return html``
   }
-  const days = claimed.length === 1 ? '1 day' : `${claimed.length} days`
-  const line = [days, ...totalOf([], claimed).map((total) => total.text)].join(' · ')
   const rows = claimed.map(
     (perDiem) => html`<tr class="expense">
-        <td class="date">${perDiem.date.withDayOfWeek}</td>
+        <td class="date" rowspan="2"><div>${perDiem.date.dayOfWeek}</div><div>${perDiem.date.toString()}</div></td>
         <td class="description">${perDiemDescriptionsOf(perDiem).join('\n')}</td>
       </tr>
-      <tr class="supporting"><td></td><td>${mealsNotClaimedOf(perDiem)}</td></tr>`,
+      <tr class="supporting"><td>${mealsNotClaimedOf(perDiem)}</td></tr>`,
   )
-  return html`<p class="per-diems-line">Per diems: ${line}</p>
+  return html`<h3>Per diems</h3>
     <table class="expenses per-diem-list">
       <thead><tr><th class="date">Date</th><th>Description</th></tr></thead>
       <tbody>${rows}</tbody>

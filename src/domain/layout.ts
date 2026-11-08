@@ -33,8 +33,6 @@ export interface TotalLine {
   readonly currencyCode: string
   /** The amount as 1,012.35, without its currency. */
   readonly amount: string
-  /** The line as any amount is written elsewhere: $1,012.35, or EUR 55.00. */
-  readonly text: string
 }
 
 /** A row of the cover's table of expenses: an expense, or a per diem with a meal claimed. */
@@ -483,18 +481,12 @@ export function totalOf(
   }
   const sum = (amounts: readonly Amount[]) => amounts.reduce((total, amount) => total.plus(amount))
   const currencies = [...foreign.keys()].sort((one, other) => one.code.localeCompare(other.code))
-  const inCanadianDollars = (amount: Amount): TotalLine => ({
-    currencyCode: 'CAD',
+  const lineOf = (currencyCode: string, amount: Amount): TotalLine => ({
+    currencyCode,
     amount: amount.grouped,
-    text: amount.toString(),
-  })
-  const inCurrency = (currency: Currency, amount: Amount): TotalLine => ({
-    currencyCode: currency.code,
-    amount: amount.grouped,
-    text: amount.inCurrency(currency),
   })
   return [
-    ...(claimed.length > 0 ? [inCanadianDollars(sum(claimed))] : []),
-    ...currencies.map((currency) => inCurrency(currency, sum(foreign.get(currency) ?? []))),
+    ...(claimed.length > 0 ? [lineOf('CAD', sum(claimed))] : []),
+    ...currencies.map((currency) => lineOf(currency.code, sum(foreign.get(currency) ?? []))),
   ]
 }

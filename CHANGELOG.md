@@ -27,9 +27,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
-- The Expenses step lists the expenses first, then the per diems, in columns
-  aligned on their dates, and shows each date on one line with its day of the week,
-  as *Sat 2026-10-03*.
+- The Expenses step lists the expenses first, then the per diems, under a title
+  of their own and in columns aligned on their dates. A date stays on one line, and
+  a per diem shows its day of the week above it. The line giving the number of days
+  and their total is gone: the Review step gives the amounts.
 - Typing a date moves on from the year by itself, as it does from the month,
   with no Tab to press in between.
 - **Last day**, left empty, takes the day after **First day**, and its picker

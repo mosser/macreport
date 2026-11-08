@@ -251,7 +251,7 @@ describe('layoutOf', () => {
       claimedAmount: undefined,
     })
     const dinner = new PerDiem(day, { internationalMeals: Meal.all, mealsClaimed: [Meal.dinner] })
-    expect(totalOf([paid], [dinner]).map((line) => line.text)).toEqual(['USD 67.70'])
+    expect(linesOf(totalOf([paid], [dinner]))).toEqual(['USD 67.70'])
     expect(totalOf([], [new PerDiem(day)])).toEqual([])
   })
 
@@ -280,7 +280,6 @@ describe('layoutOf', () => {
       ['EUR 640.00', '$87.10'],
     ])
     expect(linesOf(layout.total)).toEqual(['CAD 1,099.45', 'EUR 65.00', 'JPY 3,000.00'])
-    expect(layout.total[0]?.text).toBe('$1,099.45')
     const foreignOnly = report.afterReplacing(flight, paid(5500, euro))
     expect(linesOf(layoutOf(foreignOnly).total)).toEqual(['EUR 55.00'])
   })

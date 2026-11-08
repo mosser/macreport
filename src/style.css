@@ -288,12 +288,17 @@ td.date {
 
 /* The column of the dates, one width in the tables of the expenses and of the per diems. */
 th.date {
-  width: 10rem;
+  width: 7.5rem;
 }
 
 /* A description keeps the line breaks the Claimant typed. */
 td.description {
   white-space: pre-line;
+}
+
+/* A date beside both lines of its per diem closes the row with them. */
+tr.expense td.date[rowspan] {
+  border-bottom: 1px solid var(--color-rule);
 }
 
 tr.supporting td {
@@ -477,10 +482,6 @@ td.size-action button {
 }
 
 /* The per diems claimed, on one line above the expenses. */
-.per-diems-line {
-  font-weight: 600;
-}
-
 /* A day of the per diems: its day and date beside domestic or international, then its meals. */
 .per-diem-day {
   border: 1px solid var(--color-rule);
