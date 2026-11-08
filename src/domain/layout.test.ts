@@ -33,7 +33,7 @@ const report = new Report({
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   locations: 'Rio de Janeiro, Brazil',
-  account: '20-123-456',
+  accountName: '20-123-456',
   travelJustifications: [invitation],
 }).afterAdding(flight)
 
@@ -49,18 +49,29 @@ describe('layoutOf', () => {
     expect(layout.fileName).toBe('expense-report-2026-10-03-zoe-lefevre-smith.pdf')
   })
 
-  it("carries the template's fields on the cover, the supervisor of a student included", () => {
+  it("carries the template's fields on the cover, the purpose first, the supervisor of a student included", () => {
     expect(layoutOf(report).coverFields).toEqual([
+      { name: 'Purpose', value: 'ICSE 2026' },
+      { name: 'Dates', value: '2026-10-03 to 2026-10-07' },
+      { name: 'Location(s)', value: 'Rio de Janeiro, Brazil' },
       { name: 'Name of claimant', value: 'Zoë Lefèvre-Smith' },
       { name: 'Position', value: 'Student' },
       { name: 'Email', value: 'zoe@mcmaster.ca' },
       { name: 'Supervisor', value: 'Ada Lovelace' },
       { name: "Supervisor's email", value: 'ada@mcmaster.ca' },
-      { name: 'Purpose', value: 'ICSE 2026' },
-      { name: 'Dates', value: '2026-10-03 to 2026-10-07' },
-      { name: 'Locations', value: 'Rio de Janeiro, Brazil' },
       { name: 'Account', value: '20-123-456' },
     ])
+  })
+
+  it('writes the account by its name, then its code in parentheses when it is given', () => {
+    const coded = report.afterChanging({
+      accountName: 'NSERC Discovery',
+      accountCode: '20-123-456',
+    })
+    expect(layoutOf(coded).coverFields.at(-1)).toEqual({
+      name: 'Account',
+      value: 'NSERC Discovery (20-123-456)',
+    })
   })
 
   it('names the supervisor of a postdoctoral fellow, and no one for faculty', () => {

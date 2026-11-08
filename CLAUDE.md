@@ -154,7 +154,7 @@ first.
 - Only `src/io/draft-store.ts` touches IndexedDB; nothing uses
   `localStorage`, `sessionStorage`, cookies or the Cache API. Every access is
   guarded and the system works without it. New report deletes everything but
-  the claimant's name, position and email.
+  the claimant's name, position and email, and the supervisor or host.
 
 ### ADR 0009: vocabulary
 

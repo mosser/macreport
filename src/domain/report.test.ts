@@ -126,7 +126,7 @@ describe('Report', () => {
     expect(report.documentLike(other)).toBeUndefined()
   })
 
-  it('keeps only the claimant for a new report', () => {
+  it('keeps only the claimant, and their supervisor or host, for a new report', () => {
     const invitation = new Document(Kind.additionalDocument, 'invitation.pdf', new Uint8Array())
     const report = new Report({
       claimantName: 'Zoë Lefèvre',
@@ -137,12 +137,25 @@ describe('Report', () => {
       purpose: 'ICSE 2026',
       isBusinessTravel: true,
       firstDay: new CalendarDate(2026, 10, 3),
-      account: '20-123-456',
+      accountName: '20-123-456',
       travelJustifications: [invitation],
     }).afterAdding(new Expense({ description: 'Taxi' }))
     expect(report.afterNewReport()).toEqual(
-      new Report({ claimantName: 'Zoë Lefèvre', position: 'Student', email: 'zoe@mcmaster.ca' }),
+      new Report({
+        claimantName: 'Zoë Lefèvre',
+        position: 'Student',
+        email: 'zoe@mcmaster.ca',
+        supervisorName: 'Ada Lovelace',
+        supervisorEmail: 'ada@mcmaster.ca',
+      }),
     )
+    const visitor = report.afterChanging({
+      position: 'Visitor',
+      hostName: 'Alan Turing',
+      hostEmail: 'alan@mcmaster.ca',
+    })
+    expect(visitor.afterNewReport().hostName).toBe('Alan Turing')
+    expect(visitor.afterNewReport().hostEmail).toBe('alan@mcmaster.ca')
   })
 
   it('holds travel justifications and additional documents of their own kinds only', () => {

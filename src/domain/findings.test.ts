@@ -33,17 +33,23 @@ const complete = new Report({
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
   locations: 'Rio de Janeiro, Brazil',
-  account: '20-123-456',
+  accountName: '20-123-456',
 })
 
 describe('findings of the Report step', () => {
+  it('asks an account name, its code being optional', () => {
+    expect(fieldRules.accountCode).toBeUndefined()
+    expect(isRequired('accountCode')).toBe(false)
+    expect(isRequired('accountName')).toBe(true)
+  })
+
   it('names each required field missing; only a business travel has dates', () => {
     expect(wordings(findingsOfReportStep(new Report()))).toEqual([
       'Name of claimant is required.',
       'Position is required.',
       'Email is required.',
       'Purpose is required.',
-      'Account is required.',
+      'Account name is required.',
     ])
     expect(findingsOfReportStep(complete.afterChanging({ isBusinessTravel: false }))).toEqual([])
     const undated = complete.afterChanging({

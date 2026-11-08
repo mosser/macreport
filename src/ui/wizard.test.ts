@@ -89,7 +89,7 @@ function fillReport(): void {
   choose('position', 'Faculty')
   type('email', 'zoe@mcmaster.ca')
   type('purpose', 'ICSE 2026')
-  type('account', '20-123-456')
+  type('accountName', '20-123-456')
 }
 
 /** Ticks business travel, from October 3 to 7, 2026, to Rio de Janeiro. */
@@ -247,7 +247,7 @@ describe('the wizard', () => {
   it('offers Continue once every required field of the Report step is valid', () => {
     fillReport()
     expect(continueButton()?.disabled).toBe(false)
-    type('account', '  ')
+    type('accountName', '  ')
     expect(continueButton()?.disabled).toBe(true)
   })
 
@@ -350,6 +350,9 @@ describe('the wizard', () => {
     expect(root.querySelector('.status')?.textContent).toContain(
       'expense-report-2026-10-03-zoe-lefevre.pdf',
     )
+    expect(root.querySelector('.status.reminder')?.textContent).toBe(
+      'Redact the bank statements in the report document before you submit it.',
+    )
     expect(button('[data-action="save"]')).not.toBeNull()
     button('[data-step="1"]')?.click()
     button('[data-change="0"]')?.click()
@@ -434,14 +437,14 @@ describe('the wizard', () => {
     proceed()
     proceed()
     button('[data-step="0"]')?.click()
-    type('account', '')
+    type('accountName', '')
     button('[data-step="3"]')?.click()
     expect(root.querySelectorAll('.findings li')).toHaveLength(1)
-    expect(root.querySelector('.findings')?.textContent).toContain('Account is required.')
+    expect(root.querySelector('.findings')?.textContent).toContain('Account name is required.')
     expect(button('[data-action="save"]')).toBeNull()
   })
 
-  it('discards the draft once the Claimant confirms a new report, keeping only the claimant', async () => {
+  it('discards the draft once the Claimant confirms a new report, keeping only the claimant and their supervisor', async () => {
     fillReport()
     choose('position', 'Student')
     type('supervisorName', 'Ada Lovelace')
@@ -472,7 +475,11 @@ describe('the wizard', () => {
       'zoe@mcmaster.ca',
       'Student',
     ])
-    expect([value('supervisorName'), value('purpose'), value('account')]).toEqual(['', '', ''])
+    expect([value('supervisorName'), value('supervisorEmail')]).toEqual([
+      'Ada Lovelace',
+      'ada@mcmaster.ca',
+    ])
+    expect([value('purpose'), value('accountName'), value('accountCode')]).toEqual(['', '', ''])
     expect(kept.at(-1)?.claimantName).toBe('Zoë Lefèvre')
     expect(kept.at(-1)?.purpose).toBeUndefined()
     expect(kept.at(-1)?.expenses).toEqual([])
@@ -840,7 +847,12 @@ describe('the wizard', () => {
     await add('travelJustifications', 'invitation.pdf')
     expect(continueButton()?.disabled).toBe(false)
     proceed()
-    expect(root.querySelector('h3')?.textContent).toBe('Additional documents')
+    expect([...root.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Per diems',
+      'Additional documents',
+      'Receipts',
+      'Bank statements',
+    ])
     expect([...root.querySelectorAll('h4')].map((heading) => heading.textContent)).toEqual([
       'Travel justifications',
     ])
@@ -1294,6 +1306,33 @@ describe('the per diems', () => {
     ])
     const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
     expect(total).toEqual(['Total', '$1,040.75USD 57.70'])
+    expect(root.querySelector('tr.empty')).toBeNull()
+  })
+
+  it('say on review, in grey, that a table is empty: no expense, or no per diem of a business travel', async () => {
+    fillReport()
+    travel()
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    claim('2026-10-04', 'dinner')
+    button('[data-action="done"]')?.click()
+    proceed()
+    await add('travelJustifications', 'invitation.pdf')
+    proceed()
+    const empty = () => [...root.querySelectorAll('tr.empty')].map((row) => row.textContent)
+    expect(empty()).toEqual(['No expense entered'])
+    button('[data-step="1"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    claim('2026-10-04', 'dinner', false)
+    button('[data-action="done"]')?.click()
+    await fillExpense()
+    button('[data-step="3"]')?.click()
+    expect(empty()).toEqual(['No per diem entered'])
+    button('[data-step="0"]')?.click()
+    tick('businessTravel', false)
+    button('[data-step="3"]')?.click()
+    expect(empty()).toEqual([])
+    expect(root.textContent).not.toContain('Per diems')
   })
 
   it('make one meal domestic or international, once Per meal is chosen, and whenever the meals of the day differ', async () => {

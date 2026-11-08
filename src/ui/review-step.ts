@@ -1,4 +1,5 @@
 import { fieldNames, findingsOf } from '../domain/findings.ts'
+import { Kind } from '../domain/kind.ts'
 import { type ExpenseRow, type Layout, layoutOf, type Section } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
@@ -10,11 +11,17 @@ import type { Context, Step } from './step.ts'
 /** Writes the report document of a report without findings and hands it to the browser; gives its file name. */
 export type SaveReport = (report: Report) => Promise<string>
 
+/** What an empty table of the Review step says, in grey, in a row across its columns. */
+function emptyRow(columns: number, wording: string): Markup {
+  return html`<tr class="empty"><td colspan="${columns}">${wording}</td></tr>`
+}
+
 /**
- * The cover: its fields, then each expense on two lines, the second its documents; the per diems,
- * under their own heading; then the total of the report.
+ * The cover: its fields, then each expense on two lines, the second its documents, or No expense
+ * entered; the per diems of a business travel, under their own heading; then the total of the
+ * report.
  */
-function coverOf(layout: Layout, linkOf: LinkOf): Markup {
+function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Markup {
   const fields = layout.coverFields.map(
     (field) => html`<tr><th scope="row">${field.name}</th><td>${field.value}</td></tr>`,
   )
@@ -33,9 +40,9 @@ function coverOf(layout: Layout, linkOf: LinkOf): Markup {
       <thead><tr>
         <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th>
       </tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rows.length > 0 ? rows : emptyRow(5, 'No expense entered')}</tbody>
     </table>
-    ${perDiemsOf(layout.expenses)}
+    ${isBusinessTravel ? perDiemsOf(layout.expenses) : ''}
     <table class="report-total">
       <tr class="total"><th scope="row">Total</th><td>${layout.total.map((line) => html`<div>${line}</div>`)}</td></tr>
     </table>`
@@ -44,15 +51,12 @@ function coverOf(layout: Layout, linkOf: LinkOf): Markup {
 /**
  * The per diems, one row per day with a meal claimed: its numbers on the cover, its date, domestic
  * or international, each meal claimed with its rate or not claimed with its reason, and its total,
- * one amount per currency.
+ * one amount per currency; No per diem entered when there is none.
  */
 function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
   const numbers = new Map<PerDiem, number[]>()
   for (const { perDiem, number } of rows) {
     if (perDiem !== undefined) numbers.set(perDiem, [...(numbers.get(perDiem) ?? []), number])
-  }
-  if (numbers.size === 0) {
-    return html``
   }
   const lines = [...numbers].map(([perDiem, numbered]) => {
     const meals = Meal.all.map((meal) => {
@@ -78,7 +82,7 @@ function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
       <thead><tr>
         <th>#</th><th>Date</th><th></th>${Meal.all.map((meal) => html`<th>${meal.title}</th>`)}<th>Total</th>
       </tr></thead>
-      <tbody>${lines}</tbody>
+      <tbody>${lines.length > 0 ? lines : emptyRow(Meal.all.length + 4, 'No per diem entered')}</tbody>
     </table>`
 }
 
@@ -125,7 +129,11 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
   const draft = isDraftKept
     ? html`<p class="status">The draft, bank statements included, stays in this browser until New report.</p>`
     : html``
-  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${draft}`
+  const redaction =
+    report.documentsOf(Kind.bankStatement).length > 0
+      ? html`<p class="status reminder">Redact the bank statements in the report document before you submit it.</p>`
+      : html``
+  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${redaction}${draft}`
 }
 
 /** Step 4: the report as it will be written, each document's name opening it in a new tab, then its findings, and Save the report. */
@@ -149,7 +157,7 @@ export function reviewStep(
       const layout = layoutOf(report)
       const linkOf = linksAnew(links)
       panel.innerHTML = html`<h2>Review</h2>
-        ${coverOf(layout, linkOf)}
+        ${coverOf(layout, linkOf, report.isBusinessTravel)}
         ${sectionsOf(layout, linkOf)}
         <button class="primary save" data-action="save">Save the report</button>
         ${statusOf(outcome, report, isDraftKept())}`.text

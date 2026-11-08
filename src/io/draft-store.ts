@@ -305,7 +305,8 @@ function recordOf(
     firstDay: report.firstDay?.toString(),
     lastDay: report.lastDay?.toString(),
     locations: report.locations,
-    account: report.account,
+    accountName: report.accountName,
+    accountCode: report.accountCode,
     expenses,
     perDiems,
     travelJustifications: report.travelJustifications.map(identifier),
@@ -325,7 +326,10 @@ function namesOf(record: unknown): Map<string, string> {
   )
 }
 
-/** The report a record holds, keeping only what follows the rules of each field. */
+/**
+ * The report a record holds, keeping only what follows the rules of each field. A draft kept by
+ * version 0.2.0 holds the account as one text, `account`: it is the account's name.
+ */
 function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Report {
   if (typeof record !== 'object' || record === null) {
     return new Report()
@@ -367,7 +371,8 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
     firstDay: isBusinessTravel ? date(fields.firstDay) : undefined,
     lastDay: isBusinessTravel ? date(fields.lastDay) : undefined,
     locations: text(fields.locations),
-    account: text(fields.account),
+    accountName: text(fields.accountName) ?? text(fields.account),
+    accountCode: text(fields.accountCode),
     expenses,
     perDiems,
     travelJustifications: documentsAmong(fields.travelJustifications, Kind.additionalDocument),

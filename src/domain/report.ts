@@ -31,7 +31,8 @@ export interface ReportFields {
   readonly firstDay?: CalendarDate | undefined
   readonly lastDay?: CalendarDate | undefined
   readonly locations?: string | undefined
-  readonly account?: string | undefined
+  readonly accountName?: string | undefined
+  readonly accountCode?: string | undefined
   readonly expenses?: readonly Expense[] | undefined
   readonly perDiems?: readonly PerDiem[] | undefined
   readonly travelJustifications?: readonly Document[] | undefined
@@ -41,7 +42,7 @@ export interface ReportFields {
 /**
  * What the Claimant prepares: the claimant's name, position and email, the supervisor of a
  * student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its
- * locations, the account, the expenses, the per diems, the travel justifications and the
+ * locations, the account, by its name and its code when given, the expenses, the per diems, the travel justifications and the
  * additional documents. An email, when given, is an email address; a travel justification is an
  * additional document that justifies the travel, of the additional document kind as any other.
  * Only a business travel has per diems, one per day at most, between its dates once they are given.
@@ -61,7 +62,10 @@ export class Report {
   readonly lastDay: CalendarDate | undefined
   /** Where a business travel took the claimant, in the Claimant's words. */
   readonly locations: string | undefined
-  readonly account: string | undefined
+  /** The name of the account the Claimant suggests the expenses be charged to. */
+  readonly accountName: string | undefined
+  /** The code of that account, when the Claimant gives it. */
+  readonly accountCode: string | undefined
   readonly expenses: readonly Expense[]
   /**
    * The per diems the Claimant changed, by date; a day of the business travel without one has a
@@ -104,7 +108,8 @@ export class Report {
     this.firstDay = fields.firstDay
     this.lastDay = fields.lastDay
     this.locations = fields.locations
-    this.account = fields.account
+    this.accountName = fields.accountName
+    this.accountCode = fields.accountCode
     this.expenses = fields.expenses ?? []
     this.perDiems = this.isBusinessTravel
       ? perDiemsBetween(fields.perDiems ?? [], this.firstDay, this.lastDay)
@@ -260,14 +265,19 @@ export class Report {
   }
 
   /**
-   * The report New report starts: the claimant's name, position and email, and nothing else; no
-   * supervisor, host, purpose, dates, locations, account, expense, per diem or document.
+   * The report New report starts: the claimant's name, position and email, the supervisor of a
+   * student or a postdoctoral fellow, the host of a visitor, and nothing else; no purpose, dates,
+   * locations, account, expense, per diem or document.
    */
   afterNewReport(): Report {
     return new Report({
       claimantName: this.claimantName,
       position: this.position,
       email: this.email,
+      supervisorName: this.supervisorName,
+      supervisorEmail: this.supervisorEmail,
+      hostName: this.hostName,
+      hostEmail: this.hostEmail,
     })
   }
 
@@ -362,7 +372,8 @@ export class Report {
       firstDay: this.firstDay,
       lastDay: this.lastDay,
       locations: this.locations,
-      account: this.account,
+      accountName: this.accountName,
+      accountCode: this.accountCode,
       expenses: this.expenses,
       perDiems: this.perDiems,
       travelJustifications: this.travelJustifications,

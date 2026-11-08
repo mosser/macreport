@@ -51,10 +51,11 @@ the template's fields and its table, so that nothing else needs filling in.
 - **Heading.** The McSCert logo on the left; in the top right corner, level
   with it, *McSCert Expense Report*, and under it the date the document was
   written.
-- **Report fields.** Name of claimant, position, email, then the supervisor
+- **Report fields.** Purpose first, with the dates and the locations of a
+  business travel; then name of claimant, position, email, the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
-  email for a visitor; purpose, the dates and the locations of a business
-  travel, account.
+  email for a visitor; then the account, its name followed by its code in
+  parentheses when it is given (*NSERC Discovery (20-123-456)*).
 - **Attached information.** The four kinds of document, in alphabetical
   order, each with a box ticked when its section exists.
 - **Expenses.** A table of every expense and every per diem with a meal

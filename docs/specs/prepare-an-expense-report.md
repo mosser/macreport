@@ -19,8 +19,8 @@ browser, on this computer. Nothing is collected, sent or shared.*
 **New report** is offered on every step. It asks for confirmation, in a
 dialog over the step as every confirmation is, then
 discards the draft, its expenses and its documents, and opens the Report step
-on a report holding only the name of claimant, position and email, kept as
-the new draft. When the browser does not delete the draft, the report
+on a report holding only the name of claimant, position and email, and the
+supervisor or the host with their email, kept as the new draft. When the browser does not delete the draft, the report
 stays as it is and the system says so, so that the Claimant can try again.
 
 ## The steps
@@ -54,7 +54,8 @@ locations) and
 | First day | Asked of a business travel, and then required: a calendar date. |
 | Last day | Asked of a business travel, and then required: a calendar date, not before the first day. |
 | Location(s) | Asked of a business travel, and then required: where it took the claimant, as free text. |
-| Account | Required, free text. |
+| Account name | Required, free text. |
+| Account code | Optional, free text. Written after the account's name, in parentheses. |
 
 Choosing another position takes the supervisor or the host out of the
 report; unticking business travel takes the dates, the locations, the per
@@ -187,8 +188,10 @@ Continue is not offered.
 ### 4. Review
 
 The report as it will be written: the cover, with the table of the
-expenses, each on two lines as in the report document; the per diems, under
-their own heading, one row per day with a meal claimed, with its numbers on
+expenses, each on two lines as in the report document, or *No expense
+entered* in grey; the per diems of a business travel, under their own
+heading, one row per day with a meal claimed, or *No per diem entered* in
+grey, with its numbers on
 the cover, its date, domestic, international or both, each meal claimed with
 its rate in its currency or not claimed with its reason, and the day's
 total, one amount per currency; then the total of the report, as on the
@@ -215,8 +218,10 @@ hyphens. The browser does not tell the system whether it wrote the file or
 the Claimant cancelled, so the step says the report document was handed to
 the browser, with its file name, and keeps Save the report on offer to hand
 it over again. It also says that each missing receipt authorization, when
-there is one, is to be signed, and that the draft, bank statements included,
-stays in this browser until New report. What it says holds for the report
+there is one, is to be signed; that the bank statements, when there are
+some, are to be redacted in the report document before it is submitted; and
+that the draft, bank statements included, stays in this browser until New
+report. What it says holds for the report
 as saved: once the report changes, it is no longer said.
 
 When the report document cannot be written, the step says so, and that a

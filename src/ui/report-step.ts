@@ -75,7 +75,7 @@ function supervisorOrHost(report: Report): Markup | undefined {
   return undefined
 }
 
-/** Step 1: the claimant, their supervisor or host, the purpose, the dates and locations of a business travel, the account. */
+/** Step 1: the claimant, their supervisor or host, the purpose, the dates and locations of a business travel, the account's name and code. */
 export const reportStep: Step = {
   title: 'Report',
 
@@ -102,7 +102,10 @@ export const reportStep: Step = {
             ${input('locations', report.locations ?? '', 'text')}`
           : html``,
       ])}
-      ${section('Account', [input('account', report.account ?? '', 'text')])}`.text
+      ${section('Account', [
+        input('accountName', report.accountName ?? '', 'text'),
+        input('accountCode', report.accountCode ?? '', 'text'),
+      ])}`.text
 
     const select = panel.querySelector('select')
     if (select !== null) {
