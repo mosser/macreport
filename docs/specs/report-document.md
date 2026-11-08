@@ -89,9 +89,9 @@ the template's fields and its table, so that nothing else needs filling in.
   | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
   |---|---|---|---|---|---|
   | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
-  | | | *Air Canada booking · Visa, October* | | | |
+  | | | *Receipt ↗ · Statement ↗* | | | |
   | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | | ☐ |
-  | | | *Taxi, CDG–hotel · cash* | | | |
+  | | | *Receipt ↗ · cash* | | | |
   | 3 | 2026-10-05 | Per diem, international: breakfast, dinner | USD 86.10 | | ☐ |
   | | | *Not claimed: lunch (provided by the conference)* | | | |
   | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch | | $55.80 | ☐ |
@@ -102,10 +102,11 @@ the template's fields and its table, so that nothing else needs filling in.
   A description keeps its line breaks. The foreign amount is the currency
   code then the amount, empty for an expense paid in Canadian dollars;
   nothing is converted. The claimed amount is empty for an expense that has
-  none, McSCert working it out from the foreign amount. The supporting documents are the names of the expense's
-  documents, in grey, separated by a middle dot, in the order of the report
-  document, and *cash* for an expense paid in cash; a missing receipt
-  authorization is named by the expense's description. They run from under
+  none, McSCert working it out from the foreign amount. The supporting documents are
+  the expense's documents, in grey, separated by a middle dot, in the order of
+  the report document, each called by its kind whatever its name, *Receipt*,
+  *Missing receipt* or *Statement*, followed by the arrow of a link, and *cash*
+  for an expense paid in cash. They run from under
   the description to the claimed amount, and on to the next line when they
   do not fit. *Entered* is an empty box, a form field that McSCert's
   administrative staff tick on screen, or by hand on a printed copy, once
@@ -137,7 +138,7 @@ The title of the section, then a table of its documents:
 
 | Label | Name | Pages | Expenses |
 |---|---|---|---|
-| S1 | Visa, October | 9–11 | Air Canada, YYZ–CDG return<br>Taxi, CDG–hotel<br>Dinner with the programme comm… |
+| S1 ↗ | Visa, October | 9–11 | Air Canada, YYZ–CDG return ↗<br>Taxi, CDG–hotel ↗<br>Dinner with the programme comm… ↗ |
 
 Pages are the pages of the report document. The expenses a document
 supports are named by their description, one per line, a description longer
@@ -204,13 +205,13 @@ it reads upright on screen, whatever the page's size and rotation:
 - on a page of a receipt, a bank statement or a missing receipt
   authorization: its label, each expense the document supports, by its
   number and the start of its description, then the page number out of the
-  total, as in `R3 · Expense 2: Taxi, CDG–hotel · 12 / 30` or
-  `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
-  programme comm… · 14 / 30`. A description is written on one line, its line
+  total, as in `R3 ↗ · Expense 2: Taxi, CDG–hotel ↗ · 12 / 30` or
+  `S1 ↗ · Expense 1: Air Canada, YYZ–CDG return ↗ · Expense 3: Dinner with the
+  programme comm… ↗ · 14 / 30`. A description is written on one line, its line
   breaks as spaces, and one longer than 30 characters is cut to its first 30,
   followed by an ellipsis;
 - on a page of an additional document: its label, its name, then the page
-  number out of the total, as in `A1 · Invitation from ICSE · 3 / 30`; a
+  number out of the total, as in `A1 ↗ · Invitation from ICSE · 3 / 30`; a
   name longer than 30 characters is cut as a description is;
 - on the cover and on section pages: the page number out of the total.
 
@@ -225,18 +226,20 @@ receipt and back.
 ## Links
 
 Labels and expense numbers are links: clicked in a PDF reader, they go to
-what they name.
+what they name. An arrow pointing up and to the right, drawn after a link in the
+colour of its text, shows that it is one; a section page's pages have none, the
+label of their row already showing where they go.
 
 | Where | Link | Goes to |
 |---|---|---|
-| Cover, expenses | A name among the supporting documents | The first page of its document |
+| Cover, expenses | A document among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
 | Section page | An expense's description | The expense's row on the cover |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
 | Stamp | The label | The document's row on its section page |
 
 Going to a row opens the page that holds it, with the row at the top of the
-window. *cash* and page numbers in the stamp are not links. A link changes
+window. *cash*, a document's name and page numbers in the stamp are not links. A link changes
 nothing on a printed copy, where the stamp does its work.
 
 ## Text

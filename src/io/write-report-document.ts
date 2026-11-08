@@ -69,6 +69,12 @@ const leading = 1.35
 const cellPadding = 4
 /** The side of an expense's Entered box. */
 const enteredSize = 10
+/** The side of the arrow that marks a link, as a share of the size of the text it follows. */
+const arrowSide = 0.55
+/** The room an arrow takes after the text it follows, as a share of the size of that text. */
+const arrowRoom = 0.85
+/** The thickness of the lines of an arrow. */
+const arrowThickness = 0.6
 
 /** A column of a table: its title and its width in points. */
 interface Column {
@@ -80,6 +86,8 @@ interface Column {
 interface LinkedText {
   readonly text: string
   readonly target: Target
+  /** Whether the text next to it already shows the link with an arrow, going to the same place. */
+  readonly isUnmarked?: boolean
 }
 
 /** A cell of a table: a text, or texts each on a line of its own and each a link. */
@@ -89,6 +97,7 @@ type Cell = string | readonly LinkedText[]
 interface CellLine {
   readonly text: string
   readonly target?: Target
+  readonly isUnmarked?: boolean | undefined
 }
 
 /** A name on the line of documents under an expense, and the label of the document it links to. */
@@ -113,16 +122,26 @@ interface StampedPage {
   readonly entry?: LabelledDocument
 }
 
-/** A piece of a stamp; an expense in it is a link to the expense's row on the cover. */
+/**
+ * A piece of a stamp: an expense in it is a link to the expense's row on the cover, a label a link
+ * to the document's row on its section page.
+ */
 interface StampPiece {
   readonly text: string
   readonly expense?: StampedExpense
+  readonly label?: string
 }
 
 const stampSeparator = ' · '
 
-/** What a link goes to: the first page of a document, or the row of an expense on the cover. */
-type Target = { readonly label: string } | { readonly expenseNumber: number }
+/**
+ * What a link goes to: the first page of a document, the row of an expense on the cover, or the row
+ * of a document on its section page.
+ */
+type Target =
+  | { readonly label: string }
+  | { readonly expenseNumber: number }
+  | { readonly documentRow: string }
 
 /** A rectangle of a page that a reader clicks to go to a target. */
 interface Link {
@@ -364,6 +383,7 @@ class Writer {
   private readonly links: Link[] = []
   private readonly firstPages = new Map<string, PDFPage>()
   private readonly expenseRows = new Map<number, Place>()
+  private readonly documentRows = new Map<string, Place>()
   private readonly pdf: PDFDocument
   private readonly palette: Palette
   private readonly regular: PDFFont
@@ -500,17 +520,19 @@ class Writer {
   }
 
   /**
-   * Stamps every page: the label of its document, the name of an additional document, and each
-   * expense a document supports, by its number and the start of its description, a link to the
-   * expense's row on the cover; then the page number out of the total. When the stamp is wider than the page less its margins, the expenses go on
-   * lines of their own above it.
+   * Stamps every page: the label of its document, a link to its row on its section page, the name
+   * of an additional document, and each expense a document supports, by its number and the start of
+   * its description, a link to the expense's row on the cover; then the page number out of the
+   * total. When the stamp is wider than the page less its margins, the expenses go on lines of
+   * their own above it.
    */
   stampEveryPage(): void {
     const total = this.pages.length
     this.pages.forEach(({ page, entry }, index) => {
       const view = viewOf(page.getCropBox(), page.getRotation().angle)
       const room = view.width - 2 * margin
-      const label: StampPiece[] = entry === undefined ? [] : [{ text: entry.label }]
+      const label: StampPiece[] =
+        entry === undefined ? [] : [{ text: entry.label, label: entry.label }]
       const name: StampPiece[] =
         entry?.stampedName === undefined ? [] : [{ text: entry.stampedName }]
       const expenses = (entry?.expenses ?? []).map((expense) => ({ text: expense.name, expense }))
@@ -521,7 +543,9 @@ class Writer {
           ? [oneLine]
           : [
               ...expenses.flatMap(({ text, expense }) =>
-                wrap(text, this.regular, stampSize, room).map((part) => [{ text: part, expense }]),
+                wrap(text, this.regular, stampSize, room - arrowRoom * stampSize).map((part) => [
+                  { text: part, expense },
+                ]),
               ),
               [...label, ...name, pageNumber],
             ]
@@ -531,39 +555,56 @@ class Writer {
     })
   }
 
+  /** The width of a piece of a stamp, with the arrow of a link. */
+  private widthOfPiece(piece: StampPiece): number {
+    const isLink = piece.expense !== undefined || piece.label !== undefined
+    return (
+      this.regular.widthOfTextAtSize(piece.text, stampSize) + (isLink ? arrowRoom * stampSize : 0)
+    )
+  }
+
   private widthOf(line: readonly StampPiece[]): number {
-    const text = line.map((piece) => piece.text).join(stampSeparator)
-    return this.regular.widthOfTextAtSize(text, stampSize)
+    const separators = this.regular.widthOfTextAtSize(stampSeparator, stampSize)
+    return (
+      line.reduce((sum, piece) => sum + this.widthOfPiece(piece), 0) +
+      separators * Math.max(0, line.length - 1)
+    )
   }
 
   /**
    * A line of a stamp, upright on screen whatever the page's rotation, ending at the right margin
-   * of the page as it shows; each expense in it a link to its row on the cover.
+   * of the page as it shows; each expense and label in it a link, marked with an arrow.
    */
   private stampLine(page: PDFPage, view: PageView, line: readonly StampPiece[], up: number): void {
-    const left = view.width - margin - this.widthOf(line)
-    const text = line.map((piece) => piece.text).join(stampSeparator)
-    const at = view.toPage(left, up)
-    page.drawText(text, {
-      ...at,
-      size: stampSize,
-      font: this.regular,
-      color: colourOf(this.palette.grey),
-      rotate: degrees(view.rotation),
-    })
-    line.forEach((piece, index) => {
-      if (piece.expense === undefined) return
-      const before = line
-        .slice(0, index)
-        .map((each) => each.text + stampSeparator)
-        .join('')
-      const box = view.boxOnPage({
-        x: left + this.regular.widthOfTextAtSize(before, stampSize),
-        y: up - 2,
-        width: this.regular.widthOfTextAtSize(piece.text, stampSize),
-        height: stampSize + 3,
+    const separator = this.regular.widthOfTextAtSize(stampSeparator, stampSize)
+    const write = (text: string, right: number) =>
+      page.drawText(text, {
+        ...view.toPage(right, up),
+        size: stampSize,
+        font: this.regular,
+        color: colourOf(this.palette.grey),
+        rotate: degrees(view.rotation),
       })
-      this.links.push({ page, ...box, target: { expenseNumber: piece.expense.number } })
+    let x = view.width - margin - this.widthOf(line)
+    line.forEach((piece, index) => {
+      if (index > 0) {
+        write(stampSeparator, x)
+        x += separator
+      }
+      write(piece.text, x)
+      const target = stampTargetOf(piece)
+      if (target !== undefined) {
+        const end = x + this.regular.widthOfTextAtSize(piece.text, stampSize)
+        drawArrow(page, end, up, stampSize, this.palette.grey, view.toPage)
+        const box = view.boxOnPage({
+          x,
+          y: up - 2,
+          width: this.widthOfPiece(piece),
+          height: stampSize + 3,
+        })
+        this.links.push({ page, ...box, target })
+      }
+      x += this.widthOfPiece(piece)
     })
   }
 
@@ -577,7 +618,10 @@ class Writer {
         const page = this.firstPages.get(target.label)
         destination = page && context.obj([page.ref, 'Fit'])
       } else {
-        const row = this.expenseRows.get(target.expenseNumber)
+        const row =
+          'documentRow' in target
+            ? this.documentRows.get(target.documentRow)
+            : this.expenseRows.get(target.expenseNumber)
         destination = row && context.obj([row.page.ref, 'XYZ', null, row.top, null])
       }
       if (destination === undefined) continue
@@ -624,15 +668,24 @@ class Writer {
       if (index > 0) flow.down(12)
       if (title !== undefined) this.sectionHeading(flow, title)
       const rows = documents.map((entry): Cell[] => [
-        entry.label,
+        [{ text: entry.label, target: { label: entry.label } }],
         entry.document.name,
-        pagesOf.get(entry) ?? '',
+        [
+          {
+            text: pagesOf.get(entry) ?? '',
+            target: { label: entry.label },
+            isUnmarked: true,
+          },
+        ],
         entry.expenses.map(({ number, description }) => ({
           text: description,
           target: { expenseNumber: number },
         })),
       ])
-      this.table(flow, columns, rows)
+      this.table(flow, columns, rows, (index, place) => {
+        const label = documents[index]?.label
+        if (label !== undefined) this.documentRows.set(label, place)
+      })
       flow.stopContinuing()
     })
   }
@@ -732,8 +785,16 @@ class Writer {
     })
   }
 
-  /** A table: its header, repeated at the top of every page it continues on, then its rows. */
-  private table(flow: Flow, columns: readonly Column[], rows: readonly Cell[][]): void {
+  /**
+   * A table: its header, repeated at the top of every page it continues on, then its rows, each
+   * told where it starts.
+   */
+  private table(
+    flow: Flow,
+    columns: readonly Column[],
+    rows: readonly Cell[][],
+    placed: (index: number, place: Place) => void = () => {},
+  ): void {
     const header = () => {
       this.tableRow(
         flow,
@@ -745,9 +806,10 @@ class Writer {
     }
     header()
     flow.continueWith(header)
-    for (const row of rows) {
-      this.tableRow(flow, columns, row, this.regular)
-    }
+    rows.forEach((row, index) => {
+      const place = this.tableRow(flow, columns, row, this.regular)
+      if (place !== undefined) placed(index, place)
+    })
   }
 
   /**
@@ -812,16 +874,18 @@ class Writer {
     flow.text(line.text, x, font, tableSize, colour)
     const page = flow.page
     if (page === undefined || line.target === undefined) return
-    const width = font.widthOfTextAtSize(line.text, tableSize)
-    const y = flow.cursor - tableSize - 2
-    this.links.push({ page, x, y, width, height: tableSize + 3, target: line.target })
+    const end = x + font.widthOfTextAtSize(line.text, tableSize)
+    const baseline = flow.cursor - tableSize
+    if (!line.isUnmarked) drawArrow(page, end, baseline, tableSize, colour)
+    const width = end - x + (line.isUnmarked ? 0 : arrowRoom * tableSize)
+    this.links.push({ page, x, y: baseline - 2, width, height: tableSize + 3, target: line.target })
   }
 
   /**
-   * The line under an expense's row: its documents by name, one after the other, from under its
-   * description to its claimed amount, each a link to its document; a name that does not fit
-   * goes on to the next line. Under a per diem, its meals not claimed, a link to nothing. A rule
-   * closes the row.
+   * The line under an expense's row: its documents, one after the other, from under its
+   * description to its claimed amount, each a link to its document, marked with an arrow; one that
+   * does not fit goes on to the next line. Under a per diem, its meals not claimed, a link to
+   * nothing. A rule closes the row.
    */
   private documentsLine(
     flow: Flow,
@@ -834,15 +898,17 @@ class Writer {
     const left = margin + (widths[0] ?? 0) + (widths[1] ?? 0) + padding
     const room = (widths[2] ?? 0) + (widths[3] ?? 0) + (widths[4] ?? 0) - 2 * padding
     const widthOf = (text: string) => this.regular.widthOfTextAtSize(text, tableSize)
+    const arrow = arrowRoom * tableSize
     const lines: NamePiece[][] = []
     let used = 0
     for (const { label, name } of documents) {
-      for (const text of wrap(name, this.regular, tableSize, room)) {
+      const marked = label === undefined ? 0 : arrow
+      for (const text of wrap(name, this.regular, tableSize, room - marked)) {
         const line = lines.at(-1)
-        const needed = widthOf(nameSeparator) + widthOf(text)
+        const needed = widthOf(nameSeparator) + widthOf(text) + marked
         if (line === undefined || used + needed > room) {
           lines.push([{ text, label }])
-          used = widthOf(text)
+          used = widthOf(text) + marked
         } else {
           line.push({ text, label })
           used += needed
@@ -859,18 +925,20 @@ class Writer {
         }
         flow.text(text, x, this.regular, tableSize, this.palette.grey)
         const page = flow.page
+        const width = widthOf(text) + (label === undefined ? 0 : arrow)
         if (page !== undefined && label !== undefined) {
-          const y = flow.cursor - tableSize - 2
+          const baseline = flow.cursor - tableSize
+          drawArrow(page, x + widthOf(text), baseline, tableSize, this.palette.grey)
           this.links.push({
             page,
             x,
-            y,
-            width: widthOf(text),
+            y: baseline - 2,
+            width,
             height: tableSize + 3,
             target: { label },
           })
         }
-        x += widthOf(text)
+        x += width
       })
       flow.down(lineHeight)
     }
@@ -879,13 +947,61 @@ class Writer {
   }
 }
 
-/** The lines a cell wraps into within a width: a text that is a link starts a line of its own. */
+/** What a piece of a stamp is a link to, when it is one. */
+function stampTargetOf({ expense, label }: StampPiece): Target | undefined {
+  if (expense !== undefined) return { expenseNumber: expense.number }
+  return label === undefined ? undefined : { documentRow: label }
+}
+
+/**
+ * The arrow that marks a link, pointing up and to the right, just after the text it follows. It is
+ * drawn rather than written: the embedded font has no arrow. A point is given as a stamp gives it,
+ * as the page shows, or in the page's own coordinates.
+ */
+function drawArrow(
+  page: PDFPage,
+  textEnd: number,
+  baseline: number,
+  size: number,
+  colour: Colour,
+  toPage: (right: number, up: number) => { readonly x: number; readonly y: number } = (x, y) => ({
+    x,
+    y,
+  }),
+): void {
+  const side = arrowSide * size
+  const left = textEnd + (arrowRoom - arrowSide) * size * 0.5
+  const point = (across: number, up: number) => toPage(left + across, baseline + up)
+  const tip = point(side, side)
+  const strokes: [number, number][] = [
+    [0, 0],
+    [side * 0.4, side],
+    [side, side * 0.4],
+  ]
+  for (const [across, up] of strokes) {
+    page.drawLine({
+      start: point(across, up),
+      end: tip,
+      thickness: arrowThickness,
+      color: colourOf(colour),
+    })
+  }
+}
+
+/**
+ * The lines a cell wraps into within a width: a text that is a link starts a line of its own, with
+ * room for its arrow.
+ */
 function linesOf(cell: Cell, font: PDFFont, width: number): CellLine[] {
   if (typeof cell === 'string') {
     return wrap(cell, font, tableSize, width).map((text) => ({ text }))
   }
-  const lines = cell.flatMap(({ text, target }) =>
-    wrap(text, font, tableSize, width).map((part) => ({ text: part, target })),
+  const lines = cell.flatMap(({ text, target, isUnmarked }) =>
+    wrap(text, font, tableSize, isUnmarked ? width : width - arrowRoom * tableSize).map((part) => ({
+      text: part,
+      target,
+      isUnmarked,
+    })),
   )
   return lines.length > 0 ? lines : [{ text: '' }]
 }

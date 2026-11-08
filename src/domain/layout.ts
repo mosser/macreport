@@ -20,7 +20,7 @@ export interface AttachedInformation {
   readonly isAttached: boolean
 }
 
-/** A document supporting an expense on the cover: named, and a link to it by its label. */
+/** A document supporting an expense on the cover: called by its kind, and a link to it by its label. */
 export interface SupportingDocument {
   readonly label: string
   readonly name: string
@@ -386,7 +386,7 @@ function attachedInformationOf(kind: Kind, sections: readonly Section[]): Attach
 function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
   const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
     label: labels.get(document) ?? '',
-    name: document.name,
+    name: document.kind.coverName,
     document,
   }))
   return {

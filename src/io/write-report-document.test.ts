@@ -203,6 +203,21 @@ function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
   return texts
 }
 
+/** The texts of a page, each line of a stamp as one: its pieces are written one by one, around their arrows. */
+function stampedTextsOf(pdf: PDFDocument, page: PDFPage): string[] {
+  const texts: string[] = []
+  let isJoining = false
+  for (const text of textsOf(pdf, page)) {
+    if (text === ' · ' || isJoining) {
+      texts[texts.length - 1] += text
+      isJoining = text === ' · '
+    } else {
+      texts.push(text)
+    }
+  }
+  return texts
+}
+
 /** Where a page shows each text it writes: the text, read back, and where its baseline starts. */
 function placesOf(pdf: PDFDocument, page: PDFPage) {
   const fonts = fontsOf(pdf, page)
@@ -253,12 +268,10 @@ function shown(page: PDFPage): number[] {
 }
 
 describe('writeReportDocument', () => {
-  it("links each name of an expense's row to its document, and each page of a document back to the row", async () => {
+  it("links each document of an expense's row to its first page, and each page of a document back to the row", async () => {
     const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
     const pages = pdf.getPages()
-    const [cover, receipts, boarding, pass, statements, statement] = pages.map((page) =>
-      linksOf(pdf, page),
-    )
+    const [cover, , boarding, pass, , statement] = pages.map((page) => linksOf(pdf, page))
     expect(cover?.map(({ to, how }) => [to, how])).toEqual([
       [3, '/Fit'],
       [6, '/Fit'],
@@ -266,14 +279,65 @@ describe('writeReportDocument', () => {
     expect(cover?.[0]?.left).toBeLessThan(cover?.[1]?.left ?? 0)
     expect(cover?.[0]?.bottom).toBe(cover?.[1]?.bottom)
     expect(cover?.[0]?.left).toBeCloseTo(54 + 22 + 62 + 4)
-    for (const links of [receipts, statements, boarding, pass, statement]) {
-      expect(links?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
+    for (const links of [boarding, pass, statement]) {
+      expect(links?.[1]?.to).toBe(1)
+      expect(links?.[1]?.how).toBe('/XYZ')
     }
-    const row = boarding?.[0]?.top ?? 0
+    const row = boarding?.[1]?.top ?? 0
     expect(row).toBeGreaterThan(54)
     expect(row).toBeLessThan(792 - 54)
-    expect(statement?.[0]?.top).toBe(row)
-    expect(boarding?.[0]?.width).toBeGreaterThan(120)
+    expect(statement?.[1]?.top).toBe(row)
+    expect(boarding?.[1]?.width).toBeGreaterThan(120)
+  })
+
+  it('links the label of a stamp to the row of its document on its section page', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const [boarding, pass, statement] = [2, 3, 5].map((index) => linksOf(pdf, pdf.getPage(index)))
+    expect(boarding?.[0]?.to).toBe(2)
+    expect(boarding?.[0]?.how).toBe('/XYZ')
+    expect(pass?.[0]?.top).toBe(boarding?.[0]?.top)
+    expect(statement?.[0]?.to).toBe(5)
+    expect(statement?.[0]?.how).toBe('/XYZ')
+  })
+
+  it('links a label and its pages on a section page to the first page of the document', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const [label, pages, expense] = linksOf(pdf, pdf.getPage(1))
+    expect([label?.to, label?.how]).toEqual([3, '/Fit'])
+    expect([pages?.to, pages?.how]).toEqual([3, '/Fit'])
+    expect([expense?.to, expense?.how]).toEqual([1, '/XYZ'])
+  })
+
+  it('marks every link of a stamp with an arrow of three strokes, and nothing else', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const pdf = await written(
+      report.afterChanging({
+        additionalDocuments: [new Document(Kind.additionalDocument, 'invitation.png', png)],
+      }),
+    )
+    const strokes = (page: PDFPage) =>
+      streamsOf(pdf, page)
+        .map((stream) => decoded(stream).match(/\bl\s+S\b/g)?.length ?? 0)
+        .reduce((sum, count) => sum + count, 0)
+    const invitation = pdf
+      .getPages()
+      .find((page) => stampedTextsOf(pdf, page).at(-1)?.startsWith('A1'))
+    const statement = pdf.getPages().at(-1)
+    if (invitation === undefined || statement === undefined) throw new TypeError('No page')
+    expect(strokes(invitation)).toBe(3)
+    expect(strokes(statement)).toBe(6)
+  })
+
+  it('makes a link wide enough to click its arrow too', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const [receipt, statement] = linksOf(pdf, pdf.getPage(0))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const separator = places.find((place) => place.text === ' · ')
+    expect(places.some((place) => place.text === 'Receipt')).toBe(true)
+    expect(places.some((place) => place.text === 'Statement')).toBe(true)
+    // The link of the receipt ends where the separator after its arrow starts.
+    expect((receipt?.left ?? 0) + (receipt?.width ?? 0)).toBeCloseTo(separator?.x ?? 0)
+    expect(statement?.width).toBeGreaterThan(receipt?.width ?? 0)
   })
 
   it('puts the expenses of a stamp too wide for its page on lines of their own, above it', async () => {
@@ -285,13 +349,16 @@ describe('writeReportDocument', () => {
     )
     const pdf = await written(others.reduce((each, other) => each.afterAdding(other), report))
     const boarding = pdf.getPage(2)
-    const [content, base, ...expenseLines] = textsOf(pdf, boarding)
+    const [content, base, ...expenseLines] = stampedTextsOf(pdf, boarding)
     expect([content, base]).toEqual(['Boarding', 'R1 · 3 / 6'])
     expect(expenseLines.toReversed()).toEqual(
       Array.from({ length: 8 }, (_, index) => `Expense ${index + 1}: Taxi ${index + 1}`),
     )
     const links = linksOf(pdf, boarding)
-    expect(links.map(({ to, how }) => [to, how])).toEqual(expenseLines.map(() => [1, '/XYZ']))
+    expect(links.map(({ to, how }) => [to, how])).toEqual([
+      [2, '/XYZ'],
+      ...expenseLines.map(() => [1, '/XYZ']),
+    ])
     const crop = boarding.getCropBox()
     for (const link of links) {
       expect(link.left).toBeGreaterThanOrEqual(crop.x)
@@ -318,8 +385,8 @@ describe('writeReportDocument', () => {
         'Additional documents',
         'Air Canada, YYZ–CDG return',
         '$1,012.35',
-        'air-canada',
-        'statement-octobre',
+        'Receipt',
+        'Statement',
         'Entered',
         'Total',
         '1 / 6',
@@ -338,8 +405,10 @@ describe('writeReportDocument', () => {
       ]),
     )
     expect(receipts).not.toContain('1')
-    expect(boarding).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
-    expect(pass).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
+    const stamps = pdf.getPages().map((page) => stampedTextsOf(pdf, page))
+    expect(stamps[2]).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
+    expect(stamps[3]).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
+    expect(boarding).toHaveLength(pass?.length ?? 0)
     expect(statements).toEqual(
       expect.arrayContaining([
         'Bank statements',
@@ -350,7 +419,8 @@ describe('writeReportDocument', () => {
         '5 / 6',
       ]),
     )
-    expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
+    expect(stamps[5]).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
+    expect(statement?.at(0)).toBe('S1')
   })
 
   it('opens with the additional documents, travel justifications first, closes with the bank statements, and calls each document by its name', async () => {
@@ -378,7 +448,8 @@ describe('writeReportDocument', () => {
     const texts = pdf.getPages().map((page) => textsOf(pdf, page))
     expect(texts).toHaveLength(9)
     const [cover, additional, justification, itineraryPage, receipts, , , statements, last] = texts
-    expect(cover).toEqual(expect.arrayContaining(['air-canada', 'Visa, October', '1 / 9']))
+    expect(cover).toEqual(expect.arrayContaining(['Receipt', 'Statement', '1 / 9']))
+    expect(cover).not.toContain('Visa, October')
     expect(additional).toEqual(
       expect.arrayContaining([
         'Additional documents',
@@ -398,11 +469,15 @@ describe('writeReportDocument', () => {
     expect(at('A1')).toBeGreaterThan(at('Travel justifications'))
     expect(others).toBeGreaterThan(at('A1'))
     expect(at('A2')).toBeGreaterThan(others)
-    expect(justification).toEqual(['A1 · Invitation from ICSE · 3 / 9'])
-    expect(itineraryPage).toEqual(['Itinerary', 'A2 · itinerary · 4 / 9'])
+    const stamps = pdf.getPages().map((page) => stampedTextsOf(pdf, page))
+    expect(stamps[2]).toEqual(['A1 · Invitation from ICSE · 3 / 9'])
+    expect(stamps[3]).toEqual(['Itinerary', 'A2 · itinerary · 4 / 9'])
+    expect(justification?.at(0)).toBe('A1')
+    expect(itineraryPage?.at(0)).toBe('Itinerary')
     expect(receipts).toEqual(expect.arrayContaining(['Receipts', 'R1']))
     expect(statements).toEqual(expect.arrayContaining(['Bank statements', 'S1', 'Visa, October']))
-    expect(last).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 9 / 9'])
+    expect(stamps[8]).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 9 / 9'])
+    expect(last?.at(0)).toBe('S1')
   })
 
   it('gives each expense an Entered box on the cover, empty, which needs no font of its own', async () => {
@@ -434,9 +509,9 @@ describe('writeReportDocument', () => {
     expect(at('Supporting documents')).toBeUndefined()
     const [description, receipt, separator, statement] = [
       'Air Canada, YYZ–CDG return',
-      'air-canada',
+      'Receipt',
       ' · ',
-      'statement-octobre',
+      'Statement',
     ].map(at)
     expect(receipt?.x).toBeCloseTo(description?.x ?? 0)
     expect(receipt?.y).toBeLessThan(description?.y ?? 0)
@@ -460,7 +535,7 @@ describe('writeReportDocument', () => {
     )
     expect(flight?.x).toBe(meal?.x)
     expect(meal?.y).toBeLessThan(flight?.y ?? 0)
-    const links = linksOf(pdf, statements)
+    const links = linksOf(pdf, statements).filter(({ to }) => to === 1)
     expect(links.map(({ to, how }) => [to, how])).toEqual([
       [1, '/XYZ'],
       [1, '/XYZ'],
@@ -476,7 +551,7 @@ describe('writeReportDocument', () => {
     )
     expect(second?.x).toBe(first?.x)
     expect(second?.y).toBeLessThan(first?.y ?? 0)
-    expect(textsOf(pdf, pdf.getPage(2)).at(-1)).toBe(
+    expect(stampedTextsOf(pdf, pdf.getPage(2)).at(-1)).toBe(
       'R1 · Expense 1: Dinner with: Ada Lovelace (McM… · 3 / 6',
     )
   })
@@ -592,12 +667,14 @@ describe('writeReportDocument', () => {
         }),
       )
       const pdf = await written(many.reduce((each, other) => each.afterAdding(other), report))
-      const pageOf = (isWanted: (text: string) => boolean) =>
-        pdf.getPages().findIndex((page) => textsOf(pdf, page).some(isWanted))
-      const tall = shorter + 1
-      const description = pageOf((text) => text.startsWith(`Taxi ${tall} ride`))
-      expect(description).toBeGreaterThanOrEqual(0)
-      expect(pageOf((text) => text === `receipt-${tall}`)).toBe(description)
+      const covers = pdf
+        .getPages()
+        .map((page) => textsOf(pdf, page))
+        .filter((texts) => texts.includes('Description'))
+      for (const texts of covers) {
+        const expenses = texts.filter((text) => /^Taxi \d+ ride/.test(text))
+        expect(texts.filter((text) => text === 'Receipt')).toHaveLength(expenses.length)
+      }
     }
   }, 30_000)
 
@@ -665,7 +742,7 @@ describe('writeReportDocument', () => {
     expect(page.getMediaBox()).toEqual(page.getCropBox())
     const wrapper = decoded(streamsOf(pdf, page)[0])
     expect(wrapper).toMatch(/20 30 180 500 re\s+W\s+n\s+1 0 0 1 0 0 cm/)
-    expect(textsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 4 / 6'])
+    expect(stampedTextsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 4 / 6'])
     const kept = (page.node.Annots()?.asArray() ?? [])
       .map((reference) => pdf.context.lookup(reference, PDFDict))
       .filter((annotation) => annotation.get(PDFName.of('Subtype')) === PDFName.of('Square'))
@@ -732,11 +809,11 @@ describe('writeReportDocument', () => {
       if (page === undefined) throw new TypeError('No page')
       const [width = 0, height = 0] = shown(page)
       expect(width).toBeLessThan(height)
-      expect(textsOf(pdf, page).at(-1)).toMatch(
+      expect(stampedTextsOf(pdf, page).at(-1)).toMatch(
         /^R1 · Expense 1: Air Canada, YYZ–CDG return · \d \/ 7$/,
       )
     }
-    const link = linksOf(pdf, turned as PDFPage)[0]
+    const link = linksOf(pdf, turned as PDFPage)[1]
     const crop = (turned as PDFPage).getCropBox()
     expect(link?.left).toBeGreaterThan(crop.x + crop.width - 60)
     expect(link?.width).toBeLessThan(15)

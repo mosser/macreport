@@ -27,7 +27,7 @@ per diems of a business travel (meals per day, domestic or international);
 travel justifications and additional documents, every document named, saved
 as the report document (cover with Entered boxes, per diem rows and a total
 by currency, sections, stamps). Not yet built: missing receipts, cash, the
-number of pages on the Additional documents step, some links, refusing a
+number of pages on the Additional documents step, refusing a
 file, and font findings.
 The
 specification and the ADRs describe the full system; code follows them.

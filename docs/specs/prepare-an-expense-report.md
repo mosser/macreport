@@ -190,8 +190,8 @@ Continue is not offered.
 ### 4. Review
 
 The report as it will be written: the cover, with the table of the
-expenses, each on two lines as in the report document, or *No expense
-entered* in grey; the per diems of a business travel, under their own
+expenses, each on two lines as in the report document, its documents by their
+names, or *No expense entered* in grey; the per diems of a business travel, under their own
 heading, one row per day with a meal claimed, or *No per diem entered* in
 grey, with its numbers on
 the cover, its date, domestic, international or both, each meal claimed with

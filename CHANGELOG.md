@@ -29,6 +29,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
   with no Tab to press in between.
 - **Last day**, left empty, takes the day after **First day**, and its picker
   offers no date before the first day.
+- The cover of the report document calls an expense's documents *Receipt* and
+  *Statement*, whatever their names, which now stand on the section pages and,
+  for an additional document, in its stamp. An arrow after a link shows what can
+  be clicked, on the cover, on section pages and in stamps.
+- The label in a stamp goes to the document's row on its section page, and a
+  label or its pages on a section page go to the document.
 - The total of the report, on the Review step and on the cover of the report
   document, writes every line with its currency's code, as *CAD 1,068.15*, the
   codes and the amounts aligned.
