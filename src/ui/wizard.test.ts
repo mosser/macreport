@@ -1352,10 +1352,17 @@ describe('a missing receipt', () => {
     ).toEqual([
       'Reason for missing original receipt *',
       'Paid to *',
-      'Job title *',
+      'Your job title *',
       'Phone extension',
     ])
     expect(dialog()?.textContent).toContain('E.g., Associate Prof, Research Engineer, PhD Student.')
+    const about = dialog()?.querySelector('fieldset.section')
+    expect(about?.querySelector('legend')?.textContent).toBe(
+      'Additional information on the claimant',
+    )
+    expect(
+      [...(about?.querySelectorAll('input') ?? [])].map((input) => input.getAttribute('name')),
+    ).toEqual(['jobTitle', 'phoneExtension'])
     expect(done()?.disabled).toBe(true)
     typeInDialog('reasonForMissingReceipt', 'Lost in a taxi')
     typeInDialog('paidTo', 'Taxis Parisiens')

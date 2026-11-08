@@ -363,7 +363,7 @@ describe('findings of the Additional documents step', () => {
     expect(wordings(findingsOfCharacters(stated))).toEqual([
       'Expense 2026-10-05, Taxi: Reason for missing original receipt holds a character the report document cannot write: 失 (U+5931).',
       'Expense 2026-10-05, Taxi: Paid to holds a character the report document cannot write: 東 (U+6771).',
-      'Expense 2026-10-05, Taxi: Job title holds a character the report document cannot write: 教 (U+6559).',
+      'Expense 2026-10-05, Taxi: Your job title holds a character the report document cannot write: 教 (U+6559).',
       'Expense 2026-10-05, Taxi: Phone extension holds a character the report document cannot write: 分 (U+5206).',
     ])
   })

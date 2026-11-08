@@ -35,8 +35,11 @@ export function statedMissingReceipt(
       <textarea name="reasonForMissingReceipt" autofocus>${start.reason ?? ''}</textarea>
     </label>
     ${line('paidTo', start.paidTo)}
-    ${line('jobTitle', start.jobTitle)}
-    ${line('phoneExtension', start.phoneExtension)}
+    <fieldset class="section">
+      <legend>Additional information on the claimant</legend>
+      ${line('jobTitle', start.jobTitle)}
+      ${line('phoneExtension', start.phoneExtension)}
+    </fieldset>
     <div class="actions">
       <button type="button" data-answer="cancel">Cancel</button>
       <button type="button" class="primary" data-answer="done">Done</button>

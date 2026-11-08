@@ -128,7 +128,12 @@ a pen, which opens the dialog filled in, and **Take back**, a cross.
 |---|---|
 | Reason for missing original receipt | Required. It may run over several lines: its line breaks are kept in the report document. |
 | Paid to | Required. |
-| Job title | Required. *E.g., Associate Prof, Research Engineer, PhD Student.* |
+
+Then, in a section *Additional information on the claimant*:
+
+| Field | Rule |
+|---|---|
+| Your job title | Required. *E.g., Associate Prof, Research Engineer, PhD Student.* |
 | Phone extension | Optional. |
 
 The dialog of an expense without a missing receipt starts with the job title and the

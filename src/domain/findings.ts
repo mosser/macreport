@@ -44,7 +44,7 @@ export const fieldNames = {
   missingReceipt: 'Missing receipt',
   reasonForMissingReceipt: 'Reason for missing original receipt',
   paidTo: 'Paid to',
-  jobTitle: 'Job title',
+  jobTitle: 'Your job title',
   phoneExtension: 'Phone extension',
   travelJustifications: 'Travel justification(s)',
   additionalDocuments: 'Additional document(s)',
