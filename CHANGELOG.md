@@ -36,6 +36,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - The label in a stamp goes to the document's row on its section page, and a
   label or its pages on a section page go to the document.
 - The footer names the McMaster Centre for Software Certification.
+- The table of the expenses has a title, *Itemized expenses*, on the Expenses and
+  Review steps.
 - The total of the report, on the Review step and on the cover of the report
   document, writes every line with its currency's code, as *CAD 1,068.15*, the
   codes and the amounts aligned.

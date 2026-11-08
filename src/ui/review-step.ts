@@ -35,8 +35,8 @@ function emptyRow(columns: number, wording: string): Markup {
 }
 
 /**
- * The cover: its fields, then each expense on two lines, the second its documents, or No expense
- * entered; the per diems of a business travel, under their own heading; then the total of the
+ * The cover: its fields, then, under Itemized expenses, each expense on two lines, the second its
+ * documents, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
  * report.
  */
 function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Markup {
@@ -54,6 +54,7 @@ function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Mar
       <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`
     })
   return html`<table class="cover-fields">${fields}</table>
+    <h3>Itemized expenses</h3>
     <table class="expenses">
       <thead><tr>
         <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th>

@@ -401,6 +401,7 @@ describe('the wizard', () => {
       expect(text).toContain(expected)
     }
     expect([...root.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Itemized expenses',
       'Receipts',
       'Bank statements',
     ])
@@ -927,7 +928,12 @@ describe('the wizard', () => {
     expect(root.textContent).not.toContain('poster')
     proceed()
     const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
-    expect(sections).toEqual(['Additional documents', 'Receipts', 'Bank statements'])
+    expect(sections).toEqual([
+      'Itemized expenses',
+      'Additional documents',
+      'Receipts',
+      'Bank statements',
+    ])
     const additional = root.querySelectorAll('table.documents')[0]
     expect(additional?.textContent).toContain('Itinerary')
     expect(additional?.textContent).not.toContain('Expenses')
@@ -952,6 +958,7 @@ describe('the wizard', () => {
     expect(continueButton()?.disabled).toBe(false)
     proceed()
     expect([...root.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Itemized expenses',
       'Per diems',
       'Additional documents',
       'Receipts',
@@ -990,6 +997,7 @@ describe('the Expenses step', () => {
     fillReport()
     proceed()
     expect(root.querySelector('table.expense-list')).toBeNull()
+    expect(root.textContent).not.toContain('Itemized expenses')
     await fillExpense()
     button('[data-action="done"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
@@ -1393,11 +1401,20 @@ describe('the per diems', () => {
         (element) => element.className,
       ),
     ).toEqual(['expenses expense-list', 'per-diems-line', 'expenses per-diem-list'])
+    expect(root.querySelector('table.expense-list')?.previousElementSibling?.textContent).toBe(
+      'Itemized expenses',
+    )
     proceed()
     await add('travelJustifications', 'invitation.pdf')
     proceed()
     const expenses = [...root.querySelectorAll('table.expenses tbody tr.expense')]
     expect(expenses).toHaveLength(1)
+    expect(
+      [...root.querySelectorAll('h3')].slice(0, 2).map((heading) => heading.textContent),
+    ).toEqual(['Itemized expenses', 'Per diems'])
+    expect(root.querySelector('table.expenses')?.previousElementSibling?.textContent).toBe(
+      'Itemized expenses',
+    )
     expect(root.textContent).not.toContain('Per diem, domestic')
     const perDiems = [...root.querySelectorAll('table.per-diems tbody tr')].map((row) =>
       [...row.querySelectorAll('td')].map((cell) => cell.textContent?.replace(/\s+/g, ' ').trim()),

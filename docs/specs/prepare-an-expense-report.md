@@ -66,7 +66,8 @@ diems of the days no longer between them. Continue is offered once every require
 
 ### 2. Expenses
 
-The expenses, sorted by date, then in the order they were added. Each shows
+The expenses, under the heading *Itemized expenses* once there is one, sorted
+by date, then in the order they were added. Each shows
 its day of the week and its date on one line, as *Sat 2026-10-03*, its description, its foreign amount, its claimed amount, its
 receipt or that its receipt is missing, its bank statement or that it was
 paid in cash, and, in red, what it still lacks: a required field, or a
@@ -191,7 +192,7 @@ Continue is not offered.
 
 With a finding, the step shows its findings, as errors, and nothing else. Without
 one, it shows the report as it will be written: the cover, with the table of the
-expenses, each on two lines as in the report document, its documents by their
+expenses, under the heading *Itemized expenses*, each on two lines as in the report document, its documents by their
 names, or *No expense entered* in grey; the per diems of a business travel, under their own
 heading, one row per day with a meal claimed, or *No per diem entered* in
 grey, with its numbers on

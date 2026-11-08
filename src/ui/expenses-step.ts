@@ -196,7 +196,8 @@ function formOf(
 /**
  * The expenses, sorted by date, each with its fields, its documents, each a link that opens it in
  * a new tab, and what it still lacks,
- * Change, a pen, and Remove, a trash can; Add an expense above them, the per diems under them.
+ * Change, a pen, and Remove, a trash can, under Itemized expenses; Add an expense above them, the
+ * per diems under them.
  */
 function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
@@ -220,7 +221,8 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
   })
   const table =
     rows.length > 0
-      ? html`<table class="expenses expense-list">
+      ? html`<h3>Itemized expenses</h3>
+        <table class="expenses expense-list">
           <thead><tr>
             <th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th><th></th>
           </tr></thead>
