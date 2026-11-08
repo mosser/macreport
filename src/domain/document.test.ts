@@ -36,6 +36,17 @@ describe('Document', () => {
     expect(named.content).toBe(content)
     expect(named.afterNaming('').name).toBe('scan-0042')
   })
+
+  it('has the same content as another, byte for byte, whatever its name', () => {
+    const scan = new Document(Kind.bankStatement, 'scan.pdf', content)
+    const again = new Document(Kind.bankStatement, 'again.pdf', new Uint8Array([1, 2, 3]))
+    expect(scan.hasSameContentAs(again)).toBe(true)
+    expect(scan.hasSameContentAs(scan.afterNaming('Visa'))).toBe(true)
+    const other = (bytes: number[]) =>
+      new Document(Kind.bankStatement, 'other.pdf', new Uint8Array(bytes))
+    expect(scan.hasSameContentAs(other([1, 2, 4]))).toBe(false)
+    expect(scan.hasSameContentAs(other([1, 2]))).toBe(false)
+  })
 })
 
 describe('Kind', () => {

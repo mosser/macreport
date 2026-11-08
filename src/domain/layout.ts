@@ -1,5 +1,6 @@
-import { Amount } from './amount.ts'
+import type { Amount } from './amount.ts'
 import type { CalendarDate } from './calendar-date.ts'
+import type { Currency } from './currency.ts'
 import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
@@ -96,7 +97,11 @@ export interface Layout {
   /** Every kind of document, in alphabetical order. */
   readonly attachedInformation: readonly AttachedInformation[]
   readonly expenses: readonly ExpenseRow[]
-  readonly total: string
+  /**
+   * The total, one amount per line: the sum of the claimed amounts, when there is one, then, by
+   * currency in alphabetical order, the sum of the foreign amounts of the expenses without one.
+   */
+  readonly total: readonly string[]
   readonly sections: readonly Section[]
 }
 
@@ -115,7 +120,7 @@ interface Complete {
  */
 export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
-  const expenses = [...report.expenses].sort(byDate)
+  const expenses = report.expensesByDate
   const sections = [
     sectionOfAdditionalDocuments(report),
     sectionOf(Kind.receipt, expenses),
@@ -154,14 +159,6 @@ function completeReport(report: Report): Complete {
     throw new TypeError('Only a report without findings has a report document')
   }
   return { claimantName, position, email, purpose, account }
-}
-
-/** Expenses are sorted by date, then kept in the order they were added. */
-function byDate(one: Expense, other: Expense): number {
-  if (one.date === undefined || other.date === undefined) {
-    return 0
-  }
-  return one.date.compareTo(other.date)
 }
 
 /**
@@ -302,14 +299,28 @@ function rowOf(expense: Expense, number: number, labels: Map<Document, string>):
     number,
     date: expense.date?.toString() ?? '',
     description: expense.description ?? '',
-    foreignAmount: '',
+    foreignAmount: expense.foreignAmountText,
     claimedAmount: expense.claimedAmount?.toString() ?? '',
     supportingDocuments: supporting,
   }
 }
 
-/** The total of the claimed amounts: a report without findings claims at least one. */
-function totalOf(expenses: readonly Expense[]): string {
-  const cents = expenses.reduce((sum, expense) => sum + (expense.claimedAmount?.cents ?? 0), 0)
-  return new Amount(cents).toString()
+/**
+ * The sum of the claimed amounts, when there is one, then, by currency in alphabetical order, the
+ * sum of the foreign amounts of the expenses without a claimed amount.
+ */
+function totalOf(expenses: readonly Expense[]): readonly string[] {
+  const claimed = expenses.flatMap((expense) => expense.claimedAmount ?? [])
+  const foreign = new Map<Currency, Amount[]>()
+  for (const { claimedAmount, foreignAmount, currency } of expenses) {
+    if (claimedAmount === undefined && foreignAmount !== undefined && currency !== undefined) {
+      foreign.set(currency, [...(foreign.get(currency) ?? []), foreignAmount])
+    }
+  }
+  const sum = (amounts: readonly Amount[]) => amounts.reduce((total, amount) => total.plus(amount))
+  const currencies = [...foreign.keys()].sort((one, other) => one.code.localeCompare(other.code))
+  return [
+    ...(claimed.length > 0 ? [sum(claimed).toString()] : []),
+    ...currencies.map((currency) => sum(foreign.get(currency) ?? []).inCurrency(currency)),
+  ]
 }

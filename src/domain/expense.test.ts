@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Amount } from './amount.ts'
 import { CalendarDate } from './calendar-date.ts'
+import { Currency } from './currency.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
@@ -35,6 +36,34 @@ describe('Expense', () => {
     expect(changed.description).toBe('Taxi')
     expect(changed.receipts).toEqual([receipt])
     expect(changed.afterChanging({ description: undefined }).description).toBeUndefined()
+  })
+
+  it('has a foreign amount and a currency only while paid in another currency', () => {
+    const euro = Currency.parse('EUR')
+    const expense = new Expense().afterChanging({
+      isPaidInAnotherCurrency: true,
+      foreignAmount: new Amount(5500),
+    })
+    expect(expense.foreignAmountText).toBe('')
+    const paid = expense.afterChanging({ currency: euro })
+    expect(paid.foreignAmountText).toBe('EUR 55.00')
+    const unticked = paid.afterChanging({ isPaidInAnotherCurrency: false })
+    expect(unticked.foreignAmount).toBeUndefined()
+    expect(unticked.currency).toBeUndefined()
+    expect(unticked.foreignAmountText).toBe('')
+    const constructed = new Expense({ foreignAmount: new Amount(1), currency: euro })
+    expect(constructed.foreignAmount).toBeUndefined()
+    expect(constructed.currency).toBeUndefined()
+    expect(constructed.foreignAmountText).toBe('')
+  })
+
+  it('stops referring to a document, leaving the others', () => {
+    const expense = new Expense({ receipts: [receipt], bankStatements: [statement] })
+    expect(expense.documents).toEqual([receipt, statement])
+    const without = expense.afterRemoving(statement)
+    expect(without.receipts).toEqual([receipt])
+    expect(without.hasBankStatement).toBe(false)
+    expect(without.afterRemoving(receipt).documents).toEqual([])
   })
 })
 

@@ -19,6 +19,7 @@ const travelJustifications: DocumentField = {
   documentsIn: (report: Report) => report.travelJustifications,
   afterAdding: (report: Report, document: Document) =>
     report.afterChanging({ travelJustifications: [...report.travelJustifications, document] }),
+  afterRemoving: (report: Report, document: Document) => report.afterRemovingDocument(document),
 }
 
 /** The additional documents of the report, optional, as many as needed. */
@@ -29,6 +30,7 @@ const additionalDocuments: DocumentField = {
   documentsIn: (report: Report) => report.additionalDocuments,
   afterAdding: (report: Report, document: Document) =>
     report.afterChanging({ additionalDocuments: [...report.additionalDocuments, document] }),
+  afterRemoving: (report: Report, document: Document) => report.afterRemovingDocument(document),
 }
 
 /** Step 3: the travel justifications of a business travel, then the additional documents. */

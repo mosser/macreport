@@ -1,10 +1,12 @@
 import type { Report } from '../domain/report.ts'
 import { additionalDocumentsStep } from './additional-documents-step.ts'
+import { confirmed } from './confirmation.ts'
 import type { ReadFile } from './document-field.ts'
+import type { DocumentLinks } from './document-link.ts'
 import { expensesStep } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
-import { type DocumentLinks, reviewStep, type SaveReport } from './review-step.ts'
+import { reviewStep, type SaveReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
 
 /** What the wizard needs from the page it runs in. */
@@ -13,8 +15,6 @@ export interface WizardOptions {
   readonly version: string
   /** The reversed McSCert logo, for the maroon header bar. */
   readonly logo: string
-  /** Asks the Claimant to confirm, as New report does. */
-  readonly confirm: (question: string) => boolean
   readonly readFile: ReadFile
   readonly saveReport: SaveReport
   /** Links that open a document in a new tab, from the bytes the Claimant added. */
@@ -36,7 +36,7 @@ export interface WizardOptions {
 export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   const steps: readonly Step[] = [
     reportStep,
-    expensesStep(options.readFile),
+    expensesStep(options.readFile, options.links),
     additionalDocumentsStep(options.readFile),
     reviewStep(options.saveReport, () => isDraftKept, options.links),
   ]
@@ -87,6 +87,9 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
   }
 
   function go(index: number): void {
+    if (index !== current) {
+      stepAt(current).leave?.()
+    }
     current = index
     reached = Math.max(reached, index)
     refresh()
@@ -128,8 +131,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         <section class="panel"></section>
         <div class="actions">
           <button data-action="back" ${current === 0 ? html`hidden` : ''}>Back</button>
-          <button class="primary" data-action="continue"
-            ${current === steps.length - 1 ? html`hidden` : ''}>Continue</button>
+          <button class="primary" data-action="continue">Continue</button>
         </div>
       </main>
       <footer>
@@ -141,9 +143,14 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     if (panel !== null) {
       stepAt(current).render(panel, context)
     }
-    root.querySelector('[data-action="new-report"]')?.addEventListener('click', () => {
-      if (options.confirm('Discard this report, its expense and its documents?')) {
-        void startNewReport()
+    root.querySelector('[data-action="new-report"]')?.addEventListener('click', async () => {
+      const isConfirmed = await confirmed(root.ownerDocument, {
+        question: 'Discard this report, its expenses and its documents?',
+        details: [],
+        action: 'Discard',
+      })
+      if (isConfirmed) {
+        await startNewReport()
       }
     })
     root.querySelector('[data-action="back"]')?.addEventListener('click', () => go(current - 1))
@@ -154,16 +161,32 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     refreshActions()
   }
 
+  /**
+   * Offers Continue, Back and the steps of the stepper as the step allows: none while it holds
+   * them, nor the steps ahead while a file is being added. What a step marks `data-held` waits
+   * for both.
+   */
   function refreshActions(): void {
     const isAdding = additions.size > 0
-    const canContinue = stepAt(current).canContinue(report) && !isAdding
+    const step = stepAt(current)
+    const isHeld = step.holdsSteps?.() ?? false
+    const canContinue = step.canContinue(report) && !isAdding && !isHeld
     const continueButton = root.querySelector<HTMLButtonElement>('[data-action="continue"]')
     if (continueButton !== null) {
       continueButton.disabled = !canContinue
+      continueButton.hidden = current === steps.length - 1 || !(step.offersContinue?.() ?? true)
+    }
+    const backButton = root.querySelector<HTMLButtonElement>('[data-action="back"]')
+    if (backButton !== null) {
+      backButton.disabled = isHeld
     }
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-step]')) {
-      const step = Number(button.dataset.step)
-      button.disabled = step > reached || (isAdding && step > current)
+      const index = Number(button.dataset.step)
+      button.disabled =
+        index > reached || (isAdding && index > current) || (isHeld && index !== current)
+    }
+    for (const element of root.querySelectorAll<HTMLButtonElement>('[data-held]')) {
+      element.disabled = isAdding || isHeld
     }
   }
 

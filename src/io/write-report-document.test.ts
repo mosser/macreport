@@ -16,6 +16,7 @@ import {
 import { describe, expect, it } from 'vitest'
 import { Amount } from '../domain/amount.ts'
 import { CalendarDate } from '../domain/calendar-date.ts'
+import { Currency } from '../domain/currency.ts'
 import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
@@ -462,6 +463,30 @@ describe('writeReportDocument', () => {
     expect(textsOf(pdf, pdf.getPage(2)).at(-1)).toBe(
       'R1 · Expense 1: Dinner with: Ada Lovelace (McM… · 3 / 6',
     )
+  })
+
+  it('writes the foreign amounts, and the total one amount per line', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const flight = report.expenses[0] ?? new Expense()
+    const taxi = flight.afterChanging({
+      description: 'Taxi, CDG–hotel',
+      claimedAmount: undefined,
+      isPaidInAnotherCurrency: true,
+      foreignAmount: new Amount(5500),
+      currency: Currency.parse('EUR'),
+    })
+    const pdf = await written(report.afterAdding(taxi))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const place = (text: string) => places.find((each) => each.text === text)
+    expect(place('EUR 55.00')).toBeDefined()
+    const [cad, euro] = places
+      .filter((each) => ['$1,012.35', 'EUR 55.00'].includes(each.text))
+      .slice(-2)
+    expect(cad?.text).toBe('$1,012.35')
+    expect(euro?.text).toBe('EUR 55.00')
+    expect(euro?.x).toBe(cad?.x)
+    expect(euro?.y).toBeLessThan(cad?.y ?? 0)
+    expect(place('Total')?.y).toBe(cad?.y)
   })
 
   it('starts an expense and the line of its documents on the same page, however tall the expense', async () => {

@@ -1,9 +1,15 @@
 import type { Document } from '../domain/document.ts'
-import { type Field, fieldNames, nameTakenWording } from '../domain/findings.ts'
+import {
+  alreadyInReportWording,
+  type Field,
+  fieldNames,
+  nameTakenWording,
+} from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
-import { html, type Markup, raw } from './html.ts'
+import { html, type Markup } from './html.ts'
+import { trashCan } from './icons.ts'
 import type { Context } from './step.ts'
 
 /** Reads a file the Claimant adds into a document of a kind. */
@@ -19,14 +25,16 @@ export interface DocumentField {
   documentsIn(report: Report): readonly Document[]
   /** The report, with a document added to the field. */
   afterAdding(report: Report, document: Document): Report
+  /** The report, with a document taken out of the field. */
+  afterRemoving(report: Report, document: Document): Report
+  /**
+   * The documents already in the report the Claimant may choose for the field, rather than add a
+   * file: a field that offers them chooses the document already there for a file added again.
+   */
+  choicesIn?(report: Report): readonly Document[]
 }
 
 const accepted = 'application/pdf,image/jpeg,image/png'
-
-/** A trash can, drawn in the colour of the text of the button that holds it. */
-const trashCan = raw(
-  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
-)
 
 /**
  * A document added: its name, which the Claimant may change, its file name, and Remove; under its
@@ -47,22 +55,49 @@ function documentItem(
         value="${document.name}" placeholder="${document.afterNaming('').name}" aria-describedby="${id}" />
     </label>
     <span class="file-name" id="${id}">${document.fileName}</span>
-    <button type="button" class="remove" data-remove="${field.field}" data-index="${index}"
+    <button type="button" class="icon remove" data-remove="${field.field}" data-index="${index}"
       aria-label="Remove" title="Remove">${trashCan}</button>
     <span class="error" role="alert" data-name-taken="${field.field}-${index}" ${isTaken}>${nameTakenWording}</span>
   </li>`
 }
 
+/** The documents already in the report the Claimant may choose for a field, by their names. */
+function choicesOf(field: DocumentField, report: Report): Markup {
+  const choices = field.choicesIn?.(report) ?? []
+  if (choices.length === 0) return html``
+  const name = field.field
+  const options = choices.map(
+    (document, index) => html`<option value="${index}">${document.name}</option>`,
+  )
+  return html`<label class="choice">
+    <span class="field-name">Or choose one already added</span>
+    <select name="choose-${name}" data-choose="${name}">
+      <option value="" selected></option>
+      ${options}
+    </select>
+  </label>`
+}
+
 /**
  * The documents added to a field, each named, then a zone a file is dropped on, or clicked to
- * choose one; a field that holds one document at most shows no zone once it has it.
+ * choose one, and the documents already in the report it may choose; a field that holds one
+ * document at most shows neither once it has it. Under a document chosen again for a file added
+ * again, the step says so.
  */
-export function documentFieldOf(field: DocumentField, report: Report): Markup {
+export function documentFieldOf(
+  field: DocumentField,
+  report: Report,
+  chosenAgain?: Document,
+): Markup {
   const name = field.field
   const documents = field.documentsIn(report)
   const list =
     documents.length > 0
       ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, report, document, index))}</ul>`
+      : ''
+  const status =
+    chosenAgain !== undefined && documents.includes(chosenAgain)
+      ? html`<p class="status" role="status">${alreadyInReportWording(chosenAgain)}</p>`
       : ''
   const isFull = field.holdsOneDocument && documents.length > 0
   const several = field.holdsOneDocument ? '' : html`multiple`
@@ -73,10 +108,12 @@ export function documentFieldOf(field: DocumentField, report: Report): Markup {
           aria-labelledby="name-of-${name} content-of-${name}" />
         <span id="content-of-${name}">Drop a file here, or choose one</span>
       </label>
-      ${fieldRule(name)}`
+      ${fieldRule(name)}
+      ${choicesOf(field, report)}`
   return html`<div class="field" data-field="${name}">
     ${fieldName(name)}
     ${list}
+    ${status}
     ${zone}
   </div>`
 }
@@ -92,14 +129,17 @@ const lastAdded = new WeakMap<
 >()
 
 /**
- * Listens to the document fields of a panel: a file chosen or dropped is added, a name typed
- * names its document, and Remove takes a document out of the report.
+ * Listens to the document fields of a panel: a file chosen or dropped is added, a document
+ * already in the report chosen, a name typed names its document, and Remove takes a document out
+ * of its field. A field that offers the documents already in the report chooses the one already
+ * there for a file added again, and says so through `isChosenAgain`.
  */
 export function listenToDocumentFields(
   panel: HTMLElement,
   context: Context,
   readFile: ReadFile,
   fields: readonly DocumentField[],
+  isChosenAgain: (field: DocumentField, document: Document) => void = () => undefined,
 ): void {
   const fieldNamed = (name: string | undefined) => fields.find((field) => field.field === name)
   const documentOf = (element: HTMLElement) =>
@@ -131,8 +171,15 @@ export function listenToDocumentFields(
       const document = await reading
       if (context.session !== session) return
       if (field.holdsOneDocument && field.documentsIn(context.report).length > 0) return
-      const named = document.afterNaming(context.report.freeNameLike(document.name))
-      context.change(field.afterAdding(context.report, named))
+      const already =
+        field.choicesIn === undefined ? undefined : context.report.documentLike(document)
+      if (already !== undefined) {
+        isChosenAgain(field, already)
+        context.change(field.afterAdding(context.report, already))
+      } else {
+        const named = document.afterNaming(context.report.freeNameLike(document.name))
+        context.change(field.afterAdding(context.report, named))
+      }
       context.refresh()
     })
     lastAdded.set(context, { session, addition: addition.catch(() => undefined) })
@@ -177,9 +224,19 @@ export function listenToDocumentFields(
   }
   for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-remove]')) {
     button.addEventListener('click', () => {
+      const field = fieldNamed(button.dataset.remove)
       const document = documentOf(button)
-      if (document === undefined) return
-      context.change(context.report.afterRemoving(document))
+      if (field === undefined || document === undefined) return
+      context.change(field.afterRemoving(context.report, document))
+      context.refresh()
+    })
+  }
+  for (const select of panel.querySelectorAll<HTMLSelectElement>('[data-choose]')) {
+    select.addEventListener('change', () => {
+      const field = fieldNamed(select.dataset.choose)
+      const document = field?.choicesIn?.(context.report)[Number(select.value)]
+      if (field === undefined || document === undefined || select.value === '') return
+      context.change(field.afterAdding(context.report, document))
       context.refresh()
     })
   }

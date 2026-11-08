@@ -22,17 +22,19 @@ document.
 | Business travel | A report whose purpose took the claimant away from McMaster: a conference, a visit. Only a business travel has dates and travel justifications. |
 | Dates | The first and the last day of a business travel. One day when they are the same. |
 | Account | The account the Claimant suggests the expenses be charged to, as free text. |
-| Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipts or the reason it has none, and its bank statements unless it was paid in cash. |
+| Expense | One transaction claimed: its date, its description, its claimed amount, its foreign amount when it was paid in another currency, its receipt or the reason it has none, and its bank statement unless it was paid in cash. |
 | Description | What the expense was for, in the Claimant's words. For a meal not only for the Claimant, it lists the attendees and their affiliations. The system never checks what a description says. |
-| Claimed amount | The amount in Canadian dollars asked back for an expense. Always more than zero, to the cent. |
-| Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt, shown for information. The system converts nothing and asks for no exchange rate. |
-| Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has at least one. |
+| Claimed amount | The amount in Canadian dollars asked back for an expense, more than zero, to the cent. An expense paid in another currency may have none: McSCert then works it out from the foreign amount. |
+| Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt: more than zero, to the cent. The system converts nothing and asks for no exchange rate. |
+| Currency | A currency other than the Canadian dollar, by its three-letter ISO 4217 code and its name in English: EUR, Euro. |
+| Total | What the report claims: the sum of the claimed amounts, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount. |
+| Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
 | Name | What a document is called in the report and in the report document: its file name without its extension, unless the Claimant gives it another. No two documents of a report have the same name, whatever its case. |
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |
-| Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense. |
-| Bank statement | A document an expense refers to: a bank or credit card statement showing the charge. Added from an expense, and often referred to by several. The Claimant redacts it, before adding it or in the saved report document; the system does not redact. |
+| Receipt | A document an expense refers to: an invoice or an official receipt; for air tickets, the booking information. Added from an expense, or chosen among the receipts already in the report. |
+| Bank statement | A document an expense refers to: a bank or credit card statement showing the charge. Added from an expense, or chosen among the bank statements already in the report: one often supports several expenses. The Claimant redacts it, before adding it or in the saved report document; the system does not redact. |
 | Additional document | A document of the report as a whole, which no expense refers to: a travel justification, an itinerary, a poster, boarding passes, notes. |
 | Travel justification | An additional document of a business travel that justifies the travel: an invitation letter, a conference programme, an acceptance notification. A business travel has at least one. |
 | Missing receipt authorization | McMaster's Missing Receipt Authorization Form, written by the system for one expense with a missing receipt, filled in with what the report knows, and left for the Claimant to sign. It is not a file the Claimant adds. |
@@ -70,14 +72,14 @@ classDiagram
   Report "1" *-- "*" Expense : claims
   Report "1" *-- "*" Document : travel justifications
   Report "1" *-- "*" Document : additional documents
-  Expense "*" --> "0..*" Document : receipts
-  Expense "*" --> "0..*" Document : bank statements
+  Expense "*" --> "0..1" Document : receipt
+  Expense "*" --> "0..1" Document : bank statement
   Expense "1" --> "0..1" MissingReceipt : states
 ```
 
-- An expense has at least one receipt, or a missing receipt; never both.
-- An expense not paid in cash has at least one bank statement; an expense paid
-  in cash has none.
+- An expense has one receipt, or a missing receipt; never both.
+- An expense not paid in cash has one bank statement; an expense paid in
+  cash has none.
 - A receipt or a bank statement belongs to the report while an expense refers
   to it. One bank statement often supports every expense of a trip.
 - A business travel has at least one travel justification; another report has

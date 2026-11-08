@@ -31,6 +31,9 @@ export const fieldNames = {
   date: 'Date',
   description: 'Description',
   claimedAmount: 'Claimed amount (CAD)',
+  paidInAnotherCurrency: 'Paid in another currency',
+  foreignAmount: 'Foreign amount',
+  currency: 'Currency',
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
   travelJustifications: 'Travel justification(s)',
@@ -49,11 +52,25 @@ export const fieldRules: Partial<Record<Field, string>> = {
   lastDay: 'Not before the first day.',
   description: 'For a meal not only for the claimant, the attendees and their affiliations.',
   claimedAmount: 'In Canadian dollars, more than zero, at most two decimals.',
+  foreignAmount: 'More than zero, at most two decimals.',
+  currency: 'A three-letter ISO 4217 code, other than CAD.',
   receipts: 'A PDF, a JPEG image or a PNG image.',
   bankStatements: 'A PDF, a JPEG image or a PNG image.',
   travelJustifications:
     'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
   additionalDocuments: 'A PDF, a JPEG image or a PNG image.',
+}
+
+/**
+ * The rule of the claimed amount of an expense paid in another currency, which may have none:
+ * McSCert then works it out from the foreign amount.
+ */
+export const claimedAmountInAnotherCurrencyRule =
+  'In Canadian dollars, more than zero, at most two decimals; left empty, McSCert works it out.'
+
+/** What is said under a receipt or a bank statement added again: the document already there is chosen. */
+export function alreadyInReportWording(document: Document): string {
+  return `Already in the report, as ${document.name}: chosen.`
 }
 
 /** What is said under the name of a document that a document before it already has. */
@@ -62,17 +79,46 @@ export const nameTakenWording = 'Another document already has this name.'
 /** The fields that are optional; every other field, when asked, is required. */
 const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'businessTravel',
+  'paidInAnotherCurrency',
   'additionalDocuments',
   'documentName',
 ])
 
-/** Whether a field must be filled in, marked with an asterisk next to its name. */
-export function isRequired(field: Field): boolean {
+/**
+ * Whether a field must be filled in, marked with an asterisk next to its name: the claimed amount
+ * of an expense paid in another currency is optional.
+ */
+export function isRequired(field: Field, expense?: Expense): boolean {
+  if (field === 'claimedAmount' && expense?.isPaidInAnotherCurrency === true) return false
   return !optionalFields.has(field)
 }
 
-/** An expense, by its date and description. */
-function expenseWording(expense: Expense): string {
+/** What is said of a required field left empty. */
+export function requiredWording(field: Field): string {
+  return `${fieldNames[field]} is required.`
+}
+
+/** The required fields of an expense that are missing, in the order of its fields. */
+export function missingFieldsOf(expense: Expense): readonly Field[] {
+  const values: [Field, unknown][] = [
+    ['date', expense.date],
+    ['description', expense.description],
+    ['claimedAmount', expense.claimedAmount],
+  ]
+  if (expense.isPaidInAnotherCurrency) {
+    values.push(['foreignAmount', expense.foreignAmount], ['currency', expense.currency])
+  }
+  values.push(
+    ['receipts', expense.hasReceipt || undefined],
+    ['bankStatements', expense.hasBankStatement || undefined],
+  )
+  return values
+    .filter(([field, value]) => value === undefined && isRequired(field, expense))
+    .map(([field]) => field)
+}
+
+/** An expense, by its date and description, as findings and confirmations name it. */
+export function expenseWording(expense: Expense): string {
   const date = expense.date?.toString() ?? 'without date'
   const description = expense.description ?? 'without description'
   return `Expense ${date}, ${description}`
@@ -80,7 +126,7 @@ function expenseWording(expense: Expense): string {
 
 function missing(step: FindingStep, field: Field, expense?: Expense): Finding {
   const subject = expense === undefined ? '' : `${expenseWording(expense)}: `
-  return { step, wording: `${subject}${fieldNames[field]} is required.` }
+  return { step, wording: `${subject}${requiredWording(field)}` }
 }
 
 /**
@@ -122,19 +168,10 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
   if (report.expenses.length === 0) {
     return [{ step: 'Expenses', wording: 'No expense is claimed.' }]
   }
-  const rules = report.expenses.flatMap((expense) => {
-    const absent: Field[] = []
-    if (expense.date === undefined) absent.push('date')
-    if (expense.description === undefined) absent.push('description')
-    if (expense.claimedAmount === undefined) absent.push('claimedAmount')
-    if (!expense.hasReceipt) absent.push('receipts')
-    if (!expense.hasBankStatement) absent.push('bankStatements')
-    return absent.map((field) => missing('Expenses', field, expense))
-  })
-  const documents = report.expenses.flatMap((expense) => [
-    ...expense.receipts,
-    ...expense.bankStatements,
-  ])
+  const rules = report.expenses.flatMap((expense) =>
+    missingFieldsOf(expense).map((field) => missing('Expenses', field, expense)),
+  )
+  const documents = report.expenses.flatMap((expense) => expense.documents)
   return [...rules, ...namesTaken('Expenses', report, documents)]
 }
 
@@ -145,10 +182,23 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
 function namesTaken(step: FindingStep, report: Report, documents: readonly Document[]): Finding[] {
   return [...new Set(documents)]
     .filter((document) => report.isNameTaken(document))
-    .map((document) => ({
-      step,
-      wording: `${document.fileName}: ${fieldNames.documentName} ${document.name} is already another document's.`,
-    }))
+    .map((document) => ({ step, wording: nameTakenFindingOf(document) }))
+}
+
+/** A document named as a document before it, by its file name and its name. */
+export function nameTakenFindingOf(document: Document): string {
+  return `${document.fileName}: ${fieldNames.documentName} ${document.name} is already another document's.`
+}
+
+/**
+ * What an expense still lacks, as its row in the list of expenses says it: each required field
+ * missing, then each of its documents named as a document before it.
+ */
+export function lacksOf(report: Report, expense: Expense): readonly string[] {
+  return [
+    ...missingFieldsOf(expense).map(requiredWording),
+    ...expense.documents.filter((document) => report.isNameTaken(document)).map(nameTakenFindingOf),
+  ]
 }
 
 /** A business travel without a travel justification: it has at least one. */

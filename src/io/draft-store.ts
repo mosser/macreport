@@ -1,5 +1,6 @@
 import { Amount } from '../domain/amount.ts'
 import { CalendarDate } from '../domain/calendar-date.ts'
+import { Currency } from '../domain/currency.ts'
 import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
@@ -32,6 +33,9 @@ interface ExpenseRecord {
   readonly date?: string
   readonly description?: string
   readonly claimedAmount?: number
+  readonly isPaidInAnotherCurrency?: boolean
+  readonly foreignAmount?: number
+  readonly currency?: string
   readonly receipts: readonly string[]
   readonly bankStatements: readonly string[]
 }
@@ -254,6 +258,9 @@ function recordOf(
     ...(expense.date === undefined ? {} : { date: expense.date.toString() }),
     ...(expense.description === undefined ? {} : { description: expense.description }),
     ...(expense.claimedAmount === undefined ? {} : { claimedAmount: expense.claimedAmount.cents }),
+    isPaidInAnotherCurrency: expense.isPaidInAnotherCurrency,
+    ...(expense.foreignAmount === undefined ? {} : { foreignAmount: expense.foreignAmount.cents }),
+    ...(expense.currency === undefined ? {} : { currency: expense.currency.code }),
     receipts: expense.receipts.map(identifier),
     bankStatements: expense.bankStatements.map(identifier),
   }))
@@ -313,6 +320,9 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       date: date(expense.date),
       description: text(expense.description),
       claimedAmount: amountOf(expense.claimedAmount),
+      isPaidInAnotherCurrency: expense.isPaidInAnotherCurrency === true,
+      foreignAmount: amountOf(expense.foreignAmount),
+      currency: typeof expense.currency === 'string' ? Currency.parse(expense.currency) : undefined,
       receipts: documentsAmong(expense.receipts, Kind.receipt),
       bankStatements: documentsAmong(expense.bankStatements, Kind.bankStatement),
     })

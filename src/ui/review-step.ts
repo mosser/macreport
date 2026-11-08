@@ -1,30 +1,12 @@
-import type { Document } from '../domain/document.ts'
 import { findingsOf } from '../domain/findings.ts'
 import { type Layout, layoutOf, type Section } from '../domain/layout.ts'
 import type { Report } from '../domain/report.ts'
+import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
 import { html, type Markup } from './html.ts'
 import type { Context, Step } from './step.ts'
 
 /** Writes the report document of a report without findings and hands it to the browser; gives its file name. */
 export type SaveReport = (report: Report) => Promise<string>
-
-/** Links to the content of documents, which the browser opens in a new tab. */
-export interface DocumentLinks {
-  urlOf(document: Document): string
-  /** Lets the browser forget the links given so far. */
-  forgetAll(): void
-}
-
-/** The name of a document, a link that opens it in a new tab. */
-type LinkOf = (document: Document) => Markup
-
-/** The names of documents, one after the other, each a link to its document. */
-function namesOf(documents: readonly Document[], linkOf: LinkOf): Markup[] {
-  return documents.flatMap((document, index) => {
-    const link = linkOf(document)
-    return index === 0 ? [link] : [html` · `, link]
-  })
-}
 
 /** The cover: its fields, then each expense on two lines, the second its documents, and the total. */
 function coverOf(layout: Layout, linkOf: LinkOf): Markup {
@@ -44,7 +26,7 @@ function coverOf(layout: Layout, linkOf: LinkOf): Markup {
       <thead><tr>
         <th>#</th><th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th>
       </tr></thead>
-      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total}</td></tr></tbody>
+      <tbody>${rows}<tr class="total"><td></td><td></td><td>Total</td><td></td><td>${layout.total.map((line) => html`<div>${line}</div>`)}</td></tr></tbody>
     </table>`
 }
 
@@ -113,9 +95,7 @@ export function reviewStep(
         return
       }
       const layout = layoutOf(report)
-      links.forgetAll()
-      const linkOf: LinkOf = (document) =>
-        html`<a href="${links.urlOf(document)}" target="_blank" rel="noopener">${document.name}</a>`
+      const linkOf = linksAnew(links)
       panel.innerHTML = html`<h2>Review</h2>
         ${coverOf(layout, linkOf)}
         ${sectionsOf(layout, linkOf)}
