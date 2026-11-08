@@ -54,8 +54,9 @@ interface PerDiemRecord {
 }
 
 /**
- * What IndexedDB keeps of a document, once: its kind by its letter, its file name and its bytes.
- * Its name, which the Claimant changes as they type, is kept with the report.
+ * What IndexedDB keeps of a document, once: its kind by its letter, its file name and its bytes,
+ * the file added even when reduced. Its name, which the Claimant changes as they type, and whether
+ * it is reduced are kept with the report.
  */
 interface DocumentRecord {
   readonly letter: string
@@ -161,6 +162,7 @@ class IndexedDraftStore implements DraftStore {
       const record = await result(transaction.objectStore(draftStore).get(draftKey))
       const documents = new Map<string, Document>()
       const names = namesOf(record)
+      const reduced = new Set(identifiers((record as { reduced?: unknown } | undefined)?.reduced))
       const store = transaction.objectStore(documentStore)
       const [keys, records] = await Promise.all([
         result(store.getAllKeys()),
@@ -168,7 +170,7 @@ class IndexedDraftStore implements DraftStore {
       ])
       keys.forEach((key, index) => {
         if (typeof key !== 'string') return
-        const document = this.documentOf(key, records[index], names.get(key))
+        const document = this.documentOf(key, records[index], names.get(key), reduced.has(key))
         if (document !== undefined) documents.set(key, document)
       })
       return reportOf(record, documents)
@@ -248,6 +250,7 @@ class IndexedDraftStore implements DraftStore {
     identifier: string,
     record: unknown,
     name: string | undefined,
+    isReduced: boolean,
   ): Document | undefined {
     if (typeof record !== 'object' || record === null) return undefined
     const { letter, fileName, content } = record as Record<string, unknown>
@@ -261,7 +264,7 @@ class IndexedDraftStore implements DraftStore {
       return undefined
     }
     this.identifiers.set(content, identifier)
-    return new Document(kind, fileName, content, name)
+    return new Document(kind, fileName, content, name, isReduced)
   }
 }
 
@@ -312,6 +315,7 @@ function recordOf(
     travelJustifications: report.travelJustifications.map(identifier),
     additionalDocuments: report.additionalDocuments.map(identifier),
     names,
+    reduced: report.documents.filter((document) => document.isReduced).map(identifier),
   }
 }
 

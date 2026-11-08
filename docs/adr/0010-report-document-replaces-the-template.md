@@ -1,7 +1,7 @@
 # ADR 0010: The report document takes the place of the McSCert template and its attachments
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -163,8 +163,8 @@ The report document is written as `docs/specs/report-document.md` says:
   size. A small receipt sits in the middle of a Letter page, mostly white.
 - The stamp is written in the bottom margin of a PDF page, over its content
   when the content reaches that far.
-- A photo is embedded as it was added: a report of many phone photos is
-  large.
+- An image is written smaller than it was added (ADR 0011): a report of many
+  phone photos still weighs several megabytes.
 
 - The cover is not the template itself, and the missing receipt authorization
   is a reproduction of McMaster's form. If the administration requires the

@@ -1,7 +1,7 @@
 # ADR 0006: `@cantoo/pdf-lib` reads the documents and writes the report document
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -9,7 +9,7 @@
 The system reads the PDF documents the Claimant adds (is it a PDF, how many
 pages, is it protected) and writes the report document: generated pages
 (cover, section pages, missing receipt authorizations), every page of every
-PDF document copied as it is, images placed on pages of their own, a stamp
+PDF document copied, less what no reader shows (ADR 0011), images placed on pages of their own, a stamp
 on every page, and links from labels and expense numbers to the pages they
 name (`docs/specs/report-document.md`). All of it runs in the
 browser, from one file, with no network (ADR 0001): the library and its fonts

@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
-import type { Kind } from '../domain/kind.ts'
+import type { DocumentWeight, ReportWeights } from '../domain/document-sizes.ts'
+import { Kind } from '../domain/kind.ts'
 import { Report } from '../domain/report.ts'
 import { mountWizard, type WizardOptions } from './wizard.ts'
 
@@ -19,6 +20,10 @@ let reading: Promise<void>
 let readings: Map<string, Promise<void>>
 /** How many times the Review step let the browser forget its links. */
 let forgotten: number
+/** How long working out the sizes takes. */
+let weighing: Promise<void>
+/** The sizes worked out for a report. */
+let weigh: (report: Report) => ReportWeights
 
 function options(draft = new Report(), isDraftKept = true): WizardOptions {
   return {
@@ -48,6 +53,10 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
       if (!isSaved) throw new Error('Input document to `PDFDocument.load` is encrypted')
       saved.push(report)
       return 'expense-report-2026-10-03-zoe-lefevre.pdf'
+    },
+    weighReport: async (report: Report) => {
+      await weighing
+      return weigh(report)
     },
   }
 }
@@ -160,6 +169,8 @@ beforeEach(() => {
   reading = Promise.resolve()
   readings = new Map()
   forgotten = 0
+  weighing = Promise.resolve()
+  weigh = () => ({ reportDocumentSize: undefined, weights: new Map() })
   mountWizard(root, options())
 })
 
@@ -1474,5 +1485,198 @@ describe('the per diems', () => {
     button('[data-step="0"]')?.click()
     button('[data-step="1"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
+  })
+
+  describe('the sizes on the Review step', () => {
+    const megabyte = 1_000_000
+
+    /** Goes through the steps to the Review step, the report filled in, and gives its documents. */
+    async function review(): Promise<Report> {
+      fillReport()
+      proceed()
+      await fillExpense()
+      proceed()
+      proceed()
+      return kept.at(-1) as Report
+    }
+
+    /** Sizes for the report's receipt, and a report document of 4 MB. */
+    function receiptWeighing(weight: DocumentWeight): void {
+      weigh = (report) => ({
+        reportDocumentSize: 4 * megabyte,
+        weights: new Map(
+          report.documents.map((document) => [
+            document,
+            document.kind === Kind.receipt ? weight : { addedSize: 10, size: 10 },
+          ]),
+        ),
+      })
+    }
+
+    const reportSize = () => root.querySelector('.report-size')?.textContent
+
+    it('says it is working out the sizes, then shows the size of the report document', async () => {
+      receiptWeighing({ addedSize: 10, size: 10 })
+      let finish = () => {}
+      weighing = new Promise((resolve) => {
+        finish = resolve
+      })
+      await review()
+      expect(reportSize()).toBe('Working out the sizes…')
+      expect(button('[data-action="save"]')?.disabled).toBe(false)
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+    })
+
+    /** The Review step while its sizes are worked out, and what lets them come. */
+    async function reviewWhileWeighing(): Promise<() => void> {
+      receiptWeighing({ addedSize: 10, size: 10 })
+      let finish = () => {}
+      weighing = new Promise((resolve) => {
+        finish = resolve
+      })
+      await review()
+      return finish
+    }
+
+    it('keeps the focus on Save the report when the sizes come', async () => {
+      const finish = await reviewWhileWeighing()
+      button('[data-action="save"]')?.focus()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(document.activeElement).toBe(button('[data-action="save"]'))
+    })
+
+    it('keeps the focus on a link to a document when the sizes come', async () => {
+      const finish = await reviewWhileWeighing()
+      const links = () => [...root.querySelectorAll('a')]
+      const position = links().length - 1
+      links()[position]?.focus()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(document.activeElement).toBe(links()[position])
+    })
+
+    it('takes no focus when the sizes come and it was elsewhere', async () => {
+      const finish = await reviewWhileWeighing()
+      ;(document.activeElement as HTMLElement | null)?.blur()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(document.activeElement).toBe(document.body)
+    })
+
+    it('shows no size for a document that is not heavy', async () => {
+      receiptWeighing({ addedSize: 2 * megabyte, size: 2 * megabyte })
+      await review()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+      expect(root.querySelector('.document-size')).toBeNull()
+    })
+
+    it('shows the size of a heavy document, without an offer when reducing is not worth it', async () => {
+      receiptWeighing({ addedSize: 3 * megabyte, size: 3 * megabyte })
+      await review()
+      await vi.waitFor(() => expect(root.querySelector('.document-size')).not.toBeNull())
+      expect(root.querySelector('.document-size')?.textContent?.trim()).toBe('3.0 MB')
+      expect(button('[data-action="reduce"]')).toBeNull()
+    })
+
+    it('offers to reduce a heavy document, keeps the choice, and takes it back with Restore', async () => {
+      weigh = (report) => ({
+        reportDocumentSize: 4 * megabyte,
+        weights: new Map(
+          report.documents.map((document) => [
+            document,
+            document.isReduced
+              ? { addedSize: 9_400_000, size: 500_000, reducedSize: 500_000 }
+              : { addedSize: 9_400_000, size: 9_400_000, reducedSize: 500_000 },
+          ]),
+        ),
+      })
+      await review()
+      await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
+      const row = () =>
+        root.querySelector('.document-size')?.textContent?.replace(/\s+/g, ' ').trim()
+      expect(row()).toBe('9.4 MB Reduce to 500 KB')
+
+      button('[data-action="reduce"]')?.click()
+      expect(kept.at(-1)?.documents[0]?.isReduced).toBe(true)
+      expect(kept.at(-1)?.documents[1]?.isReduced).toBe(false)
+      await vi.waitFor(() => expect(button('[data-action="restore"]')).not.toBeNull())
+      expect(row()).toBe('9.4 MB → 500 KB Restore')
+
+      button('[data-action="restore"]')?.click()
+      expect(kept.at(-1)?.documents[0]?.isReduced).toBe(false)
+      await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
+    })
+
+    it('stops saying the report was saved once a document is reduced', async () => {
+      receiptWeighing({ addedSize: 9 * megabyte, size: 9 * megabyte, reducedSize: megabyte })
+      await review()
+      await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
+      button('[data-action="save"]')?.click()
+      await vi.waitFor(() => expect(root.querySelector('.status')).not.toBeNull())
+      button('[data-action="reduce"]')?.click()
+      expect(root.querySelector('.status')).toBeNull()
+    })
+
+    it('shows no size when they cannot be worked out, and still offers to save', async () => {
+      weigh = () => {
+        throw new TypeError('Damaged')
+      }
+      await review()
+      await vi.waitFor(() => expect(root.querySelector('.report-size')).toBeNull())
+      expect(button('[data-action="save"]')).not.toBeNull()
+    })
+
+    it('shows no size for a report document that cannot be written', async () => {
+      await review()
+      await vi.waitFor(() => expect(root.querySelector('.report-size')).toBeNull())
+    })
+
+    it('leaves another step alone when the sizes come after it was left', async () => {
+      receiptWeighing({ addedSize: 10, size: 10 })
+      let finish = () => {}
+      weighing = new Promise((resolve) => {
+        finish = resolve
+      })
+      await review()
+      button('[data-step="0"]')?.click()
+      const field = root.querySelector<HTMLInputElement>('[name="claimantName"]')
+      finish()
+      await weighing
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(root.querySelector('h2')?.textContent).not.toBe('Review')
+      expect(root.querySelector('[name="claimantName"]')).toBe(field)
+    })
+
+    it('shows the sizes when it comes back to the step while they were worked out', async () => {
+      receiptWeighing({ addedSize: 10, size: 10 })
+      let finish = () => {}
+      weighing = new Promise((resolve) => {
+        finish = resolve
+      })
+      await review()
+      button('[data-step="0"]')?.click()
+      button('[data-step="3"]')?.click()
+      finish()
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 4.0 MB'))
+    })
+
+    it('ignores the sizes of a report that has changed since', async () => {
+      receiptWeighing({ addedSize: 10, size: 10 })
+      let finish = () => {}
+      weighing = new Promise((resolve) => {
+        finish = resolve
+      })
+      await review()
+      const first = weighing
+      button('[data-step="0"]')?.click()
+      type('claimantName', 'Ada Lovelace')
+      weigh = () => ({ reportDocumentSize: 7 * megabyte, weights: new Map() })
+      button('[data-step="3"]')?.click()
+      finish()
+      await first
+      await vi.waitFor(() => expect(reportSize()).toBe('Report document: 7.0 MB'))
+    })
   })
 })

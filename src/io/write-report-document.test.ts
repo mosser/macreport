@@ -24,8 +24,20 @@ import { layoutOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import { PerDiem } from '../domain/per-diem.ts'
 import { Report } from '../domain/report.ts'
+import { DocumentsAsWritten } from './documents-as-written.ts'
+import type { ImageEncoder } from './image-encoder.ts'
 import { paletteFrom } from './palette.ts'
 import { wrap, writeReportDocument } from './write-report-document.ts'
+
+/** The documents of these tests are small: nothing is encoded again. */
+const neverEncoding: ImageEncoder = {
+  jpeg: async () => {
+    throw new RangeError('An image too small to reduce was encoded')
+  },
+  png: async () => {
+    throw new RangeError('An image too small to reduce was encoded')
+  },
+}
 
 const tokens = new Map(
   [...readFileSync('src/style.css', 'utf8').matchAll(/(--mac-[a-z-]+):([^;]*);/g)].map((match) => [
@@ -102,6 +114,7 @@ async function written(report: Report): Promise<PDFDocument> {
     palette,
     version: '0.1.0',
     writtenOn: new CalendarDate(2026, 11, 7),
+    documents: new DocumentsAsWritten(neverEncoding),
   })
   return PDFDocument.load(bytes, { updateMetadata: false })
 }
@@ -742,5 +755,94 @@ describe('wrap', () => {
     const pieces = wrap('Supercalifragilisticexpialidocious', font, 10, 40)
     expect(pieces.length).toBeGreaterThan(1)
     expect(pieces.join('')).toBe('Supercalifragilisticexpialidocious')
+  })
+})
+
+describe('the size of what it holds', () => {
+  /** A report whose receipt holds the content given, and the document it is written into. */
+  async function writtenWith(
+    content: Uint8Array,
+    encoder: ImageEncoder = neverEncoding,
+  ): Promise<PDFDocument> {
+    const base = await reportOf('Taxi')
+    const replaced = new Document(Kind.receipt, 'taxi', content)
+    const report = new Report({ ...base, expenses: [] }).afterAdding(
+      (base.expenses[0] as Expense).afterChanging({ receipts: [replaced] }),
+    )
+    const bytes = await writeReportDocument({
+      layout: layoutOf(report),
+      palette,
+      version: '0.1.0',
+      writtenOn: new CalendarDate(2026, 11, 7),
+      documents: new DocumentsAsWritten(encoder),
+    })
+    return PDFDocument.load(bytes, { updateMetadata: false })
+  }
+
+  const streamsOf = (pdf: PDFDocument) =>
+    pdf.context
+      .enumerateIndirectObjects()
+      .map(([, object]) => object)
+      .filter((object): object is PDFRawStream => object instanceof PDFRawStream)
+
+  it('leaves out of a copied page what no reader shows', async () => {
+    const source = await PDFDocument.create()
+    const page = source.addPage([612, 792])
+    const noise = new Uint8Array(50_000).map((_, index) => (index * index * 31) % 251)
+    const thumbnail = source.context.flateStream(noise, { Marked: 'thumbnail' })
+    page.node.set(PDFName.of('Thumb'), source.context.register(thumbnail))
+    const pdf = await writtenWith(await source.save())
+    expect(pdf.getPages().every((each) => !each.node.has(PDFName.of('Thumb')))).toBe(true)
+    expect(streamsOf(pdf).some((stream) => stream.dict.has(PDFName.of('Marked')))).toBe(false)
+  })
+
+  it('leaves the Exif data of a photo out of the report document', async () => {
+    const pdf = await writtenWith(jpegOf(40, 30, 6))
+    const image = streamsOf(pdf).find(
+      (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+    )
+    expect(image).toBeDefined()
+    expect(String.fromCharCode(...(image?.contents ?? []))).not.toContain('Exif')
+  })
+
+  it('leaves the Exif data of a JPEG in a copied page out of the report document', async () => {
+    const source = await PDFDocument.create()
+    const page = source.addPage([612, 792])
+    page.drawImage(await source.embedJpg(jpegOf(40, 30, 6)), { x: 0, y: 0, width: 40, height: 30 })
+    const pdf = await writtenWith(await source.save())
+    const image = streamsOf(pdf).find(
+      (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+    )
+    expect(image).toBeDefined()
+    expect(String.fromCharCode(...(image?.contents ?? []))).not.toContain('Exif')
+  })
+
+  it('holds a large image as encoded, on a Letter page', async () => {
+    const large = new Uint8Array(2_000_000)
+    large.set(jpegOf(4000, 3000))
+    const encoded = jpegOf(2200, 1650)
+    const encoder: ImageEncoder = { jpeg: async () => encoded, png: async () => encoded }
+    const pdf = await writtenWith(large, encoder)
+    const image = streamsOf(pdf).find(
+      (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+    )
+    expect(image?.contents.length).toBe(encoded.length)
+    const sizes = pdf.getPages().map((page) => [page.getWidth(), page.getHeight()].sort())
+    expect(sizes.every(([short, long]) => short === 612 && long === 792)).toBe(true)
+  })
+
+  it('holds a PNG that encoding made a JPEG as a JPEG', async () => {
+    const large = new Uint8Array(2_000_000)
+    large.set(png.subarray(0, 8))
+    const encoded = jpegOf(2200, 1650)
+    const notSmaller = new Uint8Array(1_000_000)
+    notSmaller.set([0x89, 0x50, 0x4e, 0x47])
+    const encoder: ImageEncoder = { jpeg: async () => encoded, png: async () => notSmaller }
+    const pdf = await writtenWith(large, encoder)
+    expect(
+      streamsOf(pdf).some(
+        (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+      ),
+    ).toBe(true)
   })
 })
