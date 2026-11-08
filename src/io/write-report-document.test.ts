@@ -24,7 +24,7 @@ import { Kind } from '../domain/kind.ts'
 import { layoutOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import { PerDiem } from '../domain/per-diem.ts'
-import { policy } from '../domain/policy.ts'
+import { type PolicyDocument, policy } from '../domain/policy.ts'
 import { Report } from '../domain/report.ts'
 import { DocumentsAsWritten } from './documents-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
@@ -616,28 +616,80 @@ describe('writeReportDocument', () => {
     expect(total?.x).toBeGreaterThan(large?.x ?? 0)
   })
 
-  it('has a Policy section after the total, each document named and a link to its address', async () => {
-    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
-    const cover = pdf.getPage(0)
-    const places = placesOf(pdf, cover)
-    const at = (text: string) => places.find((place) => place.text === text)
+  describe('the Policy section', () => {
     const [first, second] = policy.documents
     if (first === undefined || second === undefined) throw new TypeError('No policy')
-    const [total, heading, one, other] = ['Total', 'Policy', first.name, second.name].map(at)
-    expect(heading?.y).toBeLessThan(total?.y ?? 0)
-    expect(one?.y).toBeLessThan(heading?.y ?? 0)
-    expect(other?.y).toBeLessThan(one?.y ?? 0)
-    const addresses = (cover.node.Annots()?.asArray() ?? [])
-      .map((reference) => pdf.context.lookup(reference, PDFDict))
-      .filter((annotation) => annotation.has(PDFName.of('A')))
-      .map((annotation) => annotation.lookup(PDFName.of('A'), PDFDict))
-    expect(addresses.map((action) => action.get(PDFName.of('S')))).toEqual([
-      PDFName.of('URI'),
-      PDFName.of('URI'),
-    ])
-    expect(
-      addresses.map((action) => action.lookup(PDFName.of('URI'), PDFString).asString()),
-    ).toEqual(policy.documents.map(({ url }) => url))
+
+    /** The cover of a report whose policy holds the documents given. */
+    async function coverWith(documents: readonly PolicyDocument[]) {
+      const report = await reportOf('Air Canada, YYZ–CDG return')
+      const bytes = await writeReportDocument({
+        layout: { ...layoutOf(report), policyDocuments: documents },
+        palette,
+        version: '0.1.0',
+        writtenOn: new CalendarDate(2026, 11, 7),
+        documents: new DocumentsAsWritten(neverEncoding),
+      })
+      const pdf = await PDFDocument.load(bytes, { updateMetadata: false })
+      return { pdf, places: placesOf(pdf, pdf.getPage(0)) }
+    }
+
+    it('stands level with the attached information, against the right margin', async () => {
+      const { places } = await coverWith(policy.documents)
+      const at = (text: string) => places.find((place) => place.text === text)
+      expect(at('Policy')?.y).toBe(at('Attached information')?.y)
+      expect(at(first.name)?.y).toBe(at('Additional documents')?.y)
+      expect(at(second.name)?.y).toBe(at('Bank statements')?.y)
+      expect(at('Policy')?.x).toBeGreaterThan(400)
+      // Each name ends at the same place: the longer one starts earlier.
+      expect(at(second.name)?.x).toBeLessThan(at(first.name)?.x ?? 0)
+      expect(at('Expenses')?.y).toBeLessThan(at('Receipts')?.y ?? 0)
+    })
+
+    it('links each name to its address, its arrow included, within the right margin', async () => {
+      const { pdf } = await coverWith(policy.documents)
+      const links = (pdf.getPage(0).node.Annots()?.asArray() ?? [])
+        .map((reference) => pdf.context.lookup(reference, PDFDict))
+        .filter((annotation) => annotation.has(PDFName.of('A')))
+      const actions = links.map((link) => link.lookup(PDFName.of('A'), PDFDict))
+      expect(actions.map((action) => action.get(PDFName.of('S')))).toEqual([
+        PDFName.of('URI'),
+        PDFName.of('URI'),
+      ])
+      expect(
+        actions.map((action) => action.lookup(PDFName.of('URI'), PDFString).asString()),
+      ).toEqual(policy.documents.map(({ url }) => url))
+      for (const link of links) {
+        const [left = 0, , right = 0] = link
+          .lookup(PDFName.of('Rect'), PDFArray)
+          .asArray()
+          .map((value) => (value as PDFNumber).asNumber())
+        expect(right).toBeCloseTo(612 - 54)
+        expect(left).toBeGreaterThan(612 - 54 - 290 - 10)
+      }
+    })
+
+    it('wraps a long name clear of the attached information', async () => {
+      const name = Array.from({ length: 12 }, () => 'Reimbursements').join(' ')
+      const { places } = await coverWith([{ name, url: first.url }])
+      const lines = places.filter((place) => place.text.startsWith('Reimbursements'))
+      expect(lines.length).toBeGreaterThan(1)
+      const widest = places.find((place) => place.text === 'Missing receipt authorizations')
+      for (const line of lines) {
+        expect(line.x).toBeGreaterThan((widest?.x ?? 0) + 150)
+      }
+    })
+
+    it('pushes the expenses under it when it is longer than the attached information', async () => {
+      const documents = Array.from({ length: 8 }, (_, index) => ({
+        name: `Document ${index + 1}`,
+        url: first.url,
+      }))
+      const { places } = await coverWith(documents)
+      const at = (text: string) => places.find((place) => place.text === text)
+      expect(at('Expenses')?.y).toBeLessThan(at('Document 8')?.y ?? 0)
+      expect(at('Document 8')?.y).toBeLessThan(at('Receipts')?.y ?? 0)
+    })
   })
 
   it('keeps an amount of the total too wide for its column clear of its currency', async () => {

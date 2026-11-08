@@ -44,8 +44,9 @@ Options considered for where the interface offers them:
   only place an address appears. The system reads it when it is built, and refuses
   to build unless it holds at least one document, each with a name the report
   document can write.
-- **The report document has a Policy section** after the expenses, on the cover: the
-  name of each document, a link marked with an arrow (`report-document.md`).
+- **The report document has a Policy section** on the cover, beside the attached
+  information: the name of each document, a link marked with an arrow
+  (`report-document.md`).
 - **The footer of the interface links to them**, under every step, each by its name
   and in a new tab.
 

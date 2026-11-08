@@ -33,7 +33,6 @@ import type {
   StampedExpense,
   TotalLine,
 } from '../domain/layout.ts'
-import type { PolicyDocument } from '../domain/policy.ts'
 import type { DocumentsAsWritten } from './documents-as-written.ts'
 import { formatOf } from './format.ts'
 import { bytesOf } from './inlined.ts'
@@ -64,6 +63,9 @@ const bodySize = 10
 const tableSize = 9
 const stampSize = 8
 const titleSize = 18
+const sectionHeadingSize = 12
+/** The space between a section's heading and what it heads. */
+const sectionHeadingGap = 4
 /** The height of a capital of Noto Sans, as a share of its size. */
 const capHeight = 0.714
 const leading = 1.35
@@ -71,6 +73,8 @@ const leading = 1.35
 const cellPadding = 4
 /** The side of an expense's Entered box. */
 const enteredSize = 10
+/** The room a line of the Policy section keeps to, clear of the attached information beside it. */
+const policyWidth = 290
 /** The side of the arrow that marks a link, as a share of the size of the text it follows. */
 const arrowSide = 0.55
 /** The room an arrow takes after the text it follows, as a share of the size of that text. */
@@ -117,6 +121,12 @@ interface NamePiece {
   readonly text: string
   /** The label of the document a name links to; none for the meals of a per diem not claimed. */
   readonly label?: string | undefined
+}
+
+/** A line of the name of a document of the policy, and the address it links to. */
+interface PolicyLine {
+  readonly line: string
+  readonly url: string
 }
 
 /** What separates two names on the line of documents under an expense. */
@@ -327,6 +337,11 @@ class Flow {
     this.y -= height
   }
 
+  /** Back to a height of this page, to write what stands beside what was just written. */
+  backUpTo(height: number): void {
+    this.y = height
+  }
+
   text(text: string, x: number, font: PDFFont, size: number, colour: Colour): void {
     this.current?.drawText(text, { x, y: this.y - size, size, font, color: colourOf(colour) })
   }
@@ -419,14 +434,26 @@ class Writer {
       this.fieldLine(flow, field.name, field.value)
     }
     flow.down(12)
+    const lineHeight = bodySize * leading
+    const headingHeight = sectionHeadingSize * leading + sectionHeadingGap
+    const policyLines = layout.policyDocuments.flatMap(({ name, url }) =>
+      wrap(name, this.regular, bodySize, policyWidth).map((line) => ({ line, url })),
+    )
+    // Both sections start on one page, level with each other; what follows goes under the longer.
+    flow.ensure(
+      headingHeight + lineHeight * Math.max(layout.attachedInformation.length, policyLines.length),
+    )
+    const top = flow.cursor
+    this.policySection(flow, policyLines)
+    const policyBottom = flow.cursor
+    flow.backUpTo(top)
     this.sectionHeading(flow, 'Attached information')
     for (const information of layout.attachedInformation) {
-      const height = bodySize * leading
-      flow.ensure(height)
       flow.box(margin, bodySize, this.palette.black, information.isAttached)
       flow.text(information.kind.plural, margin + 18, this.regular, bodySize, this.palette.black)
-      flow.down(height)
+      flow.down(lineHeight)
     }
+    flow.backUpTo(Math.min(flow.cursor, policyBottom))
     flow.down(12)
     this.sectionHeading(flow, 'Expenses')
     const columns: Column[] = [
@@ -462,30 +489,33 @@ class Writer {
     }
     this.totalRow(flow, columns, layout.total)
     flow.stopContinuing()
-    flow.down(12)
-    this.sectionHeading(flow, 'Policy')
-    for (const document of layout.policyDocuments) {
-      this.policyLine(flow, document)
-    }
   }
 
-  /** A document of the policy: its name, each of its lines a link marked with an arrow. */
-  private policyLine(flow: Flow, { name, url }: PolicyDocument): void {
-    const { black } = this.palette
-    const room = letterPortrait[0] - 2 * margin - arrowRoom * bodySize
-    for (const line of wrap(name, this.regular, bodySize, room)) {
-      flow.ensure(bodySize * leading)
-      flow.text(line, margin, this.regular, bodySize, black)
+  /**
+   * The Policy section, against the right margin: its heading, then the name of each document, each
+   * of its lines a link marked with an arrow.
+   */
+  private policySection(flow: Flow, lines: readonly PolicyLine[]): void {
+    const right = letterPortrait[0] - margin
+    const { black, maroon } = this.palette
+    const heading = 'Policy'
+    const headingWidth = this.bold.widthOfTextAtSize(heading, sectionHeadingSize)
+    flow.text(heading, right - headingWidth, this.bold, sectionHeadingSize, maroon)
+    flow.down(sectionHeadingSize * leading + sectionHeadingGap)
+    const arrow = arrowRoom * bodySize
+    for (const { line, url } of lines) {
+      const width = this.regular.widthOfTextAtSize(line, bodySize)
+      const x = right - arrow - width
+      flow.text(line, x, this.regular, bodySize, black)
       const page = flow.page
       if (page !== undefined) {
-        const width = this.regular.widthOfTextAtSize(line, bodySize)
         const baseline = flow.cursor - bodySize
-        drawArrow(page, margin + width, baseline, bodySize, black)
+        drawArrow(page, x + width, baseline, bodySize, black)
         this.links.push({
           page,
-          x: margin,
+          x,
           y: baseline - 2,
-          width: width + arrowRoom * bodySize,
+          width: width + arrow,
           height: bodySize + 3,
           target: { url },
         })
@@ -812,9 +842,9 @@ class Writer {
   }
 
   private sectionHeading(flow: Flow, text: string): void {
-    flow.ensure(12 * leading + 3 * tableSize * leading)
-    this.paragraph(flow, text, this.bold, 12, this.palette.maroon)
-    flow.down(4)
+    flow.ensure(sectionHeadingSize * leading + 3 * tableSize * leading)
+    this.paragraph(flow, text, this.bold, sectionHeadingSize, this.palette.maroon)
+    flow.down(sectionHeadingGap)
   }
 
   private fieldLine(flow: Flow, name: string, value: string): void {

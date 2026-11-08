@@ -77,6 +77,10 @@ the template's fields and its table, so that nothing else needs filling in.
   parentheses when it is given (*NSERC Discovery (20-123-456)*).
 - **Attached information.** The four kinds of document, in alphabetical
   order, each with a box ticked when its section exists.
+- **Policy.** Beside the attached information, level with it and against the
+  right margin: its heading, then the name of each document `config/policy.json`
+  lists, one per line, each a link followed by its arrow. A longer name wraps, clear
+  of the attached information, and the expenses start under the longer of the two.
 - **Expenses.** A table of every expense and every per diem with a meal
   claimed, sorted by date, the expenses of a day in the order they were
   added and its per diem after them, and numbered in that order, each on two
@@ -130,9 +134,6 @@ the template's fields and its table, so that nothing else needs filling in.
   meals, each followed by its reason in parentheses when it has one; nothing
   when every meal is claimed. A per diem is supported by no document: no section page
   and no stamp names it, and its number is never a link.
-
-- **Policy.** After the total, under its heading, the name of each document
-  `config/policy.json` lists, one per line, each a link followed by its arrow.
 
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.

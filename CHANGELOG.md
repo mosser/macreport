@@ -8,8 +8,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- The report document has a **Policy** section after the expenses, and the footer of
-  every step has two links: both go to McMaster's AP-01 policy and its guidelines,
+- The cover of the report document has a **Policy** section beside the attached
+  information, and the footer of every step has two links: both go to McMaster's AP-01 policy and its guidelines,
   whose addresses are set in `config/policy.json`.
 - The Review step shows at its top the size of the report document, and the
   size of each heavy document: above 2 MB, a size set in

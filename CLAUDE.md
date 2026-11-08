@@ -191,7 +191,7 @@ first.
 - The documents of the policy are links, never copies. `config/policy.json` holds
   each one's name and https address, and is the only place an address appears; the
   build refuses a file without a valid one. The report document has a Policy section
-  after the total; the footer of the interface links to them, in a new tab.
+  beside the attached information; the footer of the interface links to them, in a new tab.
 
 ## Writing
 

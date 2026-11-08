@@ -124,7 +124,7 @@ export interface Layout {
    * the expenses without a claimed amount, US dollars including the international per diems.
    */
   readonly total: readonly TotalLine[]
-  /** The documents of the policy, in the section after the expenses. */
+  /** The documents of the policy, in the section beside the attached information. */
   readonly policyDocuments: readonly PolicyDocument[]
   readonly sections: readonly Section[]
 }
