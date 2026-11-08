@@ -12,7 +12,7 @@ import {
 import { Meal } from '../domain/meal.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
-import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
+import { type DocumentLinks, type LinkOf, linksAnew, separated } from './document-link.ts'
 import { html, type Markup } from './html.ts'
 import { reduceArrows } from './icons.ts'
 import type { Context, Step } from './step.ts'
@@ -36,7 +36,7 @@ function emptyRow(columns: number, wording: string): Markup {
 
 /**
  * The cover: its fields, then, under Itemized expenses, each expense on two lines, the second its
- * documents, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
+ * documents and Paid in cash, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
  * report.
  */
 function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Markup {
@@ -46,12 +46,14 @@ function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Mar
   const rows = layout.expenses
     .filter((row) => row.perDiem === undefined)
     .map((row) => {
-      const documents = row.supportingDocuments.map((supporting) => supporting.document)
+      const support = row.supportingDocuments.map(({ document, name }) =>
+        document === undefined ? html`${name}` : linkOf(document),
+      )
       return html`<tr class="expense">
         <td>${row.number}</td><td class="date">${row.date}</td><td class="description">${row.description}</td>
         <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
       </tr>
-      <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`
+      <tr class="supporting"><td></td><td></td><td colspan="3">${separated(support)}</td></tr>`
     })
   return html`<table class="cover-fields">${fields}</table>
     <h3>Itemized expenses</h3>

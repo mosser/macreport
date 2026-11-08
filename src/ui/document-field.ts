@@ -9,11 +9,26 @@ import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { fieldName, fieldRule } from './field.ts'
 import { html, type Markup } from './html.ts'
-import { trashCan } from './icons.ts'
+import { cross, trashCan } from './icons.ts'
 import type { Context } from './step.ts'
 
 /** Reads a file the Claimant adds into a document of a kind. */
 export type ReadFile = (file: File, kind: Kind) => Promise<Document>
+
+/**
+ * What the Claimant may state of a field that holds no document, which then takes its place: Paid
+ * in cash, of a bank statement.
+ */
+export interface StatedInstead {
+  /** What is offered, and said once stated. */
+  readonly wording: string
+  /** Whether the report states it. */
+  isStatedIn(report: Report): boolean
+  /** The report, stating it. */
+  afterStating(report: Report): Report
+  /** The report, no longer stating it: the field asks for its document again. */
+  afterTakingBack(report: Report): Report
+}
 
 /** A field of documents of one kind: where they are in the report, and how one is added. */
 export interface DocumentField {
@@ -32,6 +47,8 @@ export interface DocumentField {
    * file: a field that offers them chooses the document already there for a file added again.
    */
   choicesIn?(report: Report): readonly Document[]
+  /** What the Claimant may state instead of adding a document; nothing when there is no such thing. */
+  readonly statedInstead?: StatedInstead
 }
 
 const accepted = 'application/pdf,image/jpeg,image/png'
@@ -78,11 +95,31 @@ function choicesOf(field: DocumentField, report: Report): Markup {
   </label>`
 }
 
+/** What is stated in place of a field, and Take back, a cross. */
+function statedOf(field: DocumentField, { wording }: StatedInstead): Markup {
+  return html`<div class="field" data-field="${field.field}">
+    ${fieldName(field.field, false)}
+    <div class="stated">
+      <span class="stated-wording">${wording}</span>
+      <button type="button" class="icon remove" data-take-back="${field.field}"
+        aria-label="Take back: ${wording}" title="Take back">${cross}</button>
+    </div>
+  </div>`
+}
+
+/** What a field that holds no document may state instead, on offer unless a file is being added. */
+function offerOf(field: DocumentField): Markup {
+  return field.statedInstead === undefined
+    ? html``
+    : html`<button type="button" class="quiet" data-state="${field.field}"
+        data-held-while-adding>${field.statedInstead.wording}</button>`
+}
+
 /**
  * The documents added to a field, each named, then a zone a file is dropped on, or clicked to
- * choose one, and the documents already in the report it may choose; a field that holds one
- * document at most shows neither once it has it. Under a document chosen again for a file added
- * again, the step says so.
+ * choose one, the documents already in the report it may choose, and what it may state instead; a
+ * field that holds one document at most shows none of these once it has it. What is stated takes
+ * the place of the field. Under a document chosen again for a file added again, the step says so.
  */
 export function documentFieldOf(
   field: DocumentField,
@@ -90,6 +127,9 @@ export function documentFieldOf(
   chosenAgain?: Document,
 ): Markup {
   const name = field.field
+  if (field.statedInstead?.isStatedIn(report)) {
+    return statedOf(field, field.statedInstead)
+  }
   const documents = field.documentsIn(report)
   const list =
     documents.length > 0
@@ -109,7 +149,8 @@ export function documentFieldOf(
         <span id="content-of-${name}">Drop a file here, or choose one</span>
       </label>
       ${fieldRule(name)}
-      ${choicesOf(field, report)}`
+      ${choicesOf(field, report)}
+      ${offerOf(field)}`
   return html`<div class="field" data-field="${name}">
     ${fieldName(name)}
     ${list}
@@ -132,7 +173,8 @@ const lastAdded = new WeakMap<
  * Listens to the document fields of a panel: a file chosen or dropped is added, a document
  * already in the report chosen, a name typed names its document, and Remove takes a document out
  * of its field. A field that offers the documents already in the report chooses the one already
- * there for a file added again, and says so through `isChosenAgain`.
+ * there for a file added again, and says so through `isChosenAgain`. What a field states instead
+ * is stated, or taken back, the focus going on to the control that takes its place.
  */
 export function listenToDocumentFields(
   panel: HTMLElement,
@@ -238,6 +280,28 @@ export function listenToDocumentFields(
       if (field === undefined || document === undefined || select.value === '') return
       context.change(field.afterAdding(context.report, document))
       context.refresh()
+    })
+  }
+  const refreshFocusing = (selector: string) => {
+    context.refresh()
+    panel.ownerDocument.querySelector<HTMLElement>(selector)?.focus()
+  }
+  for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-state]')) {
+    button.addEventListener('click', () => {
+      const name = button.dataset.state
+      const stated = fieldNamed(name)?.statedInstead
+      if (stated === undefined) return
+      context.change(stated.afterStating(context.report))
+      refreshFocusing(`[data-take-back="${name}"]`)
+    })
+  }
+  for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-take-back]')) {
+    button.addEventListener('click', () => {
+      const name = button.dataset.takeBack
+      const stated = fieldNamed(name)?.statedInstead
+      if (stated === undefined) return
+      context.change(stated.afterTakingBack(context.report))
+      refreshFocusing(`[data-state="${name}"]`)
     })
   }
 }

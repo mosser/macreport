@@ -578,6 +578,18 @@ td.size-action button {
   }
 }
 
+/* What is stated in place of a document field: Paid in cash, with what takes it back. */
+.stated {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.stated-wording {
+  font-weight: 600;
+}
+
 button.quiet {
   display: inline-block;
   margin: 0.5rem 1.25rem 0 0;

@@ -57,6 +57,26 @@ describe('Expense', () => {
     expect(constructed.foreignAmountText).toBe('')
   })
 
+  it('is not paid in cash unless it says so, and then has no bank statement', () => {
+    expect(new Expense().isPaidInCash).toBe(false)
+    expect(new Expense({ isPaidInCash: true }).isPaidInCash).toBe(true)
+    expect(() => new Expense({ isPaidInCash: true, bankStatements: [statement] })).toThrow(
+      new TypeError('An expense paid in cash has no bank statement'),
+    )
+    expect(() =>
+      new Expense({ bankStatements: [statement] }).afterChanging({ isPaidInCash: true }),
+    ).toThrow(TypeError)
+  })
+
+  it('stays paid in cash through any other change, until that is taken back', () => {
+    const paid = new Expense({ receipts: [receipt], isPaidInCash: true })
+    expect(paid.afterChanging({ description: 'Taxi' }).isPaidInCash).toBe(true)
+    expect(paid.afterRemoving(receipt).isPaidInCash).toBe(true)
+    const back = paid.afterChanging({ isPaidInCash: false })
+    expect(back.isPaidInCash).toBe(false)
+    expect(back.afterChanging({ bankStatements: [statement] }).hasBankStatement).toBe(true)
+  })
+
   it('stops referring to a document, leaving the others', () => {
     const expense = new Expense({ receipts: [receipt], bankStatements: [statement] })
     expect(expense.documents).toEqual([receipt, statement])

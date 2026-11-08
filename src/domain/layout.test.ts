@@ -311,6 +311,26 @@ describe('layoutOf', () => {
     ])
   })
 
+  it('says Paid in cash where the statement of an expense would be, which is no link', () => {
+    const taxi = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      claimedAmount: new Amount(5500),
+      receipts: [new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([9]))],
+      isPaidInCash: true,
+    })
+    const layout = layoutOf(report.afterAdding(taxi))
+    expect(layout.expenses[1]?.supportingDocuments.map(({ label, name }) => [label, name])).toEqual(
+      [
+        ['R2', 'Receipt'],
+        [undefined, 'Paid in cash'],
+      ],
+    )
+    expect(layout.sections.find(({ kind }) => kind === Kind.bankStatement)?.documents).toHaveLength(
+      1,
+    )
+  })
+
   it('opens a section per kind held, additional documents first, bank statements last, each document with the expenses it supports', () => {
     const sections = layoutOf(report).sections
     expect(sections.map((section) => section.title)).toEqual([

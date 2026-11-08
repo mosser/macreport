@@ -40,6 +40,7 @@ export const fieldNames = {
   currency: 'Currency',
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
+  paidInCash: 'Paid in cash',
   travelJustifications: 'Travel justification(s)',
   additionalDocuments: 'Additional document(s)',
   documentName: 'Name',
@@ -89,6 +90,7 @@ const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'businessTravel',
   'accountCode',
   'paidInAnotherCurrency',
+  'paidInCash',
   'additionalDocuments',
   'documentName',
   'domestic',
@@ -123,7 +125,7 @@ export function missingFieldsOf(expense: Expense): readonly Field[] {
   }
   values.push(
     ['receipts', expense.hasReceipt || undefined],
-    ['bankStatements', expense.hasBankStatement || undefined],
+    ['bankStatements', expense.hasBankStatement || expense.isPaidInCash || undefined],
   )
   return values
     .filter(([field, value]) => value === undefined && isRequired(field, expense))

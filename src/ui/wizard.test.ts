@@ -1187,6 +1187,104 @@ describe('the Expenses step', () => {
   })
 })
 
+describe('an expense paid in cash', () => {
+  const offer = () => button('[data-state="bankStatements"]')
+  const takeBack = () => button('[data-take-back="bankStatements"]')
+  const lastExpense = () => kept.at(-1)?.expenses.at(-1)
+
+  async function paidInCash(): Promise<void> {
+    fillReport()
+    proceed()
+    openExpense()
+    type('date', '2026-10-05')
+    type('description', 'Taxi')
+    type('claimedAmount', '55')
+    await add('receipts', 'taxi.pdf')
+    offer()?.click()
+  }
+
+  it('takes the place of the bank statement, and no bank statement is required', async () => {
+    await paidInCash()
+    expect(lastExpense()?.isPaidInCash).toBe(true)
+    expect(root.querySelector('[data-field="bankStatements"] .stated')?.textContent).toContain(
+      'Paid in cash',
+    )
+    expect(root.querySelector('input[name="bankStatements"]')).toBeNull()
+    expect(offer()).toBeNull()
+    expect(takeBack()?.getAttribute('aria-label')).toBe('Take back: Paid in cash')
+    expect(takeBack()?.querySelector('svg')).not.toBeNull()
+    expect(document.activeElement).toBe(takeBack())
+    proceed()
+    expect(root.querySelector('h2')?.textContent).toBe('Additional documents')
+  })
+
+  it('shows in the list of expenses', async () => {
+    await paidInCash()
+    button('[data-action="done"]')?.click()
+    const support = root.querySelector('table.expense-list tr.supporting')
+    expect(support?.textContent?.replace(/\s+/g, ' ').trim()).toBe('taxi · Paid in cash')
+    expect(support?.querySelector('.lacks')).toBeNull()
+    expect(continueButton()?.disabled).toBe(false)
+  })
+
+  it('shows on the Review step', async () => {
+    await paidInCash()
+    proceed()
+    proceed()
+    const support = root.querySelector('table.expenses tr.supporting')
+    expect(support?.textContent?.replace(/\s+/g, ' ').trim()).toBe('taxi · Paid in cash')
+    expect([...(support?.querySelectorAll('a') ?? [])].map((link) => link.textContent)).toEqual([
+      'taxi',
+    ])
+  })
+
+  it('is taken back with its cross: the bank statement is asked for again and can be added', async () => {
+    await paidInCash()
+    takeBack()?.click()
+    expect(lastExpense()?.isPaidInCash).toBe(false)
+    expect(takeBack()).toBeNull()
+    expect(document.activeElement).toBe(offer())
+    button('[data-action="done"]')?.click()
+    expect(root.querySelector('.lacks')?.textContent).toContain('Bank statement is required.')
+    button('[data-change]')?.click()
+    await add('bankStatements', 'statement.pdf')
+    expect(lastExpense()?.bankStatements.map((document) => document.name)).toEqual(['statement'])
+    expect(lastExpense()?.isPaidInCash).toBe(false)
+  })
+
+  it('is offered only while the bank statement holds no document', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    expect(offer()?.textContent).toBe('Paid in cash')
+    await add('bankStatements', 'statement.pdf')
+    expect(offer()).toBeNull()
+    button('[data-remove="bankStatements"]')?.click()
+    expect(offer()).not.toBeNull()
+  })
+
+  it('is not offered while a file is being added', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    const finish = giveSlowly('bankStatements', 'statement.pdf')
+    expect(offer()?.disabled).toBe(true)
+    finish()
+    await vi.waitFor(() => expect(root.textContent).toContain('statement.pdf'))
+    expect(offer()).toBeNull()
+  })
+
+  it('is undone by Discard, as any change to the expense', async () => {
+    await paidInCash()
+    button('[data-action="done"]')?.click()
+    button('[data-change]')?.click()
+    takeBack()?.click()
+    expect(lastExpense()?.isPaidInCash).toBe(false)
+    button('[data-action="discard"]')?.click()
+    expect(lastExpense()?.isPaidInCash).toBe(true)
+  })
+})
+
 describe('Discard', () => {
   const descriptions = () => kept.at(-1)?.expenses.map((expense) => expense.description)
 

@@ -317,6 +317,19 @@ describe('findings of the Additional documents step', () => {
     ])
   })
 
+  it('requires no bank statement of an expense paid in cash, and it again once that is taken back', () => {
+    const paid = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      claimedAmount: new Amount(5500),
+      receipts: [new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([9]))],
+      isPaidInCash: true,
+    })
+    expect(missingFieldsOf(paid)).toEqual([])
+    expect(missingFieldsOf(paid.afterChanging({ isPaidInCash: false }))).toEqual(['bankStatements'])
+    expect(isRequired('paidInCash')).toBe(false)
+  })
+
   it('requires a travel justification, but neither an additional document nor a name', () => {
     expect(isRequired('travelJustifications')).toBe(true)
     expect(isRequired('additionalDocuments')).toBe(false)

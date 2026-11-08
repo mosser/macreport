@@ -14,12 +14,14 @@ export interface ExpenseFields {
   readonly currency?: Currency | undefined
   readonly receipts?: readonly Document[] | undefined
   readonly bankStatements?: readonly Document[] | undefined
+  readonly isPaidInCash?: boolean | undefined
 }
 
 /**
  * One transaction claimed: its date, its description, its claimed amount, its foreign amount when
- * it was paid in another currency, its receipt and its bank statement. A receipt is a document of
- * the receipt kind, a bank statement a document of the bank statement kind.
+ * it was paid in another currency, its receipt, and its bank statement unless it was paid in cash.
+ * A receipt is a document of the receipt kind, a bank statement a document of the bank statement
+ * kind.
  */
 export class Expense {
   readonly date: CalendarDate | undefined
@@ -34,10 +36,13 @@ export class Expense {
   readonly currency: Currency | undefined
   readonly receipts: readonly Document[]
   readonly bankStatements: readonly Document[]
+  /** Whether the expense was paid in cash: it then has no bank statement. */
+  readonly isPaidInCash: boolean
 
   /**
-   * Throws a TypeError when a receipt or a bank statement is a document of another kind. An
-   * expense not paid in another currency has neither a foreign amount nor a currency.
+   * Throws a TypeError when a receipt or a bank statement is a document of another kind, or when an
+   * expense paid in cash has a bank statement. An expense not paid in another currency has neither
+   * a foreign amount nor a currency.
    */
   constructor(fields: ExpenseFields = {}) {
     const receipts = fields.receipts ?? []
@@ -48,6 +53,9 @@ export class Expense {
     if (bankStatements.some((document) => document.kind !== Kind.bankStatement)) {
       throw new TypeError('A bank statement is a document of the bank statement kind')
     }
+    if (fields.isPaidInCash === true && bankStatements.length > 0) {
+      throw new TypeError('An expense paid in cash has no bank statement')
+    }
     this.date = fields.date
     this.description = fields.description
     this.claimedAmount = fields.claimedAmount
@@ -56,6 +64,7 @@ export class Expense {
     this.currency = this.isPaidInAnotherCurrency ? fields.currency : undefined
     this.receipts = receipts
     this.bankStatements = bankStatements
+    this.isPaidInCash = fields.isPaidInCash ?? false
   }
 
   /** Whether the expense has at least one receipt. */
@@ -110,6 +119,7 @@ export class Expense {
       currency: this.currency,
       receipts: this.receipts,
       bankStatements: this.bankStatements,
+      isPaidInCash: this.isPaidInCash,
     }
   }
 }

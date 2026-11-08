@@ -24,8 +24,9 @@ import {
   documentFieldOf,
   listenToDocumentFields,
   type ReadFile,
+  type StatedInstead,
 } from './document-field.ts'
-import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
+import { type DocumentLinks, type LinkOf, linksAnew, supportOf } from './document-link.ts'
 import { fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
@@ -76,7 +77,8 @@ function afterChanging(
 
 /**
  * The receipt and the bank statement of the expense of a rank: one each, added from a file or
- * chosen among those already in the report, and taken out of this expense only.
+ * chosen among those already in the report, and taken out of this expense only; Paid in cash,
+ * stated in place of the bank statement.
  */
 function documentFieldsOf(index: number): readonly DocumentField[] {
   const expenseIn = (report: Report) => report.expenses[index] ?? new Expense()
@@ -85,6 +87,7 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
     kind: Kind,
     documentsOf: (expense: Expense) => readonly Document[],
     changes: (documents: readonly Document[]) => ExpenseFields,
+    statedInstead?: StatedInstead,
   ): DocumentField => ({
     field,
     kind,
@@ -98,7 +101,10 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
       report
         .documentsOf(kind)
         .filter((document) => !expenseIn(report).documents.includes(document)),
+    ...(statedInstead === undefined ? {} : { statedInstead }),
   })
+  const paidInCash = (isPaidInCash: boolean) => (report: Report) =>
+    afterChanging(report, index, (expense) => expense.afterChanging({ isPaidInCash }))
   return [
     fieldOf(
       'receipts',
@@ -111,6 +117,12 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
       Kind.bankStatement,
       (expense) => expense.bankStatements,
       (bankStatements) => ({ bankStatements }),
+      {
+        wording: fieldNames.paidInCash,
+        isStatedIn: (report) => expenseIn(report).isPaidInCash,
+        afterStating: paidInCash(true),
+        afterTakingBack: paidInCash(false),
+      },
     ),
   ]
 }
@@ -202,7 +214,7 @@ function formOf(
 function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
     const index = report.expenses.indexOf(expense)
-    const names = namesOf(expense.documents, linkOf)
+    const support = supportOf(expense, linkOf)
     const lacks = lacksOf(report, expense).map((lack) => html`<li>${lack}</li>`)
     const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
@@ -217,7 +229,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
             aria-label="Remove" title="Remove">${trashCan}</button>
         </td>
       </tr>
-      <tr class="supporting"><td></td><td colspan="3">${names}${lackList}</td></tr>`
+      <tr class="supporting"><td></td><td colspan="3">${support}${lackList}</td></tr>`
   })
   const table =
     rows.length > 0

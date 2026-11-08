@@ -21,11 +21,14 @@ export interface AttachedInformation {
   readonly isAttached: boolean
 }
 
-/** A document supporting an expense on the cover: called by its kind, and a link to it by its label. */
+/**
+ * What stands under an expense on the cover: a document supporting it, called by its kind, and a
+ * link to it by its label; or Paid in cash where its bank statement would be, which is no link.
+ */
 export interface SupportingDocument {
-  readonly label: string
+  readonly label?: string
   readonly name: string
-  readonly document: Document
+  readonly document?: Document
 }
 
 /** A line of the total, in one currency. */
@@ -43,7 +46,7 @@ export interface ExpenseRow {
   readonly description: string
   readonly foreignAmount: string
   readonly claimedAmount: string
-  /** The documents supporting the expense, one per line, in the order of the report document. */
+  /** What supports the expense, in the order of the report document. */
   readonly supportingDocuments: readonly SupportingDocument[]
   /** The per diem of a row that is one; none for an expense. */
   readonly perDiem?: PerDiem
@@ -386,11 +389,16 @@ function attachedInformationOf(kind: Kind, sections: readonly Section[]): Attach
 }
 
 function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
-  const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
+  const linkOf = (document: Document): SupportingDocument => ({
     label: labels.get(document) ?? '',
     name: document.kind.coverName,
     document,
-  }))
+  })
+  const supporting = [
+    ...expense.receipts.map(linkOf),
+    ...expense.bankStatements.map(linkOf),
+    ...(expense.isPaidInCash ? [{ name: fieldNames.paidInCash }] : []),
+  ]
   return {
     number,
     date: expense.date?.toString() ?? '',

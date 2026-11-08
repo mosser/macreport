@@ -1009,6 +1009,32 @@ describe('writeReportDocument', () => {
   })
 })
 
+describe('an expense paid in cash', () => {
+  it('says Paid in cash on the cover, no link and no section page for it', async () => {
+    const receipt = new Document(Kind.receipt, 'taxi.png', png)
+    const report = new Report({
+      claimantName: 'Zoë Łukasiewicz',
+      position: 'Faculty',
+      email: 'zoe@mcmaster.ca',
+      purpose: 'ICSE 2026',
+      accountName: '20-123-456',
+    }).afterAdding(
+      new Expense({
+        date: new CalendarDate(2026, 10, 3),
+        description: 'Taxi',
+        claimedAmount: new Amount(5500),
+        receipts: [receipt],
+        isPaidInCash: true,
+      }),
+    )
+    const pdf = await written(report)
+    const cover = pdf.getPage(0)
+    expect(textsOf(pdf, cover)).toEqual(expect.arrayContaining(['Receipt', 'Paid in cash']))
+    expect(pdf.getPageCount()).toBe(3)
+    expect(linksOf(pdf, cover).map(({ to }) => to)).toEqual([3])
+  })
+})
+
 describe('wrap', () => {
   it('breaks a text at spaces, and a word longer than the width', async () => {
     const pdf = await PDFDocument.create()

@@ -40,6 +40,7 @@ interface ExpenseRecord {
   readonly currency?: string
   readonly receipts: readonly string[]
   readonly bankStatements: readonly string[]
+  readonly isPaidInCash?: boolean
 }
 
 /**
@@ -283,6 +284,7 @@ function recordOf(
     ...(expense.currency === undefined ? {} : { currency: expense.currency.code }),
     receipts: expense.receipts.map(identifier),
     bankStatements: expense.bankStatements.map(identifier),
+    isPaidInCash: expense.isPaidInCash,
   }))
   const perDiems: PerDiemRecord[] = report.perDiems.map((perDiem) => ({
     date: perDiem.date.toString(),
@@ -349,6 +351,7 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       string,
       unknown
     >
+    const bankStatements = documentsAmong(expense.bankStatements, Kind.bankStatement)
     return new Expense({
       date: date(expense.date),
       description: text(expense.description),
@@ -357,7 +360,8 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       foreignAmount: amountOf(expense.foreignAmount),
       currency: typeof expense.currency === 'string' ? Currency.parse(expense.currency) : undefined,
       receipts: documentsAmong(expense.receipts, Kind.receipt),
-      bankStatements: documentsAmong(expense.bankStatements, Kind.bankStatement),
+      bankStatements,
+      isPaidInCash: expense.isPaidInCash === true && bankStatements.length === 0,
     })
   })
   const isBusinessTravel = fields.isBusinessTravel === true

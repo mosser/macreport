@@ -1,4 +1,6 @@
 import type { Document } from '../domain/document.ts'
+import type { Expense } from '../domain/expense.ts'
+import { fieldNames } from '../domain/findings.ts'
 import { html, type Markup } from './html.ts'
 
 /** Links to the content of documents, which the browser opens in a new tab. */
@@ -21,10 +23,18 @@ export function linksAnew(links: DocumentLinks): LinkOf {
     html`<a href="${links.urlOf(document)}" target="_blank" rel="noopener">${text}</a>`
 }
 
-/** The names of documents, one after the other, each a link to its document. */
-export function namesOf(documents: readonly Document[], linkOf: LinkOf): Markup[] {
-  return documents.flatMap((document, index) => {
-    const link = linkOf(document)
-    return index === 0 ? [link] : [html` · `, link]
-  })
+/** Pieces of a line, one after the other, separated by a middle dot. */
+export function separated(pieces: readonly Markup[]): Markup[] {
+  return pieces.flatMap((piece, index) => (index === 0 ? [piece] : [html` · `, piece]))
+}
+
+/**
+ * What supports an expense, one after the other: each of its documents by its name, a link to it,
+ * and Paid in cash where its bank statement would be.
+ */
+export function supportOf(expense: Expense, linkOf: LinkOf): Markup[] {
+  return separated([
+    ...expense.documents.map((document) => linkOf(document)),
+    ...(expense.isPaidInCash ? [html`${fieldNames.paidInCash}`] : []),
+  ])
 }
