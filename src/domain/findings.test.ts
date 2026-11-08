@@ -13,6 +13,7 @@ import {
   findingsOfExpensesStep,
   findingsOfReportStep,
   isRequired,
+  lacksOf,
   missingFieldsOf,
   requiredWording,
 } from './findings.ts'
@@ -124,6 +125,22 @@ describe('findings of the Expenses step', () => {
     expect(isRequired('claimedAmount', paid)).toBe(false)
     expect(isRequired('claimedAmount', new Expense())).toBe(true)
     expect(isRequired('paidInAnotherCurrency')).toBe(false)
+  })
+
+  it('says what an expense lacks: its missing fields, then its documents named as one before', () => {
+    const visa = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1]))
+    const taxi = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([2]), 'VISA')
+    const flight = new Expense({ bankStatements: [visa] })
+    const ride = new Expense({ description: 'Taxi', receipts: [taxi], bankStatements: [visa] })
+    const report = complete.afterAdding(flight).afterAdding(ride)
+    expect(lacksOf(report, ride)).toEqual([
+      'Date is required.',
+      'Claimed amount (CAD) is required.',
+      "taxi.pdf: Name VISA is already another document's.",
+    ])
+    expect(lacksOf(report, flight)).not.toContain(
+      "visa.pdf: Name visa is already another document's.",
+    )
   })
 
   it('words the statuses and rules of an expense exactly', () => {

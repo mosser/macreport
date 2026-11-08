@@ -325,7 +325,7 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       currency: typeof expense.currency === 'string' ? Currency.parse(expense.currency) : undefined,
       receipts: documentsAmong(expense.receipts, Kind.receipt),
       bankStatements: documentsAmong(expense.bankStatements, Kind.bankStatement),
-    }).afterChanging({})
+    })
   })
   const isBusinessTravel = fields.isBusinessTravel === true
   return new Report({

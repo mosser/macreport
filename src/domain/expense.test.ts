@@ -51,9 +51,10 @@ describe('Expense', () => {
     expect(unticked.foreignAmount).toBeUndefined()
     expect(unticked.currency).toBeUndefined()
     expect(unticked.foreignAmountText).toBe('')
-    expect(
-      new Expense({ foreignAmount: new Amount(1) }).afterChanging({}).foreignAmount,
-    ).toBeUndefined()
+    const constructed = new Expense({ foreignAmount: new Amount(1), currency: euro })
+    expect(constructed.foreignAmount).toBeUndefined()
+    expect(constructed.currency).toBeUndefined()
+    expect(constructed.foreignAmountText).toBe('')
   })
 
   it('stops referring to a document, leaving the others', () => {

@@ -63,7 +63,8 @@ justifications out. Continue is offered once every required field is valid.
 The expenses, sorted by date, then in the order they were added. Each shows
 its date, its description, its foreign amount, its claimed amount, its
 receipt or that its receipt is missing, its bank statement or that it was
-paid in cash, and, in red, what it still lacks. A document's name opens the
+paid in cash, and, in red, what it still lacks: a required field, or a
+document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them.
 

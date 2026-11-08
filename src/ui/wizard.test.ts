@@ -934,6 +934,20 @@ describe('the Expenses step', () => {
     expect(root.querySelector('[data-field="receipts"] .status')).toBeNull()
   })
 
+  it('says in the row of an expense which of its documents has the name of a document before it', async () => {
+    await twoExpensesSharingTheStatement()
+    const names = root.querySelectorAll<HTMLInputElement>('input[name="documentName"]')
+    const hotel = names[0]
+    if (hotel === undefined) throw new TypeError('No name')
+    hotel.value = 'Air-Canada'
+    hotel.dispatchEvent(new Event('input'))
+    button('[data-action="done"]')?.click()
+    expect([...root.querySelectorAll('.lacks li')].map((lack) => lack.textContent)).toEqual([
+      "hotel.pdf: Name Air-Canada is already another document's.",
+    ])
+    expect(continueButton()?.disabled).toBe(true)
+  })
+
   it('removes an expense once confirmed, and the documents no other expense refers to', async () => {
     await twoExpensesSharingTheStatement()
     button('[data-action="done"]')?.click()

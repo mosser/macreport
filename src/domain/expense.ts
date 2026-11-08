@@ -35,7 +35,10 @@ export class Expense {
   readonly receipts: readonly Document[]
   readonly bankStatements: readonly Document[]
 
-  /** Throws a TypeError when a receipt or a bank statement is a document of another kind. */
+  /**
+   * Throws a TypeError when a receipt or a bank statement is a document of another kind. An
+   * expense not paid in another currency has neither a foreign amount nor a currency.
+   */
   constructor(fields: ExpenseFields = {}) {
     const receipts = fields.receipts ?? []
     const bankStatements = fields.bankStatements ?? []
@@ -49,8 +52,8 @@ export class Expense {
     this.description = fields.description
     this.claimedAmount = fields.claimedAmount
     this.isPaidInAnotherCurrency = fields.isPaidInAnotherCurrency ?? false
-    this.foreignAmount = fields.foreignAmount
-    this.currency = fields.currency
+    this.foreignAmount = this.isPaidInAnotherCurrency ? fields.foreignAmount : undefined
+    this.currency = this.isPaidInAnotherCurrency ? fields.currency : undefined
     this.receipts = receipts
     this.bankStatements = bankStatements
   }
@@ -86,12 +89,7 @@ export class Expense {
    * foreign amount and the currency out.
    */
   afterChanging(changes: ExpenseFields): Expense {
-    const changed = new Expense({ ...this.fields(), ...changes })
-    return new Expense({
-      ...changed.fields(),
-      foreignAmount: changed.isPaidInAnotherCurrency ? changed.foreignAmount : undefined,
-      currency: changed.isPaidInAnotherCurrency ? changed.currency : undefined,
-    })
+    return new Expense({ ...this.fields(), ...changes })
   }
 
   /** The same expense, no longer referring to a document; the document itself is left alone. */

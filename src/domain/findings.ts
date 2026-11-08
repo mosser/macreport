@@ -182,10 +182,23 @@ export function findingsOfExpensesStep(report: Report): readonly Finding[] {
 function namesTaken(step: FindingStep, report: Report, documents: readonly Document[]): Finding[] {
   return [...new Set(documents)]
     .filter((document) => report.isNameTaken(document))
-    .map((document) => ({
-      step,
-      wording: `${document.fileName}: ${fieldNames.documentName} ${document.name} is already another document's.`,
-    }))
+    .map((document) => ({ step, wording: nameTakenFindingOf(document) }))
+}
+
+/** A document named as a document before it, by its file name and its name. */
+export function nameTakenFindingOf(document: Document): string {
+  return `${document.fileName}: ${fieldNames.documentName} ${document.name} is already another document's.`
+}
+
+/**
+ * What an expense still lacks, as its row in the list of expenses says it: each required field
+ * missing, then each of its documents named as a document before it.
+ */
+export function lacksOf(report: Report, expense: Expense): readonly string[] {
+  return [
+    ...missingFieldsOf(expense).map(requiredWording),
+    ...expense.documents.filter((document) => report.isNameTaken(document)).map(nameTakenFindingOf),
+  ]
 }
 
 /** A business travel without a travel justification: it has at least one. */

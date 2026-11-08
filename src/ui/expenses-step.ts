@@ -9,8 +9,7 @@ import {
   type Field,
   findingsOfExpensesStep,
   isRequired,
-  missingFieldsOf,
-  requiredWording,
+  lacksOf,
 } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
@@ -191,7 +190,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
     const index = report.expenses.indexOf(expense)
     const names = namesOf(expense.documents, linkOf)
-    const lacks = missingFieldsOf(expense).map((field) => html`<li>${requiredWording(field)}</li>`)
+    const lacks = lacksOf(report, expense).map((lack) => html`<li>${lack}</li>`)
     const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
         <td>${expense.date?.toString() ?? ''}</td>
