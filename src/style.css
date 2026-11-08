@@ -436,13 +436,10 @@ table.per-diems td.meal .checkbox {
   justify-content: center;
 }
 
-table.per-diems td.meal .reason {
-  text-align: left;
-}
-
 table.per-diems .reason {
   margin-bottom: 0;
   font-size: 0.9rem;
+  text-align: left;
 }
 
 /* Add a reason, under a meal not claimed: quiet until it is wanted. */
