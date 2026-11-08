@@ -280,6 +280,32 @@ export class Report {
     return new Report({ ...this.fields(), expenses })
   }
 
+  /**
+   * The same report, with an expense put back as it was before it was changed: its fields, its
+   * documents and their names. An expense that was not, being just added, leaves the report. A
+   * document the changes took out comes back; one they added that no other expense refers to
+   * leaves. Nothing else of the report changes.
+   */
+  afterPuttingBack(expense: Expense, before: Expense | undefined): Report {
+    if (before === undefined) {
+      return this.afterRemovingExpense(expense)
+    }
+    const inReport = (document: Document) => this.documentLike(document) ?? document
+    const replaced = this.afterReplacing(
+      expense,
+      before.afterChanging({
+        receipts: before.receipts.map(inReport),
+        bankStatements: before.bankStatements.map(inReport),
+      }),
+    )
+    return before.documents.reduce((report, document) => {
+      const current = report.documentLike(document)
+      return current === undefined || current.name === document.name
+        ? report
+        : report.afterRenaming(current, document.name)
+    }, replaced)
+  }
+
   /** The receipts and bank statements that leave the report with an expense removed. */
   documentsLeavingWith(expense: Expense): readonly Document[] {
     const kept = new Set(this.afterRemovingExpense(expense).documents)

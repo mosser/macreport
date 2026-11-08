@@ -130,6 +130,24 @@ async function fillExpense(): Promise<void> {
   await add('bankStatements', 'statement.pdf')
 }
 
+/** Gives a file to a file input, read only once the function it returns is called. */
+function giveSlowly(name: string, fileName: string): () => void {
+  let finish = () => {}
+  readings.set(
+    fileName,
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
+  const input = root.querySelector<HTMLInputElement>(`input[name="${name}"]`)
+  Object.defineProperty(input, 'files', {
+    value: [new File([`%PDF-1.7 ${fileName}`], fileName)],
+    configurable: true,
+  })
+  input?.dispatchEvent(new Event('change'))
+  return finish
+}
+
 beforeEach(() => {
   document.body.innerHTML = '<div></div>'
   root = document.body.firstElementChild as HTMLElement
@@ -528,22 +546,6 @@ describe('the wizard', () => {
   })
 
   /** Gives a file to a field, its reading finishing when the function it gives back is called. */
-  function giveSlowly(name: string, fileName: string): () => void {
-    let finish = () => {}
-    readings.set(
-      fileName,
-      new Promise((resolve) => {
-        finish = resolve
-      }),
-    )
-    const input = root.querySelector<HTMLInputElement>(`input[name="${name}"]`)
-    Object.defineProperty(input, 'files', {
-      value: [new File([`%PDF-1.7 ${fileName}`], fileName)],
-      configurable: true,
-    })
-    input?.dispatchEvent(new Event('change'))
-    return finish
-  }
 
   it('holds Done, Discard and Remove while a file is being added to an expense', async () => {
     fillReport()
@@ -1061,7 +1063,7 @@ describe('Discard', () => {
     name.value = 'Booking'
     name.dispatchEvent(new Event('input'))
     button('[data-action="discard"]')?.click()
-    expect(kept.at(-1)).toBe(before)
+    expect(kept.at(-1)?.expenses).toEqual(before?.expenses)
     expect(descriptions()).toEqual(['Air Canada, YYZ–CDG return'])
     expect(kept.at(-1)?.documents.map((document) => document.name)).toEqual([
       'air-canada',
@@ -1070,6 +1072,29 @@ describe('Discard', () => {
     expect(button('[data-step="0"]')?.disabled).toBe(false)
     button('[data-change="0"]')?.click()
     expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('1012.35')
+  })
+
+  it('keeps a file added meanwhile on another step', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    proceed()
+    const finish = giveSlowly('additionalDocuments', 'poster.pdf')
+    button('[data-step="1"]')?.click()
+    button('[data-change="0"]')?.click()
+    type('description', 'Air Transat')
+    finish()
+    await vi.waitFor(() =>
+      expect(kept.at(-1)?.additionalDocuments.map((document) => document.fileName)).toEqual([
+        'poster.pdf',
+      ]),
+    )
+    await vi.waitFor(() => expect(button('[data-action="discard"]')?.disabled).toBe(false))
+    button('[data-action="discard"]')?.click()
+    expect(descriptions()).toEqual(['Air Canada, YYZ–CDG return'])
+    expect(kept.at(-1)?.additionalDocuments.map((document) => document.fileName)).toEqual([
+      'poster.pdf',
+    ])
   })
 })
 
@@ -1330,6 +1355,62 @@ describe('the per diems', () => {
     claim('2026-10-03', 'dinner', false)
     claim('2026-10-03', 'breakfast', false)
     expect(kept.at(-1)?.claimedPerDiems).toEqual([])
+  })
+
+  it('keep the focus where the keyboard was, as each change renders the step again', () => {
+    fillReport()
+    travel()
+    type('lastDay', '2026-10-03')
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    const focused = () => document.activeElement as HTMLElement | null
+    scope('2026-10-03', 'international')
+    expect(focused()?.getAttribute('name')).toBe('scope-2026-10-03')
+    expect(focused()?.getAttribute('value')).toBe('international')
+    scope('2026-10-03', 'perMeal')
+    expect(focused()?.getAttribute('value')).toBe('perMeal')
+    const lunch = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="lunch"][value="domestic"]',
+    )
+    if (lunch === null) throw new TypeError('No lunch scope')
+    lunch.checked = true
+    lunch.dispatchEvent(new Event('change'))
+    expect(focused()?.dataset.meal).toBe('lunch')
+    claim('2026-10-03', 'dinner')
+    expect(focused()?.getAttribute('name')).toBe('meal')
+    expect(focused()?.dataset.meal).toBe('dinner')
+    button('[data-add-reason][data-meal="breakfast"]')?.click()
+    button('[data-remove-reason][data-meal="breakfast"]')?.click()
+    expect(focused()?.dataset.addReason).toBe('')
+    expect(focused()?.dataset.meal).toBe('breakfast')
+    button('[data-action="all-domestic"]')?.click()
+    expect(focused()?.dataset.action).toBe('all-domestic')
+    expect(root.querySelector('[data-meal="lunch"][type="radio"]')).toBeNull()
+    scope('2026-10-03', 'perMeal')
+    const dinner = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="dinner"][value="domestic"]',
+    )
+    if (dinner === null) throw new TypeError('No dinner scope')
+    dinner.checked = true
+    dinner.dispatchEvent(new Event('change'))
+    expect(focused()?.dataset.meal).toBe('dinner')
+    const international = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="dinner"][value="international"]',
+    )
+    if (international === null) throw new TypeError('No dinner scope')
+    international.checked = true
+    international.dispatchEvent(new Event('change'))
+    button('[data-action="done"]')?.click()
+    button('[data-action="manage-per-diems"]')?.click()
+    const back = root.querySelector<HTMLInputElement>(
+      'input[type="radio"][data-meal="dinner"][value="domestic"]',
+    )
+    if (back === null) throw new TypeError('No dinner scope')
+    back.checked = true
+    back.dispatchEvent(new Event('change'))
+    expect(root.querySelector('[data-meal="dinner"][type="radio"]')).toBeNull()
+    expect(focused()?.getAttribute('name')).toBe('scope-2026-10-03')
+    expect(focused()?.getAttribute('value')).toBe('domestic')
   })
 
   it('leave the step closed, and are closed with Done', () => {

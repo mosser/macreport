@@ -209,6 +209,37 @@ describe('Report', () => {
     expect(report.freeNameLike('Receipt')).toBe('Receipt (3)')
   })
 
+  it('puts an expense back as it was, its documents and their names, and nothing else', () => {
+    const receipt = new Document(Kind.receipt, 'hotel.pdf', new Uint8Array([1]))
+    const other = new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([2]))
+    const statement = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([3]), 'Visa')
+    const poster = new Document(Kind.additionalDocument, 'poster.png', new Uint8Array([4]))
+    const before = new Expense({
+      description: 'Hotel',
+      receipts: [receipt],
+      bankStatements: [statement],
+    })
+    const taxi = new Expense({ description: 'Taxi', bankStatements: [statement] })
+    const report = new Report().afterAdding(before).afterAdding(taxi)
+    const changed = report
+      .afterReplacing(
+        before,
+        before.afterRemoving(receipt).afterChanging({ description: 'Motel', receipts: [other] }),
+      )
+      .afterRenaming(statement, 'Mastercard')
+      .afterChanging({ additionalDocuments: [poster] })
+    const opened = changed.expenses[0] ?? new Expense()
+    const putBack = changed.afterPuttingBack(opened, before)
+    expect(putBack.expenses.map((expense) => expense.description)).toEqual(['Hotel', 'Taxi'])
+    expect(putBack.documents.map((document) => document.name)).toEqual(['hotel', 'Visa', 'poster'])
+    expect(putBack.expenses[0]?.bankStatements[0]).toBe(putBack.expenses[1]?.bankStatements[0])
+    expect(putBack.additionalDocuments).toEqual([poster])
+    const added = report.afterAdding(new Expense({ receipts: [other] }))
+    const fresh = added.expenses[2] ?? new Expense()
+    expect(added.afterPuttingBack(fresh, undefined).expenses).toEqual(report.expenses)
+    expect(added.afterPuttingBack(fresh, undefined).documents).toEqual(report.documents)
+  })
+
   describe('per diems', () => {
     const october = (day: number) => new CalendarDate(2026, 10, day)
     const travel = new Report({

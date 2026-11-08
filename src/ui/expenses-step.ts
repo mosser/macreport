@@ -33,12 +33,13 @@ import type { Context, Step } from './step.ts'
 
 /**
  * The expense whose fields are open: its rank in the order the expenses were added, the report it
- * is of, and the report as it was before they opened, which Discard goes back to.
+ * is of, and the expense as it was before they opened, which Discard puts back; none for an
+ * expense just added, which Discard takes out.
  */
 interface Opened {
   readonly session: number
   readonly index: number
-  readonly before: Report
+  readonly before: Expense | undefined
 }
 
 /** A value typed in a field of an expense: what it keeps, and whether it breaks the rule. */
@@ -449,7 +450,8 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     broken.clear()
   }
 
-  const open = (context: Context, index: number | undefined, before = context.report) => {
+  const open = (context: Context, index: number | undefined, isAdded = false) => {
+    const before = isAdded || index === undefined ? undefined : context.report.expenses[index]
     opened = index === undefined ? undefined : { session: context.session, index, before }
     forget()
     context.refresh()
@@ -498,7 +500,10 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       .querySelector('[data-action="done"]')
       ?.addEventListener('click', () => open(context, undefined))
     panel.querySelector('[data-action="discard"]')?.addEventListener('click', () => {
-      if (opened !== undefined) context.change(opened.before)
+      const expense = opened === undefined ? undefined : context.report.expenses[opened.index]
+      if (opened !== undefined && expense !== undefined) {
+        context.change(context.report.afterPuttingBack(expense, opened.before))
+      }
       open(context, undefined)
     })
     listenToDocumentFields(panel, context, readFile, fields, (field, document) => {
@@ -518,6 +523,18 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         context.change(context.report.afterChangingPerDiem(change(perDiem)))
       }
     }
+    /**
+     * Renders the step again, then focuses the control that stands where the one used was, or
+     * the one given instead when it is gone, so that the keyboard goes on from there.
+     */
+    const refreshFocusing = (selector: string, instead?: string) => {
+      context.refresh()
+      const document = panel.ownerDocument
+      const control =
+        document.querySelector<HTMLElement>(selector) ??
+        (instead === undefined ? null : document.querySelector<HTMLElement>(instead))
+      control?.focus()
+    }
     for (const radio of panel.querySelectorAll<HTMLInputElement>('input[type="radio"]')) {
       radio.addEventListener('change', () => {
         const day = radio.dataset.day ?? ''
@@ -531,7 +548,10 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         } else {
           changing(radio, (perDiem) => perDiem.afterMaking(meal, isInternational))
         }
-        context.refresh()
+        refreshFocusing(
+          `input[type="radio"][name="${radio.name}"][value="${radio.value}"]`,
+          `input[type="radio"][name="scope-${day}"]:checked`,
+        )
       })
     }
     for (const box of panel.querySelectorAll<HTMLInputElement>('input[name="meal"]')) {
@@ -539,7 +559,9 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         const meal = Meal.named(box.dataset.meal ?? '')
         if (meal !== undefined) changing(box, (perDiem) => perDiem.afterClaiming(meal, box.checked))
         if (box.checked) reasonsAskedFor.delete(`${box.dataset.day} ${box.dataset.meal}`)
-        context.refresh()
+        refreshFocusing(
+          `input[name="meal"][data-day="${box.dataset.day}"][data-meal="${box.dataset.meal}"]`,
+        )
       })
     }
     for (const field of panel.querySelectorAll<HTMLInputElement>('input[name="reason"]')) {
@@ -557,19 +579,16 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         if (meal !== undefined)
           changing(button, (perDiem) => perDiem.afterGivingReason(meal, undefined))
         reasonsAskedFor.delete(`${button.dataset.day} ${button.dataset.meal}`)
-        context.refresh()
+        refreshFocusing(
+          `[data-add-reason][data-day="${button.dataset.day}"][data-meal="${button.dataset.meal}"]`,
+        )
       })
     }
     for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-add-reason]')) {
       button.addEventListener('click', () => {
         const { day, meal } = button.dataset
         reasonsAskedFor.add(`${day} ${meal}`)
-        context.refresh()
-        panel.ownerDocument
-          .querySelector<HTMLInputElement>(
-            `input[name="reason"][data-day="${day}"][data-meal="${meal}"]`,
-          )
-          ?.focus()
+        refreshFocusing(`input[name="reason"][data-day="${day}"][data-meal="${meal}"]`)
       })
     }
     for (const [action, isInternational] of [
@@ -583,7 +602,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
             internationalMeals: isInternational ? Meal.all : [],
           }),
         )
-        context.refresh()
+        refreshFocusing(`[data-action="${action}"]`)
       })
     }
     panel.querySelector('[data-action="done"]')?.addEventListener('click', () => {
@@ -599,9 +618,8 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       context.refresh()
     })
     panel.querySelector('[data-action="add-expense"]')?.addEventListener('click', () => {
-      const before = context.report
-      context.change(before.afterAdding(new Expense()))
-      open(context, context.report.expenses.length - 1, before)
+      context.change(context.report.afterAdding(new Expense()))
+      open(context, context.report.expenses.length - 1, true)
     })
     for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-change]')) {
       button.addEventListener('click', () => open(context, Number(button.dataset.change)))
