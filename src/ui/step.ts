@@ -27,6 +27,11 @@ export interface Step {
   canContinue(report: Report): boolean
   /** Whether Continue is shown at all; it is, unless the step says otherwise. */
   offersContinue?(): boolean
+  /**
+   * Whether the step holds Back and every other step, as while a value typed breaks its rule:
+   * leaving would lose it. It is not, unless the step says otherwise.
+   */
+  holdsSteps?(): boolean
   /** Forgets what the step showed, as the wizard goes to another step. */
   leave?(): void
 }

@@ -530,6 +530,63 @@ describe('the wizard', () => {
     return finish
   }
 
+  it('holds Done and Remove while a file is being added to an expense', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    proceed()
+    button('[data-step="1"]')?.click()
+    openExpense()
+    const finish = giveSlowly('receipts', 'late.pdf')
+    expect(button('[data-action="done"]')?.disabled).toBe(true)
+    finish()
+    await vi.waitFor(() => expect(root.textContent).toContain('late.pdf'))
+    expect(button('[data-action="done"]')?.disabled).toBe(false)
+    button('[data-action="done"]')?.click()
+    expect(button('[data-remove-expense="0"]')?.disabled).toBe(false)
+    button('[data-step="2"]')?.click()
+    const finishLater = giveSlowly('additionalDocuments', 'later.pdf')
+    button('[data-step="1"]')?.click()
+    expect(button('[data-remove-expense="0"]')?.disabled).toBe(true)
+    finishLater()
+    await vi.waitFor(() => expect(button('[data-remove-expense="0"]')?.disabled).toBe(false))
+    expect(kept.at(-1)?.expenses[1]?.receipts.map((document) => document.fileName)).toEqual([
+      'late.pdf',
+    ])
+  })
+
+  it('holds Done, Back and the other steps while a value typed breaks its rule, and keeps it shown', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    tick('paidInAnotherCurrency', true)
+    type('foreignAmount', '640')
+    type('currency', 'EUR')
+    type('claimedAmount', '87.123')
+    const held = () =>
+      [
+        button('[data-action="done"]'),
+        button('[data-action="back"]'),
+        button('[data-step="0"]'),
+        button('[data-step="2"]'),
+      ].map((each) => each?.disabled)
+    expect(held()).toEqual([true, true, true, true])
+    expect(kept.at(-1)?.expenses[0]?.claimedAmount).toBeUndefined()
+    button('[data-remove="receipts"][data-index="0"]')?.click()
+    expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('87.123')
+    expect(
+      root.querySelector('[data-rule-of="claimedAmount"]')?.classList.contains('is-broken'),
+    ).toBe(true)
+    expect(held()).toEqual([true, true, true, true])
+    type('currency', 'EURO')
+    tick('paidInAnotherCurrency', false)
+    expect(held()).toEqual([true, true, true, true])
+    type('claimedAmount', '')
+    expect(held()).toEqual([false, false, false, true])
+    type('claimedAmount', '87.12')
+    expect(kept.at(-1)?.expenses[0]?.claimedAmount?.cents).toBe(8712)
+  })
+
   it('holds Continue and the steps ahead while a file is being added', async () => {
     fillReport()
     proceed()

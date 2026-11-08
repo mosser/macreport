@@ -71,7 +71,9 @@ document in a new tab of the browser. Each has **Change**, a pen, and
 **Change** opens the fields of an expense, filled in. Every change is kept as
 it is typed, as on any step. While they are open, Continue is not offered:
 **Done** closes them and shows the expenses. Leaving the step closes them
-too.
+too. A value typed that breaks its rule, which the expense does not keep,
+stays shown with its rule, and holds Done, Back and the other steps until it
+follows the rule or is cleared.
 
 | Field | Rule |
 |---|---|
@@ -135,7 +137,8 @@ there already is replaced only once it is removed.
 
 Files are read in the browser, which may take a while for a large one. While
 a file is being added, Continue and the steps ahead are not offered: the
-report is not reviewed, nor saved, without it.
+report is not reviewed, nor saved, without it. Nor are Done and Remove on the
+Expenses step: the file goes to the expense it was added to.
 
 ### Naming a document
 

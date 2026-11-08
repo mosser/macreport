@@ -133,27 +133,33 @@ function currencyNameOf(currency: Currency | undefined): string {
   return currency === undefined || currency.name === currency.code ? '' : currency.name
 }
 
-/** The fields of an expense, filled in, its receipt and bank statement, and Done. */
+/**
+ * The fields of an expense, filled in, a value typed that breaks its rule as it was typed, its
+ * receipt and bank statement, and Done.
+ */
 function formOf(
   report: Report,
   expense: Expense,
   fields: readonly DocumentField[],
   chosenAgain: ReadonlyMap<Field, Document>,
+  broken: ReadonlyMap<Field, string>,
 ): Markup {
+  const shown = (field: Field, kept: string | undefined) => broken.get(field) ?? kept ?? ''
+  const currencyName = html`<span class="currency-name" data-currency-name>${currencyNameOf(expense.currency)}</span>`
   const claimedAmountRule = expense.isPaidInAnotherCurrency
     ? html`<span class="rule" data-rule-of="claimedAmount">${claimedAmountInAnotherCurrencyRule}</span>`
     : fieldRule('claimedAmount')
   const foreign = expense.isPaidInAnotherCurrency
     ? html`<div class="dates">
-        ${input('foreignAmount', expense.foreignAmount?.typed ?? '', html`type="text" inputmode="decimal"`, expense)}
-        ${input('currency', expense.currency?.code ?? '', html`type="text" list="currencies" maxlength="3" autocomplete="off"`, expense, html`<span class="currency-name" data-currency-name>${currencyNameOf(expense.currency)}</span>`)}
+        ${input('foreignAmount', shown('foreignAmount', expense.foreignAmount?.typed), html`type="text" inputmode="decimal"`, expense)}
+        ${input('currency', shown('currency', expense.currency?.code), html`type="text" list="currencies" maxlength="3" autocomplete="off"`, expense, currencyName)}
         ${currencies}
       </div>`
     : ''
   return html`<h2>Expense</h2>
     <label class="field">
       ${fieldName('date')}
-      <input name="date" type="date" value="${expense.date?.toString() ?? ''}" />
+      <input name="date" type="date" value="${shown('date', expense.date?.toString())}" />
       ${fieldRule('date')}
     </label>
     <label class="field">
@@ -164,7 +170,7 @@ function formOf(
     <label class="field">
       ${fieldName('claimedAmount', isRequired('claimedAmount', expense))}
       <input name="claimedAmount" type="text" inputmode="decimal"
-        value="${expense.claimedAmount?.typed ?? ''}" />
+        value="${shown('claimedAmount', expense.claimedAmount?.typed)}" />
       ${claimedAmountRule}
     </label>
     <label class="field checkbox">
@@ -173,7 +179,7 @@ function formOf(
     </label>
     ${foreign}
     ${fields.map((field) => documentFieldOf(field, report, chosenAgain.get(field.field)))}
-    <button type="button" class="primary" data-action="done">Done</button>`
+    <button type="button" class="primary" data-action="done" data-held>Done</button>`
 }
 
 /**
@@ -186,6 +192,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
     const index = report.expenses.indexOf(expense)
     const names = namesOf(expense.documents, linkOf)
     const lacks = missingFieldsOf(expense).map((field) => html`<li>${requiredWording(field)}</li>`)
+    const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
         <td>${expense.date?.toString() ?? ''}</td>
         <td class="description">${expense.description ?? ''}</td>
@@ -194,12 +201,11 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
         <td class="expense-actions" rowspan="2">
           <button type="button" class="icon" data-change="${index}"
             aria-label="Change" title="Change">${pen}</button>
-          <button type="button" class="icon remove" data-remove-expense="${index}"
+          <button type="button" class="icon remove" data-remove-expense="${index}" data-held
             aria-label="Remove" title="Remove">${trashCan}</button>
         </td>
       </tr>
-      <tr class="supporting"><td></td><td colspan="3">${names}
-        ${lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''}</td></tr>`
+      <tr class="supporting"><td></td><td colspan="3">${names}${lackList}</td></tr>`
   })
   const table =
     rows.length > 0
@@ -235,21 +241,36 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
   let opened: Opened | undefined
   /** The document chosen again for a file added again, by its field, while the expense is open. */
   const chosenAgain = new Map<Field, Document>()
+  /**
+   * A value typed that breaks its rule, by its field, while the expense is open: the expense does
+   * not keep it, so the step holds the others until it follows its rule or is cleared.
+   */
+  const broken = new Map<Field, string>()
+
+  const forget = () => {
+    chosenAgain.clear()
+    broken.clear()
+  }
 
   const open = (context: Context, index: number | undefined) => {
     opened = index === undefined ? undefined : { session: context.session, index }
-    chosenAgain.clear()
+    forget()
     context.refresh()
   }
 
   const renderForm = (panel: HTMLElement, context: Context, index: number, expense: Expense) => {
     const fields = documentFieldsOf(index)
-    panel.innerHTML = formOf(context.report, expense, fields, chosenAgain).text
+    panel.innerHTML = formOf(context.report, expense, fields, chosenAgain, broken).text
+    for (const field of broken.keys()) {
+      panel.querySelector(`[data-rule-of="${field}"]`)?.classList.add('is-broken')
+    }
     for (const element of panel.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
       'input:not([type="file"]):not([type="checkbox"]):not([name="documentName"]), textarea',
     )) {
       element.addEventListener('input', () => {
         const { changes, isBroken } = typed(element.name, element.value)
+        if (isBroken) broken.set(element.name as Field, element.value)
+        else broken.delete(element.name as Field)
         context.change(afterChanging(context.report, index, (each) => each.afterChanging(changes)))
         if (element.name === 'currency') {
           const name = panel.querySelector('[data-currency-name]')
@@ -265,6 +286,10 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       .querySelector<HTMLInputElement>('[name="paidInAnotherCurrency"]')
       ?.addEventListener('change', (event) => {
         const isPaidInAnotherCurrency = (event.target as HTMLInputElement).checked
+        if (!isPaidInAnotherCurrency) {
+          broken.delete('foreignAmount')
+          broken.delete('currency')
+        }
         context.change(
           afterChanging(context.report, index, (each) =>
             each.afterChanging({ isPaidInAnotherCurrency }),
@@ -313,6 +338,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         renderForm(panel, context, opened.index, expense)
       } else {
         opened = undefined
+        forget()
         renderList(panel, context)
       }
     },
@@ -325,9 +351,13 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       return opened === undefined
     },
 
+    holdsSteps(): boolean {
+      return broken.size > 0
+    },
+
     leave(): void {
       opened = undefined
-      chosenAgain.clear()
+      forget()
     },
   }
 }

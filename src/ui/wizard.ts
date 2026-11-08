@@ -161,18 +161,32 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     refreshActions()
   }
 
+  /**
+   * Offers Continue, Back and the steps of the stepper as the step allows: none while it holds
+   * them, nor the steps ahead while a file is being added. What a step marks `data-held` waits
+   * for both.
+   */
   function refreshActions(): void {
     const isAdding = additions.size > 0
     const step = stepAt(current)
-    const canContinue = step.canContinue(report) && !isAdding
+    const isHeld = step.holdsSteps?.() ?? false
+    const canContinue = step.canContinue(report) && !isAdding && !isHeld
     const continueButton = root.querySelector<HTMLButtonElement>('[data-action="continue"]')
     if (continueButton !== null) {
       continueButton.disabled = !canContinue
       continueButton.hidden = current === steps.length - 1 || !(step.offersContinue?.() ?? true)
     }
+    const backButton = root.querySelector<HTMLButtonElement>('[data-action="back"]')
+    if (backButton !== null) {
+      backButton.disabled = isHeld
+    }
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-step]')) {
-      const step = Number(button.dataset.step)
-      button.disabled = step > reached || (isAdding && step > current)
+      const index = Number(button.dataset.step)
+      button.disabled =
+        index > reached || (isAdding && index > current) || (isHeld && index !== current)
+    }
+    for (const element of root.querySelectorAll<HTMLButtonElement>('[data-held]')) {
+      element.disabled = isAdding || isHeld
     }
   }
 

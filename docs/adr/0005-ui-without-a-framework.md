@@ -32,11 +32,14 @@ The interface uses **the DOM directly**, with two small in-house pieces.
   description or any text the Claimant typed is never inserted without
   escaping.
 - **Steps.** Each step implements the `Step` interface of `src/ui/step.ts`:
-  `render(panel, ctx)`, `canContinue(draft)`, an optional `offersContinue()`,
-  false while Continue is not shown at all, as when the fields of an expense
-  are open, and an optional `leave()`, which forgets what the step showed,
-  such as the expense whose fields are open, as the wizard goes to another
-  step.
+  `render(panel, ctx)`, `canContinue(draft)`, and three optional hooks:
+  `offersContinue()`, false while Continue is not shown at all, as when the
+  fields of an expense are open; `holdsSteps()`, true while Back and every
+  other step wait, as while a value typed breaks its rule; and `leave()`,
+  which forgets what the step showed, such as the expense whose fields are
+  open, as the wizard goes to another step. An element a step marks
+  `data-held` is disabled while files are being added or the step holds the
+  others.
   The wizard (`src/ui/wizard.ts`) owns the step index, the stepper, the
   Back/Continue actions, New report, and the notice shown when the draft
   cannot be kept.
