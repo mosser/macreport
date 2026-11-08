@@ -16,8 +16,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   all** does so for every document on offer: its large JPEG images are written with fewer
   pixels and each shape it draws repeatedly is kept once, its pages, text, links
   and form fields staying as they are. A conference programme of 8 pages printed
-  from a web page goes from 9.4 MB to 545 KB and looks the same. The document's
-  name then opens its reduced file, so that it can be read before saving, and
+  from a web page goes from 9.4 MB to 545 KB and looks the same. Links to the
+  original and to the reduced file then let them be compared before saving, and
   **Restore** brings back the file added. A bank statement's shapes are not
   shared, so that a PDF reader's redaction tool still reaches them.
 

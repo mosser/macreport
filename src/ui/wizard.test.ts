@@ -44,7 +44,7 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
       return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
     },
     links: {
-      urlOf: (document) => `blob:${document.fileName}`,
+      urlOf: (document) => `blob:${document.fileName}${document.isReduced ? '#reduced' : ''}`,
       forgetAll: () => {
         forgotten += 1
       },
@@ -1710,7 +1710,14 @@ describe('the per diems', () => {
       expect(kept.at(-1)?.documents[0]?.isReduced).toBe(true)
       expect(kept.at(-1)?.documents[1]?.isReduced).toBe(false)
       await vi.waitFor(() => expect(button('[data-action="restore"]')).not.toBeNull())
-      expect(row()).toBe('9.4 MB → 500 KB')
+      expect(row()).toBe('Original 9.4 MB → Reduced 500 KB')
+      const links = [...root.querySelectorAll<HTMLAnchorElement>('.document-size .size a')]
+      expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+        ['Original 9.4 MB', `blob:${kept.at(-1)?.documents[0]?.fileName}`],
+        ['Reduced 500 KB', `blob:${kept.at(-1)?.documents[0]?.fileName}#reduced`],
+      ])
+      expect(links.every((link) => link.target === '_blank')).toBe(true)
+      expect(root.querySelector('.document-size')?.querySelector('td:nth-child(2) a')).toBeNull()
 
       button('[data-action="restore"]')?.click()
       expect(kept.at(-1)?.documents[0]?.isReduced).toBe(false)

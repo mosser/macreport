@@ -119,8 +119,9 @@ function documentsToReduce(report: Report, weights: ReportWeights | undefined): 
 }
 
 /**
- * A row of the sizes, for a document reduced or heavy: its size before and after once reduced, with
- * Restore; its size when it is heavy, with Reduce when that is worth offering; none otherwise.
+ * A row of the sizes, for a document reduced or heavy: once reduced, a link to the file added and
+ * one to its reduced file, each with its size, and Restore; when it is heavy, its size, with Reduce
+ * when that is worth offering; none otherwise.
  */
 function sizeRowOf(
   { label, document }: LabelledDocument,
@@ -133,12 +134,15 @@ function sizeRowOf(
     return []
   }
   const index = report.documents.indexOf(document)
-  const row = (size: string, action: Markup) =>
-    html`<tr class="document-size"><td>${label}</td><td>${linkOf(document)}</td><td class="size">${size}</td><td class="size-action">${action}</td></tr>`
+  const row = (name: Markup, size: Markup, action: Markup) =>
+    html`<tr class="document-size"><td>${label}</td><td>${name}</td><td class="size">${size}</td><td class="size-action">${action}</td></tr>`
   if (document.isReduced) {
+    const original = linkOf(document.afterRestoring(), `Original ${sizeText(weight.addedSize)}`)
+    const reduced = linkOf(document, `Reduced ${sizeText(weight.size)}`)
     return [
       row(
-        `${sizeText(weight.addedSize)} → ${sizeText(weight.size)}`,
+        html`${document.name}`,
+        html`${original} → ${reduced}`,
         html`<button data-action="restore" data-document="${index}">Restore</button>`,
       ),
     ]
@@ -149,7 +153,7 @@ function sizeRowOf(
       ? html``
       : html`<button class="reduce" data-action="reduce" data-document="${index}"
           aria-label="Reduce to ${reduced}" title="Reduce to ${reduced}">${reduceArrows}${reduced}</button>`
-  return [row(sizeText(weight.size), reduce)]
+  return [row(linkOf(document), html`${sizeText(weight.size)}`, reduce)]
 }
 
 /**

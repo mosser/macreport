@@ -8,8 +8,8 @@ export interface DocumentLinks {
   forgetAll(): void
 }
 
-/** The name of a document, a link that opens it in a new tab. */
-export type LinkOf = (document: Document) => Markup
+/** A link that opens a document in a new tab, its name unless given another text. */
+export type LinkOf = (document: Document, text?: string) => Markup
 
 /**
  * Links to documents for a screen about to be shown: the browser forgets the links of the screen
@@ -17,8 +17,8 @@ export type LinkOf = (document: Document) => Markup
  */
 export function linksAnew(links: DocumentLinks): LinkOf {
   links.forgetAll()
-  return (document) =>
-    html`<a href="${links.urlOf(document)}" target="_blank" rel="noopener">${document.name}</a>`
+  return (document, text = document.name) =>
+    html`<a href="${links.urlOf(document)}" target="_blank" rel="noopener">${text}</a>`
 }
 
 /** The names of documents, one after the other, each a link to its document. */

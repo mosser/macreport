@@ -49,6 +49,7 @@ document.
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
 | Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: a PDF document by the size of its file, or of its reduced file once reduced, an image by its size as written in the report document. |
 | Reduce | The Claimant asks the system to make a heavy PDF document smaller: its images written with fewer pixels and, unless it is a bank statement, each shape it draws repeatedly kept once. Its pages, text, links and form fields stay as they are. |
+| Original | The file the Claimant added, as the Review step calls it next to the reduced file of a document. |
 | Restore | The Claimant takes back reducing a document: the report document holds the file added again. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
 | New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position and email, and the supervisor of a student or a postdoctoral fellow or the host of a visitor, are kept. |
