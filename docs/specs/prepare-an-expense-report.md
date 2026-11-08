@@ -214,8 +214,8 @@ document that reducing makes at least 10 %
 smaller also offers **Reduce**, an icon and its size once reduced, as *545 KB*,
 named *Reduce to 545 KB*. Once reduced, even when no longer heavy, it shows a link
 to the file added and one to its reduced file, each opening in a new tab of the
-browser, so that the Claimant can compare them, as *Original 9.4 MB → Reduced
-545 KB*, and offers **Restore**, which brings back the file added. **Reduce all**, an icon and its name, reduces every
+browser, so that the Claimant can compare them, a photo showing upright in both,
+as *Original 9.4 MB → Reduced 545 KB*, and offers **Restore**, which brings back the file added. **Reduce all**, an icon and its name, reduces every
 document on offer, when there is more than one.
 
 | Finding | Wording |

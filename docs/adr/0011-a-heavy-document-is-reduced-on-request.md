@@ -113,7 +113,9 @@ Options considered for what makes a document heavy:
     does not stay at 25 MB.
 - **An encoded image is as it was stored**, not turned: the canvas is handed the
   image without its Exif data, and the page turns it as its orientation says, as
-  for any image (ADR 0010).
+  for any image (ADR 0010). The link to a reduced image opens it with an Exif
+  segment holding that orientation and nothing else, so that a browser shows it
+  upright as it does the original.
 - **A heavy PDF document can be reduced, when the Claimant asks**, on the Review
   step. Reducing leaves its pages, its text, its links and its form fields as
   they are, and does two things:

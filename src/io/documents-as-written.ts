@@ -10,13 +10,14 @@ import type { Report } from '../domain/report.ts'
 import { formatOf } from './format.ts'
 import { imageAsAdded, imageReduced, reducedImage, type WrittenImage } from './image-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
+import { withOrientationOf } from './orientation.ts'
 import { reducedPdf } from './reduce-pdf.ts'
 
 /** What reducing gives in one way, by the file added. */
 class Reductions {
   readonly known = new WeakMap<Uint8Array, Promise<Uint8Array | undefined>>()
-  /** What reducing gave, for what must be told at once, as a link to the document. */
-  readonly reduced = new WeakMap<Uint8Array, Uint8Array>()
+  /** What a link to the reduced file opens, told at once: a photo says how it shows upright. */
+  readonly shown = new WeakMap<Uint8Array, Uint8Array>()
 }
 
 /** Whether reducing a document shares its shapes: a bank statement's stay on its pages. */
@@ -82,7 +83,7 @@ export class DocumentsAsWritten {
   /** The bytes a document's link opens: its reduced file once it is known, or the file added. */
   contentShown(document: Document): Uint8Array {
     return document.isReduced
-      ? (this.reductionsFor(document).reduced.get(document.content) ?? document.content)
+      ? (this.reductionsFor(document).shown.get(document.content) ?? document.content)
       : document.content
   }
 
@@ -104,7 +105,10 @@ export class DocumentsAsWritten {
           ? await reducedPdf(content, this.encoder, sharesShapes(document))
           : await reducedImage(content, this.encoder)
       if (!isWorthReducing(this.sizeAsAdded(document), reduced.length)) return undefined
-      this.reductionsFor(document).reduced.set(content, reduced)
+      this.reductionsFor(document).shown.set(
+        content,
+        formatOf(content) === 'pdf' ? reduced : withOrientationOf(content, reduced),
+      )
       return reduced
     } catch {
       // A file that cannot be read has nothing to offer; saving says why when it comes to that.

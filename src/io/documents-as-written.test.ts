@@ -5,6 +5,7 @@ import { Kind } from '../domain/kind.ts'
 import { Report } from '../domain/report.ts'
 import { DocumentsAsWritten } from './documents-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
+import { orientationOf } from './orientation.ts'
 
 const megabyte = 1_000_000
 
@@ -88,6 +89,22 @@ describe('DocumentsAsWritten', () => {
       const restored = reduced.afterRestoring()
       expect((await documents.imageOf(restored)).content).toBe(receipt.content)
       expect(documents.contentShown(restored)).toBe(receipt.content)
+    })
+
+    it('opens upright from the link to its reduced file, and leaves its turning to the page in the report document', async () => {
+      const tiff = [0x4d, 0x4d, 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1]
+      const exif = [0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff, 0, 6, 0, 0, 0, 0, 0, 0]
+      const content = new Uint8Array(3 * megabyte)
+      content.set([0xff, 0xd8, 0xff, 0xe1, 0, exif.length + 2, ...exif, 0xff, 0xda])
+      const documents = new DocumentsAsWritten(encoderOf().encoder)
+      const reduced = new Document(Kind.receipt, 'turned.jpg', content).afterReducing()
+      const image = await documents.imageOf(reduced)
+      expect(orientationOf(image.content)).toEqual({ isMirrored: false, turn: 0 })
+      expect(image.orientation).toEqual({ isMirrored: false, turn: 90 })
+      expect(orientationOf(documents.contentShown(reduced))).toEqual({
+        isMirrored: false,
+        turn: 90,
+      })
     })
 
     it('is reduced once per file, however many documents have it', async () => {
