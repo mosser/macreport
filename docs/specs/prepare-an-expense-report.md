@@ -37,7 +37,8 @@ field's rule is shown with that rule, and kept once it does.
 
 The fields are grouped in sections: **Claimant** (name of claimant, position,
 email), **Supervisor** or **Host** when the position asks for one,
-**Purpose** (purpose, business travel, and its first and last day) and
+**Purpose** (purpose, business travel, its first and last day and its
+locations) and
 **Account**.
 
 | Field | Rule |
@@ -52,11 +53,13 @@ email), **Supervisor** or **Host** when the position asks for one,
 | Business travel | Ticked for a report whose purpose took the claimant away. Unticked, the report has no dates. |
 | First day | Asked of a business travel, and then required: a calendar date. |
 | Last day | Asked of a business travel, and then required: a calendar date, not before the first day. |
+| Location(s) | Asked of a business travel, and then required: where it took the claimant, as free text. |
 | Account | Required, free text. |
 
 Choosing another position takes the supervisor or the host out of the
-report; unticking business travel takes the dates and the travel
-justifications out. Continue is offered once every required field is valid.
+report; unticking business travel takes the dates, the locations, the per
+diems and the travel justifications out. Changing the dates takes out the per
+diems of the days no longer between them. Continue is offered once every required field is valid.
 
 ### 2. Expenses
 
@@ -66,7 +69,11 @@ receipt or that its receipt is missing, its bank statement or that it was
 paid in cash, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
-**Remove**, a trash can. **Add an expense** stands above them.
+**Remove**, a trash can. **Add an expense** stands above them, and, for a
+business travel whose dates are valid, **Manage per diems**, next to it.
+When a meal is claimed, the per diems stand above the expenses on one line:
+the number of days with a meal claimed, and their total, in Canadian dollars
+then in US dollars.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
 **Change** opens the fields of an expense, filled in. Every change is kept as
@@ -99,8 +106,21 @@ that leave the report with the expense. Removing an expense, or a document
 from an expense, takes out of the report any receipt or bank statement no
 expense refers to any more.
 
-Continue is offered once there is at least one expense and every expense
-follows the rules above.
+**Manage per diems** opens the per diems of the business travel, one row per
+day, from its first day to its last. As with an expense's fields, Continue is
+not offered while they are open, and **Done** closes them.
+
+| Field | Rule |
+|---|---|
+| Domestic, international | One of them, for each day. A per diem starts domestic. **All domestic** and **All international**, above the days, set every day at once. |
+| Breakfast, lunch, dinner | Each ticked when claimed, at its rate: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic per diem, in US dollars for an international one. A per diem starts with no meal claimed. |
+| Reason | Optional, for a meal not claimed: why it is not, as *provided by the conference*. Ticking the meal takes its reason out. |
+
+Each day shows its total: the sum of the rates of its meals claimed, in the
+currency of its rates.
+
+Continue is offered once there is at least one expense or a meal claimed,
+and every expense follows the rules above.
 
 ### 3. Additional documents
 
@@ -159,9 +179,12 @@ Continue is not offered.
 
 ### 4. Review
 
-The report as it will be written: the cover, with the table of the expenses
-and its total, each expense on two lines as in the report document, then
-each section with its documents, their labels and their names, every table
+The report as it will be written: the cover, with the table of the
+expenses, each on two lines as in the report document; the per diems, under
+their own heading, one row per day with a meal claimed, with its date,
+domestic or international, each meal claimed with its rate or not claimed
+with its reason, and the day's total; then the total of the report, as on the
+cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added. The Entered boxes are
 the report document's alone. Then the findings, if any.
@@ -169,11 +192,11 @@ the report document's alone. Then the findings, if any.
 | Finding | Wording |
 |---|---|
 | A required field of the Report step is missing or invalid | The field, and what it needs. |
-| No expense | No expense is claimed. |
+| No expense, and no meal claimed | No expense or per diem is claimed. |
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
 | A business travel has no travel justification | At least one travel justification is required. |
 | A document has the name of a document before it | The document, by its file name, and its name. |
-| A text holds a character the report document cannot write | The field, the expense when it is one, and the character. For a name: the document, by its kind and file name. |
+| A text holds a character the report document cannot write | The field, the expense or the per diem when it is one, and the character. For a name: the document, by its kind and file name. |
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as

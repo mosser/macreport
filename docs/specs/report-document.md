@@ -53,12 +53,15 @@ the template's fields and its table, so that nothing else needs filling in.
   written.
 - **Report fields.** Name of claimant, position, email, then the supervisor
   and their email for a student or a postdoctoral fellow, the host and their
-  email for a visitor; purpose, the dates of a business travel, account.
+  email for a visitor; purpose, the dates and the locations of a business
+  travel, account.
 - **Attached information.** The four kinds of document, in alphabetical
   order, each with a box ticked when its section exists.
-- **Expenses.** A table of every expense, sorted by date then in the order
-  they were added, and numbered in that order, each on two lines: its
-  fields, then, under its description, its supporting documents.
+- **Expenses.** A table of every expense and every per diem with a meal
+  claimed, sorted by date, the expenses of a day in the order they were
+  added and its per diem after them, and numbered in that order, each on two
+  lines: its fields, then, under its description, its supporting documents,
+  or the meals of a per diem not claimed.
 
   | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
   |---|---|---|---|---|---|
@@ -66,7 +69,10 @@ the template's fields and its table, so that nothing else needs filling in.
   | | | *Air Canada booking · Visa, October* | | | |
   | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | | ☐ |
   | | | *Taxi, CDG–hotel · cash* | | | |
-  | | | **Total** | | **$1,012.35**<br>**EUR 55.00** | |
+  | 3 | 2026-10-05 | Per diem, international: breakfast, dinner | USD 86.10 | | ☐ |
+  | | | *Not claimed: lunch (provided by the conference)* | | | |
+  | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch, dinner | | $113.50 | ☐ |
+  | | | **Total** | | **$1,125.85**<br>**EUR 55.00**<br>**USD 86.10** | |
 
   A description keeps its line breaks. The foreign amount is the currency
   code then the amount, empty for an expense paid in Canadian dollars;
@@ -81,9 +87,19 @@ the template's fields and its table, so that nothing else needs filling in.
   they have entered the expense. The table continues on the next page when
   it does not fit, its header repeated, an expense starting on the page its
   documents start on; a last row gives the total, without a box: the sum
-  of the claimed amounts, when there is one, then, one per line and by
-  currency in alphabetical order, the sum of the foreign amounts of the
-  expenses without a claimed amount.
+  of the claimed amounts and of the domestic per diems, when there is one,
+  then, one per line and by currency in alphabetical order, the sum of the
+  foreign amounts of the expenses without a claimed amount, US dollars
+  including the international per diems.
+
+  A per diem's description is *Per diem*, *domestic* or *international*,
+  then its meals claimed, in the order breakfast, lunch, dinner. Its amount
+  is the sum of their rates: a domestic per diem's is its claimed amount, an
+  international one's its foreign amount, in US dollars, without a claimed
+  amount. Under it, in grey, *Not claimed:* and its other meals, each
+  followed by its reason in parentheses when it has one; nothing when every
+  meal is claimed. A per diem is supported by no document: no section page
+  and no stamp names it, and its number is never a link.
 
 The template's exchange-rate column has no counterpart: the system does not
 deal with exchange rates.

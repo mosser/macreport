@@ -52,6 +52,16 @@ Options considered for a missing receipt:
   signs it. McMaster's form is not a fillable PDF, so the system reproduces
   its wording and layout.
 
+A business travel claims its meals as per diems, at a rate per meal, in
+Canadian dollars for a domestic day and in US dollars for an international
+one, without receipts. Options considered for the per diems on the cover:
+
+- **One row for the whole travel**, its total by currency. Short, but the
+  administration cannot see which meals of which day were claimed, nor enter
+  them day by day.
+- **One row per day**, as an expense: its meals claimed and its amount, the
+  meals not claimed and their reasons under it, an Entered box of its own.
+
 ## Decision
 
 The report document is written as `docs/specs/report-document.md` says:
@@ -83,6 +93,14 @@ The report document is written as `docs/specs/report-document.md` says:
   by the system in McMaster's wording, filled in from the expense and the
   report, its signature line left blank. The Claimant signs the saved report
   document, on paper or with a PDF reader.
+- **A per diem is one row of the cover per day with a meal claimed**, among
+  the expenses by date and numbered with them, its meals not claimed and
+  their reasons on the line where an expense's documents would be, so that
+  the administration sees what was claimed and what was not. An
+  international per diem's amount is in US dollars, in the foreign amount
+  column, and stays unconverted. A day with no meal claimed claims nothing
+  and has no row. The rates are the system's, as the specification states
+  them.
 - **An expense paid in cash** has no bank statement; the cover says *cash*
   where its statement's label would be.
 - **The cover's table names each expense's documents**, on a line under the
@@ -143,6 +161,8 @@ The report document is written as `docs/specs/report-document.md` says:
   is a reproduction of McMaster's form. If the administration requires the
   official documents, this ADR is amended.
 - When McMaster changes the wording of its form, the system changes with it.
+- When McSCert changes its per diem rates, the system changes with them; a
+  report document keeps the rates of the version that wrote it.
 - A report document with a missing receipt authorization is not complete until
   the Claimant has signed it.
 
@@ -151,8 +171,8 @@ The report document is written as `docs/specs/report-document.md` says:
 A change is compliant with this ADR when:
 
 - the report document follows `docs/specs/report-document.md`, and a change to
-  its layout or to the wording of the missing receipt authorization changes
-  that spec in the same commit;
+  its layout, to the wording of the missing receipt authorization or to a
+  per diem rate changes that spec in the same commit;
 - tests read the written report document back and check its order, its pages,
   its labels, its names, its stamps, the target of each link, the Entered box
   of each expense, the size and turn of each page, and the fields of each
