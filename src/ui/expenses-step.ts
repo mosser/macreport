@@ -326,8 +326,8 @@ function showsReason(perDiem: PerDiem, meal: Meal, askedFor: ReadonlySet<string>
 }
 
 /**
- * The reasons of the meals not claimed of a day, one under the other, their fields aligned; then
- * Add a reason for the others of a day with a meal claimed.
+ * The reasons of the meals not claimed of a day, one under the other, their fields aligned, each
+ * with a trash can that takes it out; then Add a reason for the others of a day with a meal claimed.
  */
 function reasonsOf(perDiem: PerDiem, askedFor: ReadonlySet<string>): Markup {
   const day = perDiem.date.toString()
@@ -337,7 +337,9 @@ function reasonsOf(perDiem: PerDiem, askedFor: ReadonlySet<string>): Markup {
       <span>Reason for not claiming ${meal.name} (optional)</span>
       <input type="text" name="reason" data-day="${day}" data-meal="${meal.name}"
         value="${perDiem.reasonFor(meal) ?? ''}" aria-label="${fieldNames.reason}, ${meal.name}, ${day}" />
-    </label>`,
+    </label>
+    <button type="button" class="icon remove" data-remove-reason data-day="${day}" data-meal="${meal.name}"
+      aria-label="Remove the reason for not claiming ${meal.name}, ${day}" title="Remove">${trashCan}</button>`,
   )
   const offered = perDiem.hasMealClaimed
     ? perDiem.mealsNotClaimed.filter((meal) => !shown.includes(meal))
@@ -545,6 +547,15 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
         if (meal !== undefined)
           changing(field, (perDiem) => perDiem.afterGivingReason(meal, reason))
         context.refreshActions()
+      })
+    }
+    for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-remove-reason]')) {
+      button.addEventListener('click', () => {
+        const meal = Meal.named(button.dataset.meal ?? '')
+        if (meal !== undefined)
+          changing(button, (perDiem) => perDiem.afterGivingReason(meal, undefined))
+        reasonsAskedFor.delete(`${button.dataset.day} ${button.dataset.meal}`)
+        context.refresh()
       })
     }
     for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-add-reason]')) {

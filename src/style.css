@@ -490,7 +490,7 @@ footer p {
  */
 .reasons {
   display: grid;
-  grid-template-columns: max-content minmax(0, 32rem);
+  grid-template-columns: max-content minmax(0, 32rem) auto;
   align-items: center;
   gap: 0.4rem 0.75rem;
   margin-top: 0.6rem;
@@ -503,7 +503,11 @@ footer p {
 
 @media (max-width: 40rem) {
   .reasons {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .reasons .reason > span {
+    grid-column: 1 / -1;
   }
 }
 

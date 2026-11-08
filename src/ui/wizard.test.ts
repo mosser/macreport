@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
 import type { Kind } from '../domain/kind.ts'
 import { Report } from '../domain/report.ts'
@@ -1191,6 +1192,12 @@ describe('the per diems', () => {
     expect(
       root.querySelector<HTMLInputElement>('input[name="reason"][data-day="2026-10-03"]')?.value,
     ).toBe('provided by the conference')
+    button('[data-remove-reason][data-day="2026-10-03"][data-meal="lunch"]')?.click()
+    expect(root.querySelector('input[name="reason"][data-day="2026-10-03"]')).toBeNull()
+    expect(kept.at(-1)?.perDiemOn(new CalendarDate(2026, 10, 3)).reasons.size).toBe(0)
+    expect(button('[data-add-reason][data-day="2026-10-03"][data-meal="lunch"]')).not.toBeNull()
+    button('[data-add-reason][data-day="2026-10-03"][data-meal="lunch"]')?.click()
+    reason('2026-10-03', 'lunch', 'provided by the conference')
     claim('2026-10-03', 'lunch')
     expect(root.querySelector('input[name="reason"][data-day="2026-10-03"]')).toBeNull()
     claim('2026-10-03', 'lunch', false)
