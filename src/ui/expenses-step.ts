@@ -564,6 +564,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       ['all-international', true],
     ] as const) {
       panel.querySelector(`[data-action="${action}"]`)?.addEventListener('click', () => {
+        perMealShownFor.clear()
         context.change(
           context.report.afterChangingEveryPerDiem({
             internationalMeals: isInternational ? Meal.all : [],

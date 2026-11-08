@@ -121,7 +121,7 @@ not offered while they are open, and **Done** closes them.
 
 | Field | Rule |
 |---|---|
-| Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows Per meal. **All domestic** and **All international**, above the days, set every meal at once. |
+| Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows Per meal. **All domestic** and **All international**, above the days, set every meal at once, and every day to Domestic or International, a day on Per meal included. |
 | Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
 | Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
 
