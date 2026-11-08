@@ -102,8 +102,8 @@ describe('DocumentsAsWritten', () => {
       const first = await documents.imageOf(new Document(Kind.receipt, 'a.jpg', content))
       expect(first.content).toBe(content)
       expect(
-        (await documents.imageOf(new Document(Kind.receipt, 'b.jpg', jpegOf(10)))).content.length,
-      ).toBe(10)
+        (await documents.imageOf(new Document(Kind.receipt, 'b.jpg', jpegOf(10)))).content,
+      ).toHaveLength(10)
     })
   })
 

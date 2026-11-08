@@ -15,7 +15,7 @@ import { dropUnreachable, leaveOutWhatNoReaderShows } from './unseen-data.ts'
 const name = (text: string) => PDFName.of(text)
 /** What an image may hold that encoding it again as a plain JPEG would break. */
 const unsafeImageKeys = ['SMask', 'Mask', 'Decode', 'ImageMask'].map(name)
-const plainColourSpaces = [name('DeviceRGB'), name('DeviceGray')]
+const plainColourSpaces: readonly unknown[] = [name('DeviceRGB'), name('DeviceGray')]
 
 /** The number of components of an ICC colour space, when a colour space is one. */
 function iccComponents(colourSpace: unknown, context: PDFContext): number | undefined {
@@ -30,7 +30,7 @@ function iccComponents(colourSpace: unknown, context: PDFContext): number | unde
 /** Whether a colour space is RGB or grey. */
 function isPlainColourSpace(value: unknown, context: PDFContext): boolean {
   const colourSpace = context.lookup(value as PDFRef)
-  if (plainColourSpaces.some((plain) => plain === colourSpace)) return true
+  if (plainColourSpaces.includes(colourSpace)) return true
   const components = iccComponents(colourSpace, context)
   return components === 1 || components === 3
 }
@@ -74,18 +74,23 @@ async function reduceImage(
   context.assign(reference, PDFRawStream.of(dictionary, encoded))
 }
 
+/**
+ * Encodes the images of a PDF one after the other: the pages of a scan, all decoded at once, may not
+ * fit in the memory of a browser. An image the browser cannot read stays as it is: larger, and just
+ * as readable.
+ */
 async function reduceImages(pdf: PDFDocument, encoder: ImageEncoder): Promise<void> {
   const { context } = pdf
   const images = context
     .enumerateIndirectObjects()
     .filter(([, object]) => isReducibleImage(object, context))
-  for (const [reference, image] of images) {
-    try {
-      await reduceImage(reference, image as PDFRawStream, encoder, context)
-    } catch {
-      // An image the browser cannot read stays as it is: larger, and just as readable.
-    }
-  }
+  await images.reduce(
+    (previous, [reference, image]) =>
+      previous
+        .then(() => reduceImage(reference, image as PDFRawStream, encoder, context))
+        .catch(() => undefined),
+    Promise.resolve(),
+  )
 }
 
 /**

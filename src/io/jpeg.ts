@@ -38,7 +38,7 @@ function segmentsOf(content: Uint8Array): Segment[] {
 function isColourProfile(content: Uint8Array, segment: Segment): boolean {
   if (segment.marker !== iccApplicationSegment) return false
   const signature = content.subarray(segment.start + 4, segment.start + 4 + iccSignature.length)
-  return String.fromCharCode(...signature) === iccSignature
+  return String.fromCodePoint(...signature) === iccSignature
 }
 
 /** Whether a segment says something of the camera or the file rather than of the image. */

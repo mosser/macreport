@@ -77,7 +77,7 @@ function megabytesOf(key: string, value: unknown): number {
   if (typeof value !== 'number') {
     throw new TypeError(`The document size ${key} is not a number`)
   }
-  if (!(value > 0)) {
+  if (Number.isNaN(value) || value <= 0) {
     throw new RangeError(`The document size ${key} is not more than zero`)
   }
   return value

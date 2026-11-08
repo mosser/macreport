@@ -65,14 +65,14 @@ describe('imageAsWritten', () => {
     const image = await imageAsWritten(content, encoder)
     expect(handed).toEqual([])
     expect(image.format).toBe('jpeg')
-    expect(image.content.length).toBe(content.length - exifSegment.length)
+    expect(image.content).toHaveLength(content.length - exifSegment.length)
     expect([...image.content.subarray(0, 4)]).toEqual([0xff, 0xd8, 0xff, 0xda])
   })
 
   it('encodes a JPEG above the size configured, handing it over without its Exif data', async () => {
     const { encoder, handed } = encoderOf({ jpeg: 500 })
     const image = await imageAsWritten(jpegOf(2 * megabyte), encoder)
-    expect(image.content.length).toBe(500)
+    expect(image.content).toHaveLength(500)
     expect(image.format).toBe('jpeg')
     expect([...(handed[0]?.subarray(0, 4) ?? [])]).toEqual([0xff, 0xd8, 0xff, 0xda])
   })
@@ -87,12 +87,12 @@ describe('imageAsWritten', () => {
   it('keeps the pixels of a JPEG that encoding does not make smaller', async () => {
     const content = jpegOf(2 * megabyte)
     const image = await imageAsWritten(content, encoderOf({ jpeg: 3 * megabyte }).encoder)
-    expect(image.content.length).toBe(content.length - exifSegment.length)
+    expect(image.content).toHaveLength(content.length - exifSegment.length)
   })
 
   it('writes an image it cannot encode as it was added', async () => {
     const jpeg = await imageAsWritten(jpegOf(2 * megabyte), failing)
-    expect(jpeg.content.length).toBe(2 * megabyte - exifSegment.length)
+    expect(jpeg.content).toHaveLength(2 * megabyte - exifSegment.length)
     const png = pngOf(2 * megabyte)
     expect((await imageAsWritten(png, failing)).content).toBe(png)
   })
@@ -111,7 +111,7 @@ describe('imageAsWritten', () => {
       encoderOf({ png: 200, jpeg: 100 }).encoder,
     )
     expect(image.format).toBe('png')
-    expect(image.content.length).toBe(200)
+    expect(image.content).toHaveLength(200)
   })
 
   it('makes a photo saved as a PNG a JPEG, beyond twice the size', async () => {
@@ -120,7 +120,7 @@ describe('imageAsWritten', () => {
       encoderOf({ png: 201, jpeg: 100 }).encoder,
     )
     expect(image.format).toBe('jpeg')
-    expect(image.content.length).toBe(100)
+    expect(image.content).toHaveLength(100)
   })
 
   it('leaves a PNG as it was added when neither encoding is smaller', async () => {

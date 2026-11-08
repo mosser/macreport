@@ -27,13 +27,16 @@ function encoderOf(size = 60) {
   return { encoder, jpeg }
 }
 
-async function pdfWithImage(image: Uint8Array): Promise<Uint8Array> {
+async function pdfWithImages(images: readonly Uint8Array[]): Promise<Uint8Array> {
   const pdf = await PDFDocument.create()
-  const embedded = await pdf.embedJpg(image)
-  const page = pdf.addPage([612, 792])
-  page.drawImage(embedded, { x: 0, y: 0, width: 612, height: 792 })
+  const embedded = await Promise.all(images.map((image) => pdf.embedJpg(image)))
+  for (const image of embedded) {
+    pdf.addPage([612, 792]).drawImage(image, { x: 0, y: 0, width: 612, height: 792 })
+  }
   return pdf.save()
 }
+
+const pdfWithImage = (image: Uint8Array) => pdfWithImages([image])
 
 /** The images of a PDF. */
 function imagesOf(pdf: PDFDocument): PDFRawStream[] {
@@ -163,6 +166,31 @@ describe('reducedPdf', () => {
     }
     const reduced = await reducedPdf(await pdfWithImage(scan), encoder, true)
     expect(imagesOf(await PDFDocument.load(reduced))[0]?.contents.length).toBe(scan.length)
+  })
+
+  it('encodes its images one after the other', async () => {
+    let encoding = 0
+    let mostAtOnce = 0
+    const jpeg = vi.fn(async () => {
+      encoding += 1
+      mostAtOnce = Math.max(mostAtOnce, encoding)
+      await Promise.resolve()
+      encoding -= 1
+      return jpegOf(2200, 1650, 60)
+    })
+    await reducedPdf(await pdfWithImages([scan, scan, scan]), { jpeg, png: jpeg }, true)
+    expect(jpeg).toHaveBeenCalledTimes(3)
+    expect(mostAtOnce).toBe(1)
+  })
+
+  it('goes on with the next image after one the browser cannot read', async () => {
+    const jpeg = vi
+      .fn<ImageEncoder['jpeg']>()
+      .mockRejectedValueOnce(new TypeError('Cannot read it'))
+      .mockResolvedValue(jpegOf(2200, 1650, 60))
+    const reduced = await reducedPdf(await pdfWithImages([scan, scan]), { jpeg, png: jpeg }, true)
+    const sizes = imagesOf(await PDFDocument.load(reduced)).map((image) => image.contents.length)
+    expect(sizes.toSorted((first, second) => first - second)).toEqual([60, scan.length])
   })
 
   it('keeps an image an encoder gives no size for', async () => {

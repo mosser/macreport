@@ -36,7 +36,7 @@ const delimiters: ReadonlySet<number> = new Set([
   slash,
   percent,
 ])
-const numberLike = /^[+-]?(\d+\.?\d*|\.\d+)$/
+const numberLike = /^[+-]?(\d+(\.\d*)?|\.\d+)$/
 
 /** Reads the tokens of a content stream, byte by byte, so that its strings stay what they were. */
 export class ContentScanner {
@@ -129,7 +129,7 @@ export class ContentScanner {
 
   private numberOrOperator(start: number): Token {
     const end = this.position
-    const text = String.fromCharCode(...this.bytes.subarray(start, end))
+    const text = String.fromCodePoint(...this.bytes.subarray(start, end))
     return numberLike.test(text)
       ? { kind: 'number', value: Number(text), start, end }
       : { kind: 'operator', text, start, end }

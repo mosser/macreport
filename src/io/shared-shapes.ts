@@ -58,8 +58,7 @@ interface ScannedPage {
 
 /** A number as a content stream writes it, at 0.01 point, without what it does not need. */
 function numberText(value: number): string {
-  const text = value.toFixed(decimals).replace(/\.?0+$/, '')
-  return text === '' || text === '-0' || text === '-' ? '0' : text
+  return String(Number(value.toFixed(decimals)))
 }
 
 /** The transform after a `cm`: the matrix given, then the current one. */
@@ -306,7 +305,7 @@ function formsOf(
   return forms
 }
 
-const asciiBytes = (text: string) => Uint8Array.from(text, (character) => character.charCodeAt(0))
+const asciiBytes = (text: string) => new TextEncoder().encode(text)
 
 /** A page's content with each shape shared drawn from its form; its other bytes stay as they were. */
 function contentWithForms(
