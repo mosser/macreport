@@ -50,6 +50,41 @@ describe('leaveOutWhatNoReaderShows', () => {
     expect(other.dict.has(key('Metadata'))).toBe(true)
   })
 
+  describe('of a JPEG image', () => {
+    const exif = [0xff, 0xe1, 0, 8, ...new TextEncoder().encode('Exif'), 0, 0]
+    const rest = [0xff, 0xc0, 0, 2, 0xff, 0xda, 1, 2, 3]
+    const jpeg = new Uint8Array([0xff, 0xd8, ...exif, ...rest])
+    const withoutIt = [0xff, 0xd8, ...rest]
+
+    /** The bytes of a stream of a PDF once what no reader shows is left out. */
+    async function bytesAfter(dictionary: Record<string, unknown>): Promise<number[]> {
+      const pdf = await PDFDocument.create()
+      const reference = pdf.context.register(
+        pdf.context.stream(jpeg, dictionary as Parameters<typeof pdf.context.stream>[1]),
+      )
+      leaveOutWhatNoReaderShows(pdf)
+      const stream = pdf.context.lookup(reference)
+      if (!(stream instanceof PDFRawStream)) throw new TypeError('No stream')
+      return [...stream.contents]
+    }
+
+    it('takes the Exif data out, and nothing else', async () => {
+      expect(await bytesAfter({ Subtype: 'Image', Filter: 'DCTDecode', Width: 5 })).toEqual(
+        withoutIt,
+      )
+    })
+
+    it('takes it out under a filter given as an array of one', async () => {
+      expect(await bytesAfter({ Subtype: 'Image', Filter: ['DCTDecode'] })).toEqual(withoutIt)
+    })
+
+    it('leaves bytes it cannot read, under another filter or not an image, as they are', async () => {
+      const filters = ['FlateDecode', 'DCTDecode']
+      expect(await bytesAfter({ Subtype: 'Image', Filter: filters })).toEqual([...jpeg])
+      expect(await bytesAfter({ Filter: 'DCTDecode' })).toEqual([...jpeg])
+    })
+  })
+
   it('keeps what the page shows', async () => {
     const { pdf, page, references } = await pdfWithUnseenData()
     const contents = page.node.get(key('Contents'))

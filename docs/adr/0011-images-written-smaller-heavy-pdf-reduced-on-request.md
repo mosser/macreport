@@ -109,7 +109,8 @@ Options considered for what makes a document heavy:
   or not.
 - **A page copied from a PDF document leaves out what no reader shows**: its
   thumbnail, the private data of the editor that wrote it, and its metadata. The
-  same goes for the images and forms it draws.
+  same goes for the images and forms it draws, and a JPEG it draws loses its Exif
+  data, whether it is reduced or not.
 - **A document is heavy above 2 MB.** A PDF document's size is that of the file
   added, or of its reduced file once reduced; an image's is that of the image as
   written.
@@ -184,6 +185,8 @@ Options considered for what makes a document heavy:
 - A heavy image has nothing to offer either: below 2200 pixels, digits start to
   be mistaken.
 - A reduced PDF document's coordinates move by at most 0.01 point.
+- A JPEG a PDF document wraps in a second filter keeps its Exif data: reading it
+  takes undoing that filter, for a form hardly any PDF uses.
 
 ## Compliance
 
@@ -194,12 +197,13 @@ A change is compliant with this ADR when:
   unless it holds both, each more than zero;
 - an image above the configured size has a long side of at most 2200 pixels in
   the report document, a smaller image keeps its pixels as added, and no JPEG in
-  it holds Exif data;
+  it, a JPEG of a copied page included, holds Exif data, but for one under a
+  second filter;
 - tests read a reduced PDF document back and find the same pages, sizes, text,
   links and form fields, images of at most 2200 pixels, and each shape, drawn from
   where it is kept, within 0.01 point of where it was;
-- tests check that a bank statement's shapes stay on its pages, that Restore gives
-  back the bytes of the file added, and that the draft holds the file added and
-  not the reduced file;
+- tests check that a bank statement's shapes stay on its pages, even when another
+  document holds the same file, that Restore gives back the bytes of the file added,
+  and that the draft holds the file added and not the reduced file;
 - a document is called heavy, and offered to be reduced, only by the rule above,
   in one place.

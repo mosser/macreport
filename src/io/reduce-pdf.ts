@@ -8,9 +8,9 @@ import {
   type PDFRef,
 } from '@cantoo/pdf-lib'
 import { type ImageEncoder, longestSide } from './image-encoder.ts'
-import { sizeOfJpeg, withoutColourProfile, withoutExif } from './jpeg.ts'
+import { sizeOfJpeg, withoutColourProfile } from './jpeg.ts'
 import { shareShapes } from './shared-shapes.ts'
-import { dropUnreachable, leaveOutWhatNoReaderShows } from './unseen-data.ts'
+import { dropUnreachable, isJpeg, leaveOutWhatNoReaderShows } from './unseen-data.ts'
 
 const name = (text: string) => PDFName.of(text)
 /**
@@ -45,14 +45,6 @@ function isPlainColourSpace(value: unknown, context: PDFContext): boolean {
   )
 }
 
-/** Whether a stream's only filter is the JPEG one. */
-function isJpeg(stream: PDFRawStream, context: PDFContext): boolean {
-  const filter = context.lookup(stream.dict.get(name('Filter')))
-  const only =
-    filter instanceof PDFArray && filter.size() === 1 ? context.lookup(filter.get(0)) : filter
-  return only === name('DCTDecode')
-}
-
 /** Whether an object is a JPEG in RGB or grey, without a mask, with a long side above the limit. */
 function isReducibleImage(object: unknown, context: PDFContext): object is PDFRawStream {
   if (!(object instanceof PDFRawStream)) return false
@@ -71,7 +63,7 @@ async function reduceImage(
   encoder: ImageEncoder,
   context: PDFContext,
 ): Promise<void> {
-  const encoded = await encoder.jpeg(withoutColourProfile(withoutExif(image.contents)))
+  const encoded = await encoder.jpeg(withoutColourProfile(image.contents))
   const size = sizeOfJpeg(encoded)
   if (size === undefined || encoded.length >= image.contents.length) return
   const dictionary = image.dict.clone(context)

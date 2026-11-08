@@ -38,7 +38,7 @@ R1, R2, and so on.
   A Letter page stays as it is; an A4 page is shown at 94 %. It keeps its
   text, its links and its form fields; what its crop box hid stays hidden. It
   leaves out what no reader shows: its thumbnail, the private data of the editor
-  that wrote it, and its metadata.
+  that wrote it, its metadata, and the Exif data of its JPEG images.
 - An image document is placed on a Letter page of its own, across the page
   when it is wider than tall: scaled down to fit the three-quarter-inch
   margins when it is larger, never enlarged, and centred.

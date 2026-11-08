@@ -1,4 +1,14 @@
-import { PDFArray, PDFDict, type PDFDocument, PDFName, PDFRef, PDFStream } from '@cantoo/pdf-lib'
+import {
+  PDFArray,
+  type PDFContext,
+  PDFDict,
+  type PDFDocument,
+  PDFName,
+  PDFRawStream,
+  PDFRef,
+  PDFStream,
+} from '@cantoo/pdf-lib'
+import { withoutExif } from './jpeg.ts'
 
 /** What a page, or an image or a form it draws, may hold that no reader shows. */
 const unseenKeys = ['Thumb', 'PieceInfo', 'Metadata'].map((key) => PDFName.of(key))
@@ -18,18 +28,41 @@ function isDrawn(dictionary: PDFDict): boolean {
   return type === pageType || drawnSubtypes.has(subtype)
 }
 
+/** Whether a stream's only filter is the JPEG one. */
+export function isJpeg(stream: PDFRawStream, context: PDFContext): boolean {
+  const filter = context.lookup(stream.dict.get(PDFName.of('Filter')))
+  const only =
+    filter instanceof PDFArray && filter.size() === 1 ? context.lookup(filter.get(0)) : filter
+  return only === PDFName.of('DCTDecode')
+}
+
+/** Takes the Exif data, a location among it, out of a JPEG image of a PDF. */
+function leaveOutExif(reference: PDFRef, object: unknown, context: PDFContext): void {
+  const isJpegImage =
+    object instanceof PDFRawStream &&
+    object.dict.get(PDFName.of('Subtype')) === PDFName.of('Image') &&
+    isJpeg(object, context)
+  if (!isJpegImage) return
+  const kept = withoutExif(object.contents)
+  if (kept !== object.contents) {
+    context.assign(reference, PDFRawStream.of(object.dict, kept))
+  }
+}
+
 /**
  * Takes out of a PDF what no reader shows: the thumbnail of each page, the private data of the
- * editor that wrote it, and its metadata, of its pages and of the images and forms they draw.
+ * editor that wrote it, and its metadata, of its pages and of the images and forms they draw, and
+ * the Exif data of its JPEG images.
  */
 export function leaveOutWhatNoReaderShows(pdf: PDFDocument): void {
-  for (const [, object] of pdf.context.enumerateIndirectObjects()) {
+  for (const [reference, object] of pdf.context.enumerateIndirectObjects()) {
     const dictionary = dictionaryOf(object)
     if (dictionary !== undefined && isDrawn(dictionary)) {
       for (const key of unseenKeys) {
         dictionary.delete(key)
       }
     }
+    leaveOutExif(reference, object, pdf.context)
   }
 }
 

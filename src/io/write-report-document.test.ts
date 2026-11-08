@@ -805,6 +805,18 @@ describe('the size of what it holds', () => {
     expect(String.fromCharCode(...(image?.contents ?? []))).not.toContain('Exif')
   })
 
+  it('leaves the Exif data of a JPEG in a copied page out of the report document', async () => {
+    const source = await PDFDocument.create()
+    const page = source.addPage([612, 792])
+    page.drawImage(await source.embedJpg(jpegOf(40, 30, 6)), { x: 0, y: 0, width: 40, height: 30 })
+    const pdf = await writtenWith(await source.save())
+    const image = streamsOf(pdf).find(
+      (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+    )
+    expect(image).toBeDefined()
+    expect(String.fromCharCode(...(image?.contents ?? []))).not.toContain('Exif')
+  })
+
   it('holds a large image as encoded, on a Letter page', async () => {
     const large = new Uint8Array(2_000_000)
     large.set(jpegOf(4000, 3000))

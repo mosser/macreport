@@ -29,7 +29,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   screenshot's text stays crisp. The draft keeps the file added, and a smaller
   image keeps its pixels.
 - A page copied from a PDF document leaves out what no reader shows: its
-  thumbnail, the private data of the editor that wrote it, and its metadata.
+  thumbnail, the private data of the editor that wrote it, its metadata, and the
+  Exif data of its JPEG images.
 
 ### Fixed
 

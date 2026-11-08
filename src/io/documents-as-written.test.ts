@@ -184,6 +184,21 @@ describe('DocumentsAsWritten', () => {
       expect(forms?.keys().length ?? 0).toBe(0)
     })
 
+    it('keeps the shapes of a bank statement on its pages, whatever shares its file', async () => {
+      const content = await heavy
+      const documents = new DocumentsAsWritten(encoderOf().encoder)
+      const receipt = new Document(Kind.receipt, 'taxi.pdf', content, undefined, true)
+      const statement = new Document(Kind.bankStatement, 'visa.pdf', content, undefined, true)
+      const reduced = await documents.pdfOf(receipt)
+      const kept = await documents.pdfOf(statement)
+      expect(kept).not.toBe(reduced)
+      expect(documents.contentShown(statement)).toBe(kept)
+      expect(documents.contentShown(receipt)).toBe(reduced)
+      const written = await PDFDocument.load(kept)
+      const forms = written.getPage(0).node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)
+      expect(forms?.keys().length ?? 0).toBe(0)
+    })
+
     it('shares the shapes of any other document', async () => {
       const content = await heavy
       const documents = new DocumentsAsWritten(encoderOf().encoder)

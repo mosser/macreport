@@ -78,6 +78,16 @@ describe('reducedPdf', () => {
     expect(jpeg).not.toHaveBeenCalled()
   })
 
+  it('leaves the Exif data out of an image it does not encode', async () => {
+    const exif = [0xff, 0xe1, 0, 8, ...new TextEncoder().encode('Exif'), 0, 0]
+    const small = jpegOf(800, 600)
+    const content = new Uint8Array([0xff, 0xd8, ...exif, ...small.subarray(2)])
+    const { encoder, jpeg } = encoderOf()
+    const reduced = await reducedPdf(await pdfWithImage(content), encoder, true)
+    expect(jpeg).not.toHaveBeenCalled()
+    expect(imagesOf(await PDFDocument.load(reduced))[0]?.contents).toEqual(small)
+  })
+
   it('leaves an image in CMYK as it is', async () => {
     const { encoder, jpeg } = encoderOf()
     await reducedPdf(await pdfWithImage(jpegOf(3000, 4000, 5000, 4)), encoder, true)
