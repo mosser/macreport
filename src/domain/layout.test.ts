@@ -5,7 +5,9 @@ import { Currency } from './currency.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
-import { layoutOf } from './layout.ts'
+import { layoutOf, mealsNotClaimedOf, totalOf } from './layout.ts'
+import { Meal } from './meal.ts'
+import { PerDiem } from './per-diem.ts'
 import { Report } from './report.ts'
 
 const receipt = new Document(Kind.receipt, 'air-canada.pdf', new Uint8Array([1]))
@@ -30,6 +32,7 @@ const report = new Report({
   isBusinessTravel: true,
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
+  locations: 'Rio de Janeiro, Brazil',
   account: '20-123-456',
   travelJustifications: [invitation],
 }).afterAdding(flight)
@@ -55,6 +58,7 @@ describe('layoutOf', () => {
       { name: "Supervisor's email", value: 'ada@mcmaster.ca' },
       { name: 'Purpose', value: 'ICSE 2026' },
       { name: 'Dates', value: '2026-10-03 to 2026-10-07' },
+      { name: 'Locations', value: 'Rio de Janeiro, Brazil' },
       { name: 'Account', value: '20-123-456' },
     ])
   })
@@ -118,9 +122,79 @@ describe('layoutOf', () => {
           { label: 'R1', name: 'air-canada', document: receipt },
           { label: 'S1', name: 'statement-october', document: statement },
         ],
+        mealsNotClaimed: '',
       },
     ])
     expect(layout.total).toEqual(['$1,012.35'])
+  })
+
+  it('itemizes each per diem with a meal claimed among the expenses, by date, after the expenses of its day', () => {
+    const october = (day: number) => new CalendarDate(2026, 10, day)
+    const taxi = flight.afterChanging({ date: october(5), description: 'Taxi' })
+    const international = new PerDiem(october(5), {
+      isInternational: true,
+      mealsClaimed: [Meal.dinner, Meal.breakfast],
+      reasons: new Map([[Meal.lunch, 'provided by the conference']]),
+    })
+    const domestic = new PerDiem(october(4), { mealsClaimed: Meal.all })
+    const layout = layoutOf(
+      report
+        .afterAdding(taxi)
+        .afterChangingPerDiem(international)
+        .afterChangingPerDiem(domestic)
+        .afterChangingPerDiem(new PerDiem(october(6), { isInternational: true })),
+    )
+    expect(
+      layout.expenses.map((row) => [
+        row.number,
+        row.date,
+        row.description,
+        row.foreignAmount,
+        row.claimedAmount,
+        row.mealsNotClaimed,
+      ]),
+    ).toEqual([
+      [1, '2026-10-03', 'Air Canada, YYZ–CDG return', '', '$1,012.35', ''],
+      [2, '2026-10-04', 'Per diem, domestic: breakfast, lunch, dinner', '', '$113.50', ''],
+      [3, '2026-10-05', 'Taxi', '', '$1,012.35', ''],
+      [
+        4,
+        '2026-10-05',
+        'Per diem, international: breakfast, dinner',
+        'USD 86.10',
+        '',
+        'Not claimed: lunch (provided by the conference)',
+      ],
+    ])
+    expect(layout.expenses[1]?.perDiem).toBe(domestic)
+    expect(layout.expenses[1]?.supportingDocuments).toEqual([])
+    expect(layout.total).toEqual(['$2,138.20', 'USD 86.10'])
+    const receipts = layout.sections.find((section) => section.kind === Kind.receipt)
+    expect(receipts?.documents[0]?.expenseNumbers).toEqual([1, 3])
+    expect(receipts?.documents[0]?.expenses[1]?.name).toBe('Expense 3: Taxi')
+  })
+
+  it('names the meals of a per diem not claimed, with their reasons when given', () => {
+    const day = new CalendarDate(2026, 10, 4)
+    expect(mealsNotClaimedOf(new PerDiem(day))).toBe('Not claimed: breakfast, lunch, dinner')
+    const lunch = new PerDiem(day, {
+      mealsClaimed: [Meal.lunch],
+      reasons: new Map([[Meal.dinner, 'invited by the host']]),
+    })
+    expect(mealsNotClaimedOf(lunch)).toBe('Not claimed: breakfast, dinner (invited by the host)')
+  })
+
+  it('totals the international per diems in US dollars, with the expenses paid in US dollars', () => {
+    const day = new CalendarDate(2026, 10, 4)
+    const paid = flight.afterChanging({
+      isPaidInAnotherCurrency: true,
+      foreignAmount: new Amount(1000),
+      currency: Currency.usDollar,
+      claimedAmount: undefined,
+    })
+    const dinner = new PerDiem(day, { isInternational: true, mealsClaimed: [Meal.dinner] })
+    expect(totalOf([paid], [dinner])).toEqual(['USD 67.70'])
+    expect(totalOf([], [new PerDiem(day)])).toEqual([])
   })
 
   it('totals the claimed amounts, then, by currency, the foreign amounts of the expenses without one', () => {

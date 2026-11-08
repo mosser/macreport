@@ -8,6 +8,24 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Location(s)**: a business travel now requires where it took the
+  claimant, written on the cover under its dates. A draft of a business
+  travel kept before this version asks for it at the Report step.
+- Per diems for a business travel. **Manage per diems**, next to **Add an
+  expense**, lists every day of the travel, each domestic or international
+  (**All domestic** and **All international** set every day at once), with
+  breakfast (28.40), lunch (27.40) and dinner (57.70) to tick, in Canadian
+  dollars for a domestic day and in US dollars for an international one, and
+  an optional reason for each meal not claimed. The days claimed and their
+  total show above the expenses; a report may claim per diems only. The
+  Review step shows them in a section of their own, then the total of the
+  report. In the report document, each day with a meal claimed is a row of
+  the cover's table, among the expenses by date, with its Entered box, and
+  its meals not claimed and their reasons under it; an international per
+  diem is in the foreign amount column, in US dollars, and in the total by
+  currency. Changing the dates drops the per diems of the days left out;
+  unticking business travel drops them all.
+
 - Several expenses per report. The Expenses step lists them, sorted by date,
   each with its amounts, its documents, each a link that opens it in a new
   tab, and, in red, what it still lacks. **Add an expense**, above the list,
@@ -38,7 +56,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Known limitations
 
-- No per diem, missing receipt or payment in cash.
+- No missing receipt or payment in cash.
 - The Additional documents step does not show how many pages each document
   has.
 - Files are not checked when added: a damaged or password-protected PDF is

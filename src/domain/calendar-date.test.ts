@@ -24,4 +24,10 @@ describe('CalendarDate', () => {
     expect(first.equals(new CalendarDate(2026, 10, 3))).toBe(true)
     expect(new CalendarDate(2025, 12, 31).compareTo(first)).toBeLessThan(0)
   })
+
+  it('gives the day after, across a month and a year', () => {
+    expect(new CalendarDate(2026, 10, 3).dayAfter.toString()).toBe('2026-10-04')
+    expect(new CalendarDate(2028, 2, 28).dayAfter.toString()).toBe('2028-02-29')
+    expect(new CalendarDate(2026, 12, 31).dayAfter.toString()).toBe('2027-01-01')
+  })
 })

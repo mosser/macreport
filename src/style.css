@@ -398,6 +398,46 @@ footer p {
   margin-bottom: 1rem;
 }
 
+/* Add an expense and Manage per diems side by side; All domestic and All international too. */
+.expense-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.expense-buttons .add-expense {
+  margin-bottom: 0;
+}
+
+/* The per diems claimed, on one line above the expenses. */
+.per-diems-line {
+  font-weight: 600;
+}
+
+/* A day's meals: each ticked or not, with its rate, a meal not claimed with its reason under it. */
+table.per-diems .checkbox {
+  margin-bottom: 0.25rem;
+}
+
+table.per-diems .reason {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+td.not-claimed {
+  color: var(--color-secondary-text);
+}
+
+/* The total of the report, under the expenses and the per diems. */
+table.report-total th {
+  width: 8rem;
+}
+
+table.report-total td {
+  font-weight: 600;
+}
+
 /* What an expense still lacks, under its documents in the list of expenses. */
 .lacks {
   margin: 0.25rem 0 0;

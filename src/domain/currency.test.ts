@@ -25,4 +25,8 @@ describe('Currency', () => {
     expect(new Set(codes).size).toBe(codes.length)
     expect(codes.every((code) => /^[A-Z]{3}$/.test(code))).toBe(true)
   })
+
+  it('knows the US dollar, the currency of an international per diem', () => {
+    expect(Currency.usDollar).toBe(Currency.parse('USD'))
+  })
 })

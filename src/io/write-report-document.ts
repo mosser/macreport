@@ -30,7 +30,6 @@ import type {
   Layout,
   Section,
   StampedExpense,
-  SupportingDocument,
 } from '../domain/layout.ts'
 import { formatOf } from './format.ts'
 import { bytesOf } from './inlined.ts'
@@ -88,9 +87,16 @@ interface CellLine {
 }
 
 /** A name on the line of documents under an expense, and the label of the document it links to. */
+/** What is written under a row: a document's name and its label, or a per diem's meals not claimed. */
+interface NamedPiece {
+  readonly name: string
+  readonly label?: string | undefined
+}
+
 interface NamePiece {
   readonly text: string
-  readonly label: string
+  /** The label of the document a name links to; none for the meals of a per diem not claimed. */
+  readonly label?: string | undefined
 }
 
 /** What separates two names on the line of documents under an expense. */
@@ -415,7 +421,9 @@ class Writer {
         this.expenseRows.set(row.number, place)
         this.enteredBox(row, place, columns)
       }
-      this.documentsLine(flow, row.supportingDocuments, columns)
+      const under =
+        row.mealsNotClaimed === '' ? row.supportingDocuments : [{ name: row.mealsNotClaimed }]
+      this.documentsLine(flow, under, columns)
     }
     this.tableRow(flow, columns, ['', '', 'Total', '', layout.total.join('\n'), ''], this.bold)
     flow.stopContinuing()
@@ -775,11 +783,12 @@ class Writer {
   /**
    * The line under an expense's row: its documents by name, one after the other, from under its
    * description to its claimed amount, each a link to its document; a name that does not fit
-   * goes on to the next line. A rule closes the expense.
+   * goes on to the next line. Under a per diem, its meals not claimed, a link to nothing. A rule
+   * closes the row.
    */
   private documentsLine(
     flow: Flow,
-    documents: readonly SupportingDocument[],
+    documents: readonly NamedPiece[],
     columns: readonly Column[],
   ): void {
     const padding = 4
@@ -813,7 +822,7 @@ class Writer {
         }
         flow.text(text, x, this.regular, tableSize, this.palette.grey)
         const page = flow.page
-        if (page !== undefined) {
+        if (page !== undefined && label !== undefined) {
           const y = flow.cursor - tableSize - 2
           this.links.push({
             page,

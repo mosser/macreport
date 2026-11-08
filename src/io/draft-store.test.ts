@@ -6,6 +6,8 @@ import { Currency } from '../domain/currency.ts'
 import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
+import { Meal } from '../domain/meal.ts'
+import { PerDiem } from '../domain/per-diem.ts'
 import { Report } from '../domain/report.ts'
 import { openDraftStore } from './draft-store.ts'
 
@@ -93,6 +95,56 @@ describe('the draft store', () => {
     expect(restored.expenses[0]?.bankStatements[0]?.name).toBe('Visa, October')
     expect(restored.expenses[0]?.receipts[0]?.name).toBe('reçu')
     expect(restored.documents.filter((document) => restored.isNameTaken(document))).toEqual([])
+  })
+
+  it('keeps the locations and the per diems, their meals claimed and their reasons', async () => {
+    const factory = new IDBFactory()
+    const perDiem = new PerDiem(new CalendarDate(2026, 10, 4), {
+      isInternational: true,
+      mealsClaimed: [Meal.dinner, Meal.breakfast],
+      reasons: new Map([[Meal.lunch, 'provided by the conference']]),
+    })
+    const travelled = report
+      .afterChanging({ locations: 'Rio de Janeiro, Brazil' })
+      .afterChangingPerDiem(perDiem)
+    expect(await (await openDraftStore(factory)).keep(travelled)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.locations).toBe('Rio de Janeiro, Brazil')
+    expect(restored.perDiems).toEqual([perDiem])
+  })
+
+  it('keeps only the per diems that follow their rules from a damaged draft', async () => {
+    const factory = new IDBFactory()
+    await written(
+      factory,
+      {
+        isBusinessTravel: true,
+        firstDay: '2026-10-03',
+        lastDay: '2026-10-07',
+        perDiems: [
+          'not a per diem',
+          { date: '2026-10-31', mealsClaimed: ['lunch'] },
+          { date: 'not a date', mealsClaimed: ['lunch'] },
+          {
+            date: '2026-10-04',
+            isInternational: 'yes',
+            mealsClaimed: ['lunch', 'supper', 3],
+            reasons: { lunch: 'kept?', dinner: '  ', breakfast: 'at the hotel', tea: 'no' },
+          },
+          { date: '2026-10-05', reasons: 'none' },
+        ],
+      },
+      {},
+    )
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.perDiems.map((perDiem) => perDiem.date.toString())).toEqual([
+      '2026-10-04',
+      '2026-10-05',
+    ])
+    const [damaged] = restored.perDiems
+    expect(damaged?.isInternational).toBe(false)
+    expect(damaged?.mealsClaimed).toEqual([Meal.lunch])
+    expect([...(damaged?.reasons ?? [])]).toEqual([[Meal.breakfast, 'at the hotel']])
   })
 
   it('keeps every document when a change is kept before the one before it has finished', async () => {

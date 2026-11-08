@@ -2,6 +2,7 @@ import type { CalendarDate } from './calendar-date.ts'
 import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
+import { PerDiem, type PerDiemFields } from './per-diem.ts'
 import { isEmailAddress } from './text.ts'
 
 /** What the claimant is at McSCert. */
@@ -29,18 +30,21 @@ export interface ReportFields {
   readonly isBusinessTravel?: boolean | undefined
   readonly firstDay?: CalendarDate | undefined
   readonly lastDay?: CalendarDate | undefined
+  readonly locations?: string | undefined
   readonly account?: string | undefined
   readonly expenses?: readonly Expense[] | undefined
+  readonly perDiems?: readonly PerDiem[] | undefined
   readonly travelJustifications?: readonly Document[] | undefined
   readonly additionalDocuments?: readonly Document[] | undefined
 }
 
 /**
  * What the Claimant prepares: the claimant's name, position and email, the supervisor of a
- * student or a postdoctoral fellow, or the host of a visitor, the purpose and its dates, the
- * account, the expenses, the travel justifications and the additional documents. An email, when
- * given, is an email address; a travel justification is an additional document that justifies
- * the travel, of the additional document kind as any other.
+ * student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its
+ * locations, the account, the expenses, the per diems, the travel justifications and the
+ * additional documents. An email, when given, is an email address; a travel justification is an
+ * additional document that justifies the travel, of the additional document kind as any other.
+ * Only a business travel has per diems, one per day at most, between its dates once they are given.
  */
 export class Report {
   readonly claimantName: string | undefined
@@ -55,8 +59,15 @@ export class Report {
   readonly isBusinessTravel: boolean
   readonly firstDay: CalendarDate | undefined
   readonly lastDay: CalendarDate | undefined
+  /** Where a business travel took the claimant, in the Claimant's words. */
+  readonly locations: string | undefined
   readonly account: string | undefined
   readonly expenses: readonly Expense[]
+  /**
+   * The per diems the Claimant changed, by date; a day of the business travel without one has a
+   * per diem as it starts, domestic and without a meal claimed.
+   */
+  readonly perDiems: readonly PerDiem[]
   /** The documents justifying a business travel, in the order they were added. */
   readonly travelJustifications: readonly Document[]
   /** The other documents of the report as a whole, in the order they were added. */
@@ -92,8 +103,12 @@ export class Report {
     this.isBusinessTravel = fields.isBusinessTravel ?? false
     this.firstDay = fields.firstDay
     this.lastDay = fields.lastDay
+    this.locations = fields.locations
     this.account = fields.account
     this.expenses = fields.expenses ?? []
+    this.perDiems = this.isBusinessTravel
+      ? perDiemsBetween(fields.perDiems ?? [], this.firstDay, this.lastDay)
+      : []
     this.travelJustifications = travelJustifications
     this.additionalDocuments = additionalDocuments
   }
@@ -148,6 +163,60 @@ export class Report {
     })
   }
 
+  /**
+   * Whether the report asks for per diems: it does of a business travel whose first and last day
+   * are given, the last not before the first.
+   */
+  get asksForPerDiems(): boolean {
+    const { firstDay, lastDay } = this
+    return (
+      this.isBusinessTravel &&
+      firstDay !== undefined &&
+      lastDay !== undefined &&
+      !lastDay.isBefore(firstDay)
+    )
+  }
+
+  /** Every day of a business travel that asks for per diems, from its first day to its last. */
+  get days(): readonly CalendarDate[] {
+    const { firstDay, lastDay } = this
+    if (!this.asksForPerDiems || firstDay === undefined || lastDay === undefined) {
+      return []
+    }
+    const days = [firstDay]
+    for (let day = firstDay.dayAfter; !lastDay.isBefore(day); day = day.dayAfter) {
+      days.push(day)
+    }
+    return days
+  }
+
+  /** The per diem of a day: the one the Claimant changed, or one as it starts. */
+  perDiemOn(day: CalendarDate): PerDiem {
+    return this.perDiems.find((perDiem) => perDiem.date.equals(day)) ?? new PerDiem(day)
+  }
+
+  /** The per diem of every day of the business travel, in the order of the days. */
+  get perDiemsByDay(): readonly PerDiem[] {
+    return this.days.map((day) => this.perDiemOn(day))
+  }
+
+  /** The per diems with a meal claimed, by date: one that claims no meal claims nothing. */
+  get claimedPerDiems(): readonly PerDiem[] {
+    return this.perDiems.filter((perDiem) => perDiem.hasMealClaimed)
+  }
+
+  /** The same report, with the per diem of a day replaced by the one given. */
+  afterChangingPerDiem(perDiem: PerDiem): Report {
+    const others = this.perDiems.filter((other) => !other.date.equals(perDiem.date))
+    return new Report({ ...this.fields(), perDiems: [...others, perDiem] })
+  }
+
+  /** The same report, with the fields given changed in the per diem of every day: all domestic, all international. */
+  afterChangingEveryPerDiem(changes: PerDiemFields): Report {
+    const perDiems = this.perDiemsByDay.map((perDiem) => perDiem.afterChanging(changes))
+    return new Report({ ...this.fields(), perDiems })
+  }
+
   /** Whether the report asks for a supervisor: it does of a student or a postdoctoral fellow. */
   get asksForSupervisor(): boolean {
     return this.position === 'Student' || this.position === 'Postdoctoral fellow'
@@ -160,8 +229,9 @@ export class Report {
 
   /**
    * The same report, with the fields given changed. Choosing another position takes the
-   * supervisor or the host out of the report; unticking business travel takes the dates and the
-   * travel justifications out.
+   * supervisor or the host out of the report; unticking business travel takes the dates, the
+   * locations, the per diems and the travel justifications out. Changing the dates takes out the
+   * per diems of the days no longer between them.
    */
   afterChanging(changes: ReportFields): Report {
     const changed = new Report({ ...this.fields(), ...changes })
@@ -173,6 +243,7 @@ export class Report {
       hostEmail: changed.asksForHost ? changed.hostEmail : undefined,
       firstDay: changed.isBusinessTravel ? changed.firstDay : undefined,
       lastDay: changed.isBusinessTravel ? changed.lastDay : undefined,
+      locations: changed.isBusinessTravel ? changed.locations : undefined,
       travelJustifications: changed.isBusinessTravel ? changed.travelJustifications : [],
     })
   }
@@ -190,7 +261,7 @@ export class Report {
 
   /**
    * The report New report starts: the claimant's name, position and email, and nothing else; no
-   * supervisor, host, purpose, dates, account, expense or document.
+   * supervisor, host, purpose, dates, locations, account, expense, per diem or document.
    */
   afterNewReport(): Report {
     return new Report({
@@ -264,8 +335,10 @@ export class Report {
       isBusinessTravel: this.isBusinessTravel,
       firstDay: this.firstDay,
       lastDay: this.lastDay,
+      locations: this.locations,
       account: this.account,
       expenses: this.expenses,
+      perDiems: this.perDiems,
       travelJustifications: this.travelJustifications,
       additionalDocuments: this.additionalDocuments,
     }
@@ -275,4 +348,24 @@ export class Report {
 /** Whether two names are the same, whatever their case. */
 function isSameName(one: string, other: string): boolean {
   return one.toLocaleLowerCase('en') === other.toLocaleLowerCase('en')
+}
+
+/**
+ * The per diems, one per day, the last given for a day kept, by date; once both dates are given,
+ * the last not before the first, only those of the days between them.
+ */
+function perDiemsBetween(
+  perDiems: readonly PerDiem[],
+  firstDay: CalendarDate | undefined,
+  lastDay: CalendarDate | undefined,
+): readonly PerDiem[] {
+  const isBetween = (day: CalendarDate) =>
+    firstDay === undefined ||
+    lastDay === undefined ||
+    lastDay.isBefore(firstDay) ||
+    (!day.isBefore(firstDay) && !lastDay.isBefore(day))
+  const byDay = new Map(perDiems.map((perDiem) => [perDiem.date.toString(), perDiem]))
+  return [...byDay.values()]
+    .filter((perDiem) => isBetween(perDiem.date))
+    .sort((one, other) => one.date.compareTo(other.date))
 }

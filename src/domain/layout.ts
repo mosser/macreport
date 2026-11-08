@@ -2,9 +2,10 @@ import type { Amount } from './amount.ts'
 import type { CalendarDate } from './calendar-date.ts'
 import type { Currency } from './currency.ts'
 import type { Document } from './document.ts'
-import type { Expense } from './expense.ts'
+import { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
 import { Kind } from './kind.ts'
+import type { PerDiem } from './per-diem.ts'
 import type { Report } from './report.ts'
 
 /** A field of the cover: its name and its value. */
@@ -26,7 +27,7 @@ export interface SupportingDocument {
   readonly document: Document
 }
 
-/** A row of the cover's table of expenses. */
+/** A row of the cover's table of expenses: an expense, or a per diem with a meal claimed. */
 export interface ExpenseRow {
   readonly number: number
   readonly date: string
@@ -35,6 +36,13 @@ export interface ExpenseRow {
   readonly claimedAmount: string
   /** The documents supporting the expense, one per line, in the order of the report document. */
   readonly supportingDocuments: readonly SupportingDocument[]
+  /** The per diem of a row that is one; none for an expense. */
+  readonly perDiem?: PerDiem
+  /**
+   * Under a per diem, Not claimed: and its other meals, each followed by its reason in
+   * parentheses when it has one; empty when every meal is claimed, and for an expense.
+   */
+  readonly mealsNotClaimed: string
 }
 
 /**
@@ -96,10 +104,15 @@ export interface Layout {
   readonly coverFields: readonly CoverField[]
   /** Every kind of document, in alphabetical order. */
   readonly attachedInformation: readonly AttachedInformation[]
+  /**
+   * Every expense and every per diem with a meal claimed, sorted by date, the expenses of a day in
+   * the order they were added and its per diem after them, and numbered in that order.
+   */
   readonly expenses: readonly ExpenseRow[]
   /**
-   * The total, one amount per line: the sum of the claimed amounts, when there is one, then, by
-   * currency in alphabetical order, the sum of the foreign amounts of the expenses without one.
+   * The total, one amount per line: the sum of the claimed amounts and of the domestic per diems,
+   * when there is one, then, by currency in alphabetical order, the sum of the foreign amounts of
+   * the expenses without a claimed amount, US dollars including the international per diems.
    */
   readonly total: readonly string[]
   readonly sections: readonly Section[]
@@ -121,10 +134,14 @@ interface Complete {
 export function layoutOf(report: Report): Layout {
   const complete = completeReport(report)
   const expenses = report.expensesByDate
+  const entries = entriesOf(expenses, report.claimedPerDiems)
+  const numbered = entries.flatMap((entry, index) =>
+    entry instanceof Expense ? [{ expense: entry, number: index + 1 }] : [],
+  )
   const sections = [
     sectionOfAdditionalDocuments(report),
-    sectionOf(Kind.receipt, expenses),
-    sectionOf(Kind.bankStatement, expenses),
+    sectionOf(Kind.receipt, numbered),
+    sectionOf(Kind.bankStatement, numbered),
   ].filter((section) => section.documents.length > 0)
   const labels = new Map(
     sections.flatMap((section) =>
@@ -139,10 +156,34 @@ export function layoutOf(report: Report): Layout {
     attachedInformation: [...Kind.all]
       .sort((one, other) => one.plural.localeCompare(other.plural, 'en'))
       .map((kind) => attachedInformationOf(kind, sections)),
-    expenses: expenses.map((expense, index) => rowOf(expense, index + 1, labels)),
-    total: totalOf(expenses),
+    expenses: entries.map((entry, index) =>
+      entry instanceof Expense ? rowOf(entry, index + 1, labels) : perDiemRowOf(entry, index + 1),
+    ),
+    total: totalOf(expenses, report.claimedPerDiems),
     sections,
   }
+}
+
+/** An expense or a per diem, as the cover numbers them. */
+type Entry = Expense | PerDiem
+
+/**
+ * The expenses and the per diems, sorted by date, the expenses of a day in the order they were
+ * added and its per diem after them; an expense without a date last.
+ */
+function entriesOf(expenses: readonly Expense[], perDiems: readonly PerDiem[]): readonly Entry[] {
+  const dateOf = (entry: Entry) => entry.date
+  return [...expenses, ...perDiems].sort((one, other) => {
+    const oneDate = dateOf(one)
+    const otherDate = dateOf(other)
+    if (oneDate === undefined || otherDate === undefined) {
+      return Number(oneDate === undefined) - Number(otherDate === undefined)
+    }
+    return (
+      oneDate.compareTo(otherDate) ||
+      Number(!(one instanceof Expense)) - Number(!(other instanceof Expense))
+    )
+  })
 }
 
 function completeReport(report: Report): Complete {
@@ -199,6 +240,9 @@ function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
   if (dates !== undefined) {
     fields.push({ name: 'Dates', value: dates })
   }
+  if (report.isBusinessTravel && report.locations !== undefined) {
+    fields.push({ name: 'Locations', value: report.locations })
+  }
   fields.push({ name: fieldNames.account, value: complete.account })
   return fields
 }
@@ -214,19 +258,25 @@ function datesOf(
   return (firstDay ?? lastDay)?.toString()
 }
 
+/** An expense, and its number on the cover. */
+interface NumberedExpense {
+  readonly expense: Expense
+  readonly number: number
+}
+
 /**
  * The section of a kind: its documents by the number of the first expense they support, then in
  * the order they were added, each in the report once whatever the number of expenses it supports.
  */
-function sectionOf(kind: Kind, expenses: readonly Expense[]): Section {
+function sectionOf(kind: Kind, expenses: readonly NumberedExpense[]): Section {
   const supported = new Map<Document, StampedExpense[]>()
-  expenses.forEach((expense, index) => {
+  for (const { expense, number } of expenses) {
     const documents = kind === Kind.receipt ? expense.receipts : expense.bankStatements
-    const stamped = stampedExpenseOf(expense, index + 1)
+    const stamped = stampedExpenseOf(expense, number)
     for (const document of documents) {
       supported.set(document, [...(supported.get(document) ?? []), stamped])
     }
-  })
+  }
   const documents = [...supported].map(([document, stamped], rank) => ({
     label: `${kind.letter}${rank + 1}`,
     document,
@@ -302,19 +352,65 @@ function rowOf(expense: Expense, number: number, labels: Map<Document, string>):
     foreignAmount: expense.foreignAmountText,
     claimedAmount: expense.claimedAmount?.toString() ?? '',
     supportingDocuments: supporting,
+    mealsNotClaimed: '',
   }
 }
 
 /**
- * The sum of the claimed amounts, when there is one, then, by currency in alphabetical order, the
- * sum of the foreign amounts of the expenses without a claimed amount.
+ * The row of a per diem: Per diem, domestic or international, then its meals claimed; its amount
+ * the claimed amount of a domestic per diem, the foreign amount, in US dollars, of an
+ * international one; under it, its meals not claimed and their reasons. No document supports it.
  */
-function totalOf(expenses: readonly Expense[]): readonly string[] {
+function perDiemRowOf(perDiem: PerDiem, number: number): ExpenseRow {
+  const scope = perDiem.isInternational ? 'international' : 'domestic'
+  const meals = perDiem.mealsClaimed.map((meal) => meal.name).join(', ')
+  return {
+    number,
+    date: perDiem.date.toString(),
+    description: `Per diem, ${scope}: ${meals}`,
+    foreignAmount: perDiem.isInternational ? perDiem.amountText : '',
+    claimedAmount: perDiem.isInternational ? '' : perDiem.amountText,
+    supportingDocuments: [],
+    perDiem,
+    mealsNotClaimed: mealsNotClaimedOf(perDiem),
+  }
+}
+
+/**
+ * Not claimed: and the meals of a per diem not claimed, each followed by its reason in
+ * parentheses when it has one; empty when every meal is claimed.
+ */
+export function mealsNotClaimedOf(perDiem: PerDiem): string {
+  const meals = perDiem.mealsNotClaimed.map((meal) => {
+    const reason = perDiem.reasonFor(meal)
+    return reason === undefined ? meal.name : `${meal.name} (${reason})`
+  })
+  return meals.length > 0 ? `Not claimed: ${meals.join(', ')}` : ''
+}
+
+/**
+ * The sum of the claimed amounts and of the domestic per diems, when there is one, then, by
+ * currency in alphabetical order, the sum of the foreign amounts of the expenses without a claimed
+ * amount, US dollars including the international per diems.
+ */
+export function totalOf(
+  expenses: readonly Expense[],
+  perDiems: readonly PerDiem[],
+): readonly string[] {
   const claimed = expenses.flatMap((expense) => expense.claimedAmount ?? [])
   const foreign = new Map<Currency, Amount[]>()
+  const addForeign = (currency: Currency, amount: Amount) =>
+    foreign.set(currency, [...(foreign.get(currency) ?? []), amount])
   for (const { claimedAmount, foreignAmount, currency } of expenses) {
     if (claimedAmount === undefined && foreignAmount !== undefined && currency !== undefined) {
-      foreign.set(currency, [...(foreign.get(currency) ?? []), foreignAmount])
+      addForeign(currency, foreignAmount)
+    }
+  }
+  for (const { amount, currency } of perDiems) {
+    if (amount !== undefined && currency !== undefined) {
+      addForeign(currency, amount)
+    } else if (amount !== undefined) {
+      claimed.push(amount)
     }
   }
   const sum = (amounts: readonly Amount[]) => amounts.reduce((total, amount) => total.plus(amount))

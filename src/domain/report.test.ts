@@ -3,6 +3,8 @@ import { CalendarDate } from './calendar-date.ts'
 import { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
+import { Meal } from './meal.ts'
+import { PerDiem } from './per-diem.ts'
 import { positions, Report } from './report.ts'
 
 describe('Report', () => {
@@ -205,5 +207,73 @@ describe('Report', () => {
     const report = new Report({ additionalDocuments: [scan('Receipt'), scan('receipt (2)')] })
     expect(report.freeNameLike('Hotel')).toBe('Hotel')
     expect(report.freeNameLike('Receipt')).toBe('Receipt (3)')
+  })
+
+  describe('per diems', () => {
+    const october = (day: number) => new CalendarDate(2026, 10, day)
+    const travel = new Report({
+      isBusinessTravel: true,
+      firstDay: october(3),
+      lastDay: october(5),
+      locations: 'Lyon, France',
+    })
+    const dinner = new PerDiem(october(4), { mealsClaimed: [Meal.dinner] })
+
+    it('are asked of a business travel whose dates are given, the last not before the first', () => {
+      expect(travel.asksForPerDiems).toBe(true)
+      expect(travel.days.map(String)).toEqual(['2026-10-03', '2026-10-04', '2026-10-05'])
+      expect(travel.afterChanging({ lastDay: october(3) }).days.map(String)).toEqual(['2026-10-03'])
+      for (const report of [
+        new Report(),
+        travel.afterChanging({ lastDay: undefined }),
+        travel.afterChanging({ lastDay: october(2) }),
+      ]) {
+        expect(report.asksForPerDiems).toBe(false)
+        expect(report.days).toEqual([])
+      }
+    })
+
+    it('give every day a per diem, as it starts until the Claimant changes it', () => {
+      const changed = travel.afterChangingPerDiem(dinner)
+      expect(changed.perDiems).toEqual([dinner])
+      expect(changed.perDiemOn(october(4))).toBe(dinner)
+      const [first, second, third] = changed.perDiemsByDay
+      expect(first?.date).toEqual(october(3))
+      expect(first?.hasMealClaimed).toBe(false)
+      expect(second).toBe(dinner)
+      expect(third?.isInternational).toBe(false)
+      expect(changed.claimedPerDiems).toEqual([dinner])
+      const again = changed.afterChangingPerDiem(dinner.afterClaiming(Meal.lunch, true))
+      expect(again.perDiems.map((perDiem) => perDiem.mealsClaimed)).toEqual([
+        [Meal.lunch, Meal.dinner],
+      ])
+    })
+
+    it('are set all international, or all domestic, at once', () => {
+      const international = travel
+        .afterChangingPerDiem(dinner)
+        .afterChangingEveryPerDiem({ isInternational: true })
+      expect(international.perDiemsByDay.map((perDiem) => perDiem.isInternational)).toEqual([
+        true,
+        true,
+        true,
+      ])
+      expect(international.perDiemOn(october(4)).mealsClaimed).toEqual([Meal.dinner])
+      const domestic = international.afterChangingEveryPerDiem({ isInternational: false })
+      expect(domestic.perDiems.some((perDiem) => perDiem.isInternational)).toBe(false)
+    })
+
+    it('leave with the days no longer between the dates, and all of them with the business travel', () => {
+      const claimed = travel
+        .afterChangingPerDiem(new PerDiem(october(3), { mealsClaimed: [Meal.lunch] }))
+        .afterChangingPerDiem(dinner)
+      expect(claimed.afterChanging({ firstDay: october(4) }).perDiems).toEqual([dinner])
+      expect(claimed.afterChanging({ lastDay: undefined }).perDiems).toHaveLength(2)
+      const unticked = claimed.afterChanging({ isBusinessTravel: false })
+      expect(unticked.perDiems).toEqual([])
+      expect(unticked.locations).toBeUndefined()
+      expect(new Report({ perDiems: [dinner] }).perDiems).toEqual([])
+      expect(claimed.afterNewReport().perDiems).toEqual([])
+    })
   })
 })

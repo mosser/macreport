@@ -18,14 +18,16 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** v0.2.0, plus the unreleased list of expenses: one report,
-its expenses listed by date, each added, changed or removed, with one
-receipt and one bank statement, chosen again among those already in the
-report, and a foreign amount and currency; travel justifications and
-additional documents, every document named, saved as the report document
-(cover with Entered boxes and a total by currency, sections, stamps). Not
-yet built: per diems, missing receipts, cash, the number of pages on the
-Additional documents step, some links, refusing a file, and font findings.
+**Current state:** v0.2.0, plus the unreleased list of expenses and per
+diems: one report, its expenses listed by date, each added, changed or
+removed, with one receipt and one bank statement, chosen again among those
+already in the report, and a foreign amount and currency; the locations and
+per diems of a business travel (meals per day, domestic or international);
+travel justifications and additional documents, every document named, saved
+as the report document (cover with Entered boxes, per diem rows and a total
+by currency, sections, stamps). Not yet built: missing receipts, cash, the
+number of pages on the Additional documents step, some links, refusing a
+file, and font findings.
 The
 specification and the ADRs describe the full system; code follows them.
 

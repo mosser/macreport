@@ -36,6 +36,12 @@ export class CalendarDate {
     }
   }
 
+  /** The day after this one. */
+  get dayAfter(): CalendarDate {
+    const next = new Date(Date.UTC(this.year, this.month - 1, this.day + 1))
+    return new CalendarDate(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate())
+  }
+
   /** Whether this date comes before the other one. */
   isBefore(other: CalendarDate): boolean {
     return this.compareTo(other) < 0
