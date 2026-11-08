@@ -721,7 +721,7 @@ class Writer {
     const expenses: Column = { title: 'Expenses', width: 184 }
     const columns: Column[] = [
       { title: 'Label', width: 50 },
-      { title: 'Name', width: section.listsExpenses ? 210 : 210 + expenses.width },
+      { title: section.nameColumn, width: section.listsExpenses ? 210 : 210 + expenses.width },
       { title: 'Pages', width: 60 },
       ...(section.listsExpenses ? [expenses] : []),
     ]

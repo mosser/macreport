@@ -153,8 +153,8 @@ Pages are the pages of the report document. The expenses a document
 supports are named by their description, one per line, a description longer
 than 30 characters cut to its first 30 followed by an ellipsis, as in the
 stamp. Missing receipt authorizations
-have no name: the column shows who was paid, and the Expenses column names the
-expense, as for any other document. The Expenses column
+have no name: the column, headed *Payee*, shows who was paid, and the Expenses
+column names the expense, as for any other document. The Expenses column
 is left out of the section of additional documents. Of a business travel,
 that section page splits its table in two subsections, each under its
 subheading and with its own header: *Travel justifications*, then
@@ -174,7 +174,7 @@ across the frame divide it in four parts. On one page, the frame runs down to th
 bottom margin, the height left over shared among the gaps and the lines:
 
 1. The McMaster logo, on the left; level with its bottom, centred, bold and
-   underlined, *Missing Receipt Authorization Form*; then:
+   underlined, *Missing Receipt Authorization Form*; then, justified:
 
    > **Original invoices** on company letterhead or official receipts are
    > required for reimbursements. Where the original invoice or receipt is not

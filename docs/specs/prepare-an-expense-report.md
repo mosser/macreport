@@ -126,9 +126,9 @@ a pen, which opens the dialog filled in, and **Take back**, a cross.
 
 | Field | Rule |
 |---|---|
-| Reason for missing original receipt or boarding pass(es) | Required. It may run over several lines: its line breaks are kept in the report document. |
+| Reason for missing original receipt | Required. It may run over several lines: its line breaks are kept in the report document. |
 | Paid to | Required. |
-| Job title | Required: as Associate Prof, Research Engineer, PhD Student. |
+| Job title | Required. *E.g., Associate Prof, Research Engineer, PhD Student.* |
 | Phone extension | Optional. |
 
 The dialog of an expense without a missing receipt starts with the job title and the
@@ -231,7 +231,7 @@ cover of the report document; then each section with its documents, their labels
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added, or from its reduced file
 once reduced. A missing receipt authorization has no file to open: its section shows its
-label, who was paid and its expense, without a link. The Entered boxes and the Policy section are the report document's alone.
+label, who was paid, under the heading *Payee*, and its expense, without a link. The Entered boxes and the Policy section are the report document's alone.
 
 The sizes stand at the top of the step: the size of the report
 document, or *Working out the sizes…* until the sizes are known, Save the report

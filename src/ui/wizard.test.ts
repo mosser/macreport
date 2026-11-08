@@ -1350,12 +1350,12 @@ describe('a missing receipt', () => {
     expect(
       [...(dialog()?.querySelectorAll('.field-name') ?? [])].map((name) => name.textContent),
     ).toEqual([
-      'Reason for missing original receipt or boarding pass(es) *',
+      'Reason for missing original receipt *',
       'Paid to *',
       'Job title *',
       'Phone extension',
     ])
-    expect(dialog()?.textContent).toContain('As Associate Prof, Research Engineer, PhD Student.')
+    expect(dialog()?.textContent).toContain('E.g., Associate Prof, Research Engineer, PhD Student.')
     expect(done()?.disabled).toBe(true)
     typeInDialog('reasonForMissingReceipt', 'Lost in a taxi')
     typeInDialog('paidTo', 'Taxis Parisiens')
@@ -1515,6 +1515,11 @@ describe('a missing receipt', () => {
       (each) => each.textContent === 'Missing receipt authorizations',
     )
     const table = heading?.nextElementSibling
+    expect([...(table?.querySelectorAll('th') ?? [])].map((title) => title.textContent)).toEqual([
+      'Label',
+      'Payee',
+      'Expenses',
+    ])
     expect(
       [...(table?.querySelectorAll('tbody td') ?? [])].map((cell) => cell.textContent?.trim()),
     ).toEqual(['M1', 'Taxis Parisiens', 'Taxi'])

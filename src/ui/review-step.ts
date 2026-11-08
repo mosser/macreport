@@ -210,7 +210,7 @@ function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
       })
       return html`<table class="documents">
         <colgroup><col class="label" /><col />${expenses(html`<col />`)}</colgroup>
-        <thead><tr><th>Label</th><th>Name</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
+        <thead><tr><th>Label</th><th>${section.nameColumn}</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
         <tbody>${rows}</tbody>
       </table>`
     }

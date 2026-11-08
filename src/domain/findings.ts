@@ -42,7 +42,7 @@ export const fieldNames = {
   bankStatements: 'Bank statement',
   paidInCash: 'Paid in cash',
   missingReceipt: 'Missing receipt',
-  reasonForMissingReceipt: 'Reason for missing original receipt or boarding pass(es)',
+  reasonForMissingReceipt: 'Reason for missing original receipt',
   paidTo: 'Paid to',
   jobTitle: 'Job title',
   phoneExtension: 'Phone extension',
@@ -70,7 +70,7 @@ export const fieldRules: Partial<Record<Field, string>> = {
   currency: 'A three-letter ISO 4217 code, other than CAD.',
   receipts: 'A PDF, a JPEG image or a PNG image.',
   bankStatements: 'A PDF, a JPEG image or a PNG image.',
-  jobTitle: 'As Associate Prof, Research Engineer, PhD Student.',
+  jobTitle: 'E.g., Associate Prof, Research Engineer, PhD Student.',
   travelJustifications:
     'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
   additionalDocuments: 'A PDF, a JPEG image or a PNG image.',

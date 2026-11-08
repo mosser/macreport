@@ -30,6 +30,7 @@ import { Report } from '../domain/report.ts'
 import { DocumentsAsWritten } from './documents-as-written.ts'
 import { wrap } from './generated-page.ts'
 import type { ImageEncoder } from './image-encoder.ts'
+import { justified } from './missing-receipt-form.ts'
 import { paletteFrom } from './palette.ts'
 import { writeReportDocument } from './write-report-document.ts'
 
@@ -1139,11 +1140,32 @@ describe('a missing receipt authorization', () => {
     expect(start('Amount:')).toBeGreaterThan(start('Email:'))
   })
 
+  it('heads its column of names Payee, and no other section', async () => {
+    const pdf = await written(stated())
+    expect(textsOf(pdf, pdf.getPage(1))).not.toContain('Name')
+    const other = await written(await reportOf('Air Canada'))
+    const sectionPage = other.getPage(1)
+    expect(textsOf(other, sectionPage)).toContain('Name')
+    expect(textsOf(other, sectionPage)).not.toContain('Payee')
+  })
+
+  it('justifies the paragraph that opens it: each of its words on its own, its last line as it is', async () => {
+    const pdf = await written(stated())
+    const places = placesOf(pdf, pdf.getPage(2))
+    const first = places.find(({ text }) => text === 'Original')
+    const line = places.filter(({ y }) => y === first?.y)
+    expect(line.map(({ text }) => text).slice(0, 3)).toEqual(['Original', 'invoices', 'on'])
+    expect(
+      places.some(({ text }) => text === 'clearly indicated on the substituting support.'),
+    ).toBe(true)
+  })
+
   it('has a section page naming who was paid and the expense, and a stamp naming the expense', async () => {
     const pdf = await written(stated())
     expect(textsOf(pdf, pdf.getPage(1))).toEqual(
       expect.arrayContaining([
         'Missing receipt authorizations',
+        'Payee',
         'M1',
         'Taxis Parisiens',
         '3',
@@ -1232,6 +1254,37 @@ describe('an expense paid in cash', () => {
     expect(textsOf(pdf, cover)).toEqual(expect.arrayContaining(['Receipt', 'Paid in cash']))
     expect(pdf.getPageCount()).toBe(3)
     expect(linksOf(pdf, cover).map(({ to }) => to)).toEqual([3])
+  })
+})
+
+describe('justified', () => {
+  it('spreads the words of a line, the first starting it and the last ending it, the spaces alike', async () => {
+    const pdf = await PDFDocument.create()
+    const font = await pdf.embedFont(StandardFonts.Helvetica)
+    const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+    const widthOf = (text: string, of = font) => of.widthOfTextAtSize(text, 10)
+    const placed = justified(
+      [
+        { text: 'one', font: bold },
+        { text: 'two three', font },
+      ],
+      300,
+    )
+    expect(placed.map(({ text }) => text)).toEqual(['one', 'two', 'three'])
+    expect(placed.map(({ font: used }) => used)).toEqual([bold, font, font])
+    const [one, two, three] = placed
+    expect(one?.offset).toBe(0)
+    expect((three?.offset ?? 0) + widthOf('three')).toBeCloseTo(300, 5)
+    expect((two?.offset ?? 0) - widthOf('one', bold)).toBeCloseTo(
+      (three?.offset ?? 0) - (two?.offset ?? 0) - widthOf('two'),
+      5,
+    )
+  })
+
+  it('starts a line of one word', async () => {
+    const pdf = await PDFDocument.create()
+    const font = await pdf.embedFont(StandardFonts.Helvetica)
+    expect(justified([{ text: 'one', font }], 300).map(({ offset }) => offset)).toEqual([0])
   })
 })
 

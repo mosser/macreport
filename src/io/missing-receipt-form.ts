@@ -121,6 +121,30 @@ function wrapRuns(runs: readonly Run[], width: number): readonly (readonly Run[]
   return lines
 }
 
+/** A word of a justified line, and how far along the line it starts. */
+export interface PlacedWord extends Run {
+  readonly offset: number
+}
+
+/**
+ * The words of a line, spread so that its first starts it and its last ends it, across a width: the
+ * spaces between them all alike.
+ */
+export function justified(line: readonly Run[], width: number): readonly PlacedWord[] {
+  const words = line.flatMap(({ text, font }) =>
+    text.split(' ').map((word): Run => ({ text: word, font })),
+  )
+  const widths = words.map(({ text, font }) => font.widthOfTextAtSize(text, textSize))
+  const space =
+    (width - widths.reduce((sum, each) => sum + each, 0)) / Math.max(1, words.length - 1)
+  let offset = 0
+  return words.map((word, index) => {
+    const placed = { ...word, offset }
+    offset += (widths[index] ?? 0) + space
+    return placed
+  })
+}
+
 /**
  * The form being laid out, page after page, its frame closing where a page ends. Its gaps and its
  * lines are as high as asked, the text of its paragraphs staying as it is.
@@ -192,16 +216,37 @@ class FormFlow {
     this.gap(partGap)
   }
 
+  /** A paragraph of runs across the frame, every line but its last ending at the frame's edge. */
+  justifiedParagraph(runs: readonly Run[]): void {
+    const lines = wrapRuns(runs, textWidth)
+    lines.forEach((line, index) => {
+      if (index === lines.length - 1) {
+        this.line(line)
+        return
+      }
+      this.ensure(paragraphHeight)
+      this.down(paragraphHeight)
+      for (const { text, font, offset } of justified(line, textWidth)) {
+        this.write(text, textLeft + offset, this.y + baselineLift, font, textSize)
+      }
+    })
+  }
+
   /** A paragraph of runs across the frame. */
   paragraph(runs: readonly Run[]): void {
     for (const line of wrapRuns(runs, textWidth)) {
-      this.ensure(paragraphHeight)
-      this.down(paragraphHeight)
-      let x = textLeft
-      for (const { text, font } of line) {
-        this.write(text, x, this.y + baselineLift, font, textSize)
-        x += font.widthOfTextAtSize(`${text} `, textSize)
-      }
+      this.line(line)
+    }
+  }
+
+  /** A line of runs, from the left of the frame. */
+  private line(line: readonly Run[]): void {
+    this.ensure(paragraphHeight)
+    this.down(paragraphHeight)
+    let x = textLeft
+    for (const { text, font } of line) {
+      this.write(text, x, this.y + baselineLift, font, textSize)
+      x += font.widthOfTextAtSize(`${text} `, textSize)
     }
   }
 
@@ -307,7 +352,7 @@ function formFlowOf(
   const { regular, bold } = means
   const flow = new FormFlow(means, stretch)
   flow.heading('Missing Receipt Authorization Form')
-  flow.paragraph([
+  flow.justifiedParagraph([
     { text: 'Original invoices', font: bold },
     {
       text: 'on company letterhead or official receipts are required for reimbursements. Where the original invoice or receipt is not issued or lost, then a copy of the official invoice or receipt or a credit card statement will be accepted as a substitute with a brief explanation and notation of "original lost" clearly indicated on the substituting support.',

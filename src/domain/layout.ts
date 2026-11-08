@@ -138,6 +138,8 @@ export interface Subsection {
 export interface Section {
   readonly kind: Kind
   readonly title: string
+  /** What its section page heads the column of names with: Name, or Payee for a form, which has none. */
+  readonly nameColumn: string
   /** Whether its section page lists the expenses each document supports. */
   readonly listsExpenses: boolean
   /** Its documents, in order. */
@@ -376,7 +378,14 @@ function sectionOf(kind: Kind, expenses: readonly NumberedExpense[]): Section {
     expenseNumbers: stamped.map((expense) => expense.number),
     expenses: stamped,
   }))
-  return { kind, title: kind.plural, listsExpenses: true, documents, subsections: [] }
+  return {
+    kind,
+    title: kind.plural,
+    nameColumn: 'Name',
+    listsExpenses: true,
+    documents,
+    subsections: [],
+  }
 }
 
 /** The section of the missing receipt authorizations: one per expense with a missing receipt. */
@@ -398,7 +407,14 @@ function sectionOfAuthorizations(
       expenses: [stampedExpenseOf(expense, number)],
       authorization: authorizationOf(complete, expense, missing),
     }))
-  return { kind, title: kind.plural, listsExpenses: true, documents, subsections: [] }
+  return {
+    kind,
+    title: kind.plural,
+    nameColumn: 'Payee',
+    listsExpenses: true,
+    documents,
+    subsections: [],
+  }
 }
 
 /** What the missing receipt authorization of an expense writes, filled in from the report. */
@@ -447,7 +463,14 @@ function sectionOfAdditionalDocuments(report: Report): Section {
         { title: subheadings.others, documents: documents.slice(count) },
       ].filter((subsection) => subsection.documents.length > 0)
     : []
-  return { kind, title: kind.plural, listsExpenses: false, documents, subsections }
+  return {
+    kind,
+    title: kind.plural,
+    nameColumn: 'Name',
+    listsExpenses: false,
+    documents,
+    subsections,
+  }
 }
 
 /** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */

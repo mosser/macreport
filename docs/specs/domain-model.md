@@ -36,7 +36,7 @@ document.
 | Total | What the report claims: the sum of the claimed amounts and of the domestic meals claimed, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount, and, in US dollars, of the international meals claimed. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason, who was paid and the job title, and the phone extension when the Claimant gives one; the system writes a missing receipt authorization for it. |
-| Paid to | Who was paid for an expense with a missing receipt, in the Claimant's words. |
+| Paid to | Who was paid for an expense with a missing receipt, in the Claimant's words: its payee, as the section of missing receipt authorizations heads it. |
 | Job title | What the claimant's job is called, in the Claimant's words, given with each missing receipt and written under *Title* on its missing receipt authorization: Associate Prof, Research Engineer, PhD Student. |
 | Phone extension | The claimant's telephone extension, given or not with each missing receipt, and written under *Extension* on its missing receipt authorization. |
 | Accounts Payable | The McMaster office that reimburses. It may not accept a missing receipt authorization, and may return the report. |
