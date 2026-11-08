@@ -1211,6 +1211,7 @@ describe('an expense paid in cash', () => {
       'Paid in cash',
     )
     expect(root.querySelector('input[name="bankStatements"]')).toBeNull()
+    expect(root.querySelector('[data-field="bankStatements"] .field-name')).toBeNull()
     expect(offer()).toBeNull()
     expect(takeBack()?.getAttribute('aria-label')).toBe('Take back: Paid in cash')
     expect(takeBack()?.querySelector('svg')).not.toBeNull()
@@ -1343,13 +1344,16 @@ describe('a missing receipt', () => {
     expect(offer()?.textContent).toBe('Missing receipt')
     await openDialog()
     expect(dialog()?.querySelector('h2')?.textContent).toBe('Missing receipt')
+    expect(dialog()?.querySelector('.notice')?.textContent).toBe(
+      "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it. Accounts Payable may not accept it, and may return the report.",
+    )
     expect(
       [...(dialog()?.querySelectorAll('.field-name') ?? [])].map((name) => name.textContent),
     ).toEqual([
       'Reason for missing original receipt or boarding pass(es) *',
       'Paid to *',
       'Job title *',
-      'Extension',
+      'Phone extension',
     ])
     expect(dialog()?.textContent).toContain('As Associate Prof, Research Engineer, PhD Student.')
     expect(done()?.disabled).toBe(true)
@@ -1368,7 +1372,7 @@ describe('a missing receipt', () => {
         reason: 'Lost in a taxi',
         paidTo: 'Taxis Parisiens',
         jobTitle: 'PhD Student',
-        extension: undefined,
+        phoneExtension: undefined,
       }),
     )
   })
@@ -1380,6 +1384,7 @@ describe('a missing receipt', () => {
       'Missing receipt',
     )
     expect(root.querySelector('input[name="receipts"]')).toBeNull()
+    expect(root.querySelector('[data-field="receipts"] .field-name')).toBeNull()
     expect(takeBack()?.getAttribute('aria-label')).toBe('Take back: Missing receipt')
     expect(changeIt()?.getAttribute('aria-label')).toBe('Change: Missing receipt')
     expect(document.activeElement).toBe(takeBack())
@@ -1419,24 +1424,24 @@ describe('a missing receipt', () => {
     expect(lastExpense()?.missingReceipt?.paidTo).toBe('Taxis Parisiens')
     await openDialog(changeIt())
     typeInDialog('paidTo', 'Taxis <Lyonnais>')
-    typeInDialog('extension', '24242')
+    typeInDialog('phoneExtension', '24242')
     await answerDialog(done)
     await vi.waitFor(() => expect(lastExpense()?.missingReceipt?.paidTo).toBe('Taxis <Lyonnais>'))
-    expect(lastExpense()?.missingReceipt?.extension).toBe('24242')
+    expect(lastExpense()?.missingReceipt?.phoneExtension).toBe('24242')
     await vi.waitFor(() => expect(changeIt()).not.toBeNull())
     await openDialog(changeIt())
     expect(fieldOfDialog('paidTo')?.value).toBe('Taxis <Lyonnais>')
     await answerDialog(cancel)
   })
 
-  it('starts with the job title and the extension of the last expense added that has one, changed for its expense only', async () => {
+  it('starts with the job title and the phone extension of the last expense added that has one, changed for its expense only', async () => {
     await ready()
     await openDialog()
     expect(fieldOfDialog('jobTitle')?.value).toBe('')
     typeInDialog('reasonForMissingReceipt', 'Lost')
     typeInDialog('paidTo', 'Taxi')
     typeInDialog('jobTitle', 'Research Engineer')
-    typeInDialog('extension', '24242')
+    typeInDialog('phoneExtension', '24242')
     await answerDialog(done)
     await vi.waitFor(() => expect(takeBack()).not.toBeNull())
     button('[data-action="done"]')?.click()
@@ -1445,7 +1450,7 @@ describe('a missing receipt', () => {
     expect(fieldOfDialog('reasonForMissingReceipt')?.value).toBe('')
     expect(fieldOfDialog('paidTo')?.value).toBe('')
     expect(fieldOfDialog('jobTitle')?.value).toBe('Research Engineer')
-    expect(fieldOfDialog('extension')?.value).toBe('24242')
+    expect(fieldOfDialog('phoneExtension')?.value).toBe('24242')
     typeInDialog('reasonForMissingReceipt', 'Lost too')
     typeInDialog('paidTo', 'Bus')
     typeInDialog('jobTitle', 'Associate Prof')

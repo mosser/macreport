@@ -36,7 +36,7 @@ interface MissingReceiptRecord {
   readonly reason: string
   readonly paidTo: string
   readonly jobTitle: string
-  readonly extension?: string
+  readonly phoneExtension?: string
 }
 
 /** What IndexedDB keeps of an expense: its documents by their identifiers. */
@@ -280,8 +280,8 @@ class IndexedDraftStore implements DraftStore {
 }
 
 function missingReceiptRecordOf(missing: MissingReceipt): MissingReceiptRecord {
-  const { reason, paidTo, jobTitle, extension } = missing
-  return { reason, paidTo, jobTitle, ...(extension === undefined ? {} : { extension }) }
+  const { reason, paidTo, jobTitle, phoneExtension } = missing
+  return { reason, paidTo, jobTitle, ...(phoneExtension === undefined ? {} : { phoneExtension }) }
 }
 
 /** The missing receipt a record holds; none unless it holds all that one must. */
@@ -293,7 +293,7 @@ function missingReceiptOf(record: unknown): MissingReceipt | undefined {
   const jobTitle = text(fields.jobTitle)
   return reason === undefined || paidTo === undefined || jobTitle === undefined
     ? undefined
-    : new MissingReceipt({ reason, paidTo, jobTitle, extension: text(fields.extension) })
+    : new MissingReceipt({ reason, paidTo, jobTitle, phoneExtension: text(fields.phoneExtension) })
 }
 
 /** What IndexedDB keeps of a report, its documents by the identifiers its transaction chose. */

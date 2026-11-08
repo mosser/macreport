@@ -319,7 +319,7 @@ export class Report {
 
   /**
    * The missing receipt of the last expense added that has one: another missing receipt starts with
-   * its job title and its extension.
+   * its job title and its phone extension.
    */
   get lastMissingReceipt(): MissingReceipt | undefined {
     return this.expenses.findLast((expense) => expense.missingReceipt !== undefined)?.missingReceipt

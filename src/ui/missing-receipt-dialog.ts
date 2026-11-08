@@ -1,4 +1,4 @@
-import { type Field, fieldNames } from '../domain/findings.ts'
+import { type Field, fieldNames, missingReceiptNotice } from '../domain/findings.ts'
 import { MissingReceipt, type MissingReceiptFields } from '../domain/missing-receipt.ts'
 import { textOrAbsent } from '../domain/text.ts'
 import { fieldName, fieldRule } from './field.ts'
@@ -29,13 +29,14 @@ export function statedMissingReceipt(
   dialog.className = 'missing-receipt'
   dialog.setAttribute('aria-labelledby', 'missing-receipt-heading')
   dialog.innerHTML = html`<h2 id="missing-receipt-heading">${fieldNames.missingReceipt}</h2>
+    <p class="notice">${missingReceiptNotice}</p>
     <label class="field">
       ${fieldName('reasonForMissingReceipt')}
       <textarea name="reasonForMissingReceipt" autofocus>${start.reason ?? ''}</textarea>
     </label>
     ${line('paidTo', start.paidTo)}
     ${line('jobTitle', start.jobTitle)}
-    ${line('extension', start.extension)}
+    ${line('phoneExtension', start.phoneExtension)}
     <div class="actions">
       <button type="button" data-answer="cancel">Cancel</button>
       <button type="button" class="primary" data-answer="done">Done</button>
@@ -59,7 +60,7 @@ export function statedMissingReceipt(
             reason: typedIn('reasonForMissingReceipt'),
             paidTo: typedIn('paidTo'),
             jobTitle: typedIn('jobTitle'),
-            extension: typedIn('extension'),
+            phoneExtension: typedIn('phoneExtension'),
           })
         : undefined
       dialog.remove()

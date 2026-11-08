@@ -100,7 +100,7 @@ export interface MissingReceiptAuthorization {
   readonly dated: string
   /**
    * The claimed amount; for an expense paid in another currency, the foreign amount follows in
-   * parentheses, or stands alone when the expense has no claimed amount.
+   * parentheses, or stands alone when the expense has no claimed amount. Each names its currency.
    */
   readonly amount: string
   readonly description: string
@@ -407,7 +407,7 @@ function authorizationOf(
   expense: Expense,
   missing: MissingReceipt,
 ): MissingReceiptAuthorization {
-  const claimed = expense.claimedAmount?.toString()
+  const claimed = expense.claimedAmount && `CAD ${expense.claimedAmount.grouped}`
   const foreign = expense.foreignAmountText
   const inParentheses = claimed !== undefined && foreign !== '' ? ` (${foreign})` : ''
   return {
@@ -418,7 +418,7 @@ function authorizationOf(
     description: expense.description ?? '',
     printedName: complete.claimantName,
     title: missing.jobTitle,
-    extension: missing.extension ?? '',
+    extension: missing.phoneExtension ?? '',
     email: complete.email,
   }
 }

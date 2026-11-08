@@ -16,6 +16,7 @@ import {
   isRequired,
   lacksOf,
   missingFieldsOf,
+  missingReceiptNotice,
   requiredWording,
 } from './findings.ts'
 import { Kind } from './kind.ts'
@@ -355,7 +356,7 @@ describe('findings of the Additional documents step', () => {
           reason: '失',
           paidTo: '東',
           jobTitle: '教',
-          extension: '分',
+          phoneExtension: '分',
         }),
       }),
     )
@@ -363,16 +364,22 @@ describe('findings of the Additional documents step', () => {
       'Expense 2026-10-05, Taxi: Reason for missing original receipt or boarding pass(es) holds a character the report document cannot write: 失 (U+5931).',
       'Expense 2026-10-05, Taxi: Paid to holds a character the report document cannot write: 東 (U+6771).',
       'Expense 2026-10-05, Taxi: Job title holds a character the report document cannot write: 教 (U+6559).',
-      'Expense 2026-10-05, Taxi: Extension holds a character the report document cannot write: 分 (U+5206).',
+      'Expense 2026-10-05, Taxi: Phone extension holds a character the report document cannot write: 分 (U+5206).',
     ])
   })
 
-  it('requires what a missing receipt states but its extension, and gives examples of a job title', () => {
+  it('requires what a missing receipt states but its phone extension, and gives examples of a job title', () => {
     expect(isRequired('reasonForMissingReceipt')).toBe(true)
     expect(isRequired('paidTo')).toBe(true)
     expect(isRequired('jobTitle')).toBe(true)
-    expect(isRequired('extension')).toBe(false)
+    expect(isRequired('phoneExtension')).toBe(false)
     expect(fieldRules.jobTitle).toBe('As Associate Prof, Research Engineer, PhD Student.')
+  })
+
+  it('tells the Claimant what follows from a missing receipt', () => {
+    expect(missingReceiptNotice).toBe(
+      "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it. Accounts Payable may not accept it, and may return the report.",
+    )
   })
 
   it('requires a travel justification, but neither an additional document nor a name', () => {

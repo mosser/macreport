@@ -53,6 +53,8 @@ const lineHeight = 17
 const fieldHeight = 28
 const signatureHeight = 32
 const partGap = 12
+/** What is kept of the spare height, so that rounding never sends the last line to another page. */
+const roundingRoom = 0.01
 
 const frameLeft = margin
 const frameRight = letterPortrait[0] - margin
@@ -66,8 +68,9 @@ const signatureStart = frameLeft + 125
 const descriptionStart = frameLeft + 145
 const amountName = frameLeft + 240
 const amountStart = frameLeft + 285
-const emailName = frameLeft + 240
-const emailStart = frameLeft + 275
+const extensionEnd = frameLeft + 145
+const emailName = frameLeft + 155
+const emailStart = frameLeft + 190
 
 /**
  * The lines a text wraps into when its first line is narrower than the others, as a value that
@@ -118,14 +121,37 @@ function wrapRuns(runs: readonly Run[], width: number): readonly (readonly Run[]
   return lines
 }
 
-/** The form being laid out, page after page, its frame closing where a page ends. */
+/**
+ * The form being laid out, page after page, its frame closing where a page ends. Its gaps and its
+ * lines are as high as asked, the text of its paragraphs staying as it is.
+ */
 class FormFlow {
   readonly pages: Drawing[][] = [[]]
+  /** The height of its gaps and its lines, before they are made higher. */
+  stretchableHeight = 0
   private y = frameTop
   private readonly means: FormMeans
+  private readonly stretch: number
 
-  constructor(means: FormMeans) {
+  constructor(means: FormMeans, stretch: number) {
     this.means = means
+    this.stretch = stretch
+  }
+
+  /** The height left on the page under its frame, down to the bottom margin. */
+  get spareHeight(): number {
+    return this.y - frameClosing - margin
+  }
+
+  /** A height of a gap or a line, once made higher, counted. */
+  private stretched(height: number): number {
+    this.stretchableHeight += height
+    return height * this.stretch
+  }
+
+  /** A gap, as high as asked. */
+  gap(height: number): void {
+    this.down(this.stretched(height))
   }
 
   private get drawings(): Drawing[] {
@@ -162,7 +188,8 @@ class FormFlow {
     const start = pageMiddle - width / 2
     this.write(title, start, bottom, bold, titleSize)
     this.rule(start, start + width, bottom - 2)
-    this.y = bottom - partGap
+    this.y = bottom
+    this.gap(partGap)
   }
 
   /** A paragraph of runs across the frame. */
@@ -199,7 +226,7 @@ class FormFlow {
     const { regular, bold } = this.means
     const count = Math.max(...fields.map(({ lines }) => lines.length))
     for (let index = 0; index < count; index += 1) {
-      const height = index === 0 ? firstHeight : lineHeight
+      const height = this.stretched(index === 0 ? firstHeight : lineHeight)
       this.ensure(height)
       this.down(height)
       for (const field of fields) {
@@ -256,7 +283,8 @@ class FormFlow {
 
 /**
  * The pages of a missing receipt authorization, which reproduces McMaster's form, filled in: on
- * one page when it fits. A value wraps over as many lines as it needs. A form longer than a page
+ * one page when it fits, its frame running down to the bottom margin, the spare height shared among
+ * its gaps and its lines. A value wraps over as many lines as it needs. A form longer than a page
  * continues on the next one, in a frame of its own, and the certification and the signature lines
  * stay together on its last page, so that what is signed is under the signature.
  */
@@ -264,8 +292,20 @@ export function formPagesOf(
   authorization: MissingReceiptAuthorization,
   means: FormMeans,
 ): readonly FormPage[] {
+  const flow = formFlowOf(authorization, means, 1)
+  if (flow.pages.length > 1) return flow.pages
+  const stretch = 1 + (flow.spareHeight - roundingRoom) / flow.stretchableHeight
+  return formFlowOf(authorization, means, stretch).pages
+}
+
+/** The form laid out, its gaps and its lines made higher by a factor. */
+function formFlowOf(
+  authorization: MissingReceiptAuthorization,
+  means: FormMeans,
+  stretch: number,
+): FormFlow {
   const { regular, bold } = means
-  const flow = new FormFlow(means)
+  const flow = new FormFlow(means, stretch)
   flow.heading('Missing Receipt Authorization Form')
   flow.paragraph([
     { text: 'Original invoices', font: bold },
@@ -274,17 +314,17 @@ export function formPagesOf(
       font: regular,
     },
   ])
-  flow.down(partGap)
+  flow.gap(partGap)
   flow.partRule()
-  flow.down(partGap / 2)
+  flow.gap(partGap / 2)
   flow.centred('EXPLANATORY NOTE', bold)
-  flow.down(partGap / 2)
+  flow.gap(partGap / 2)
   flow.paragraph([
     { text: 'Please accept this as proof of expenditure for the missing', font: regular },
     { text: 'original', font: bold },
     { text: 'receipt.', font: regular },
   ])
-  flow.down(partGap / 2)
+  flow.gap(partGap / 2)
   flow.paragraph([
     { text: 'Reason for missing original receipt or boarding pass(es):', font: regular },
   ])
@@ -360,7 +400,7 @@ export function formPagesOf(
   ]
   const printedName = onLine(authorization.printedName, signatureStart)
   const title = onLine(authorization.title, signatureStart)
-  const extension = onLine(authorization.extension, fieldStart, emailName - valueInset)
+  const extension = onLine(authorization.extension, fieldStart, extensionEnd)
   const email = onLine(authorization.email, emailStart)
   const certificationHeight = wrapRuns(certification, textWidth).length * paragraphHeight
   const runsOn = (lines: readonly string[], height: number) =>
@@ -376,7 +416,7 @@ export function formPagesOf(
         runsOn(extension.length > email.length ? extension : email, fieldHeight),
     ),
   )
-  flow.down(partGap / 2)
+  flow.gap(partGap / 2)
   flow.paragraph(certification)
   const signatureLine = (name: string, lines: readonly string[], height: number) =>
     flow.fields([{ name, lineStart: signatureStart, lineEnd: frameRight, lines }], height)
@@ -389,7 +429,7 @@ export function formPagesOf(
         name: 'Extension:',
         nameStart: textLeft,
         lineStart: fieldStart,
-        lineEnd: emailName - valueInset,
+        lineEnd: extensionEnd,
         lines: extension,
       },
       {
@@ -403,5 +443,5 @@ export function formPagesOf(
     fieldHeight,
   )
   flow.closeFrame()
-  return flow.pages
+  return flow
 }

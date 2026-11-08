@@ -35,10 +35,11 @@ document.
 | Rate | What a meal claimed is worth, in Canadian dollars for a domestic meal, in US dollars for an international one. The rates are configured, one for each meal and each of domestic and international, in `config/per-diems.json`: today breakfast 28.40, lunch 27.40 and dinner 57.70, either way. |
 | Total | What the report claims: the sum of the claimed amounts and of the domestic meals claimed, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount, and, in US dollars, of the international meals claimed. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
-| Missing receipt | An expense whose Claimant has no receipt. It states the reason, who was paid and the job title, and the extension when the Claimant gives one; the system writes a missing receipt authorization for it. |
+| Missing receipt | An expense whose Claimant has no receipt. It states the reason, who was paid and the job title, and the phone extension when the Claimant gives one; the system writes a missing receipt authorization for it. |
 | Paid to | Who was paid for an expense with a missing receipt, in the Claimant's words. |
 | Job title | What the claimant's job is called, in the Claimant's words, given with each missing receipt and written under *Title* on its missing receipt authorization: Associate Prof, Research Engineer, PhD Student. |
-| Extension | The claimant's telephone extension, given or not with each missing receipt, and written on its missing receipt authorization. |
+| Phone extension | The claimant's telephone extension, given or not with each missing receipt, and written under *Extension* on its missing receipt authorization. |
+| Accounts Payable | The McMaster office that reimburses. It may not accept a missing receipt authorization, and may return the report. |
 | Take back | The Claimant goes back on a missing receipt or on an expense paid in cash: the expense asks for its receipt or its bank statement again. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
 | Name | What a document is called in the report and in the report document: its file name without its extension, unless the Claimant gives it another. No two documents of a report have the same name, whatever its case. |

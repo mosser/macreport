@@ -45,7 +45,7 @@ export const fieldNames = {
   reasonForMissingReceipt: 'Reason for missing original receipt or boarding pass(es)',
   paidTo: 'Paid to',
   jobTitle: 'Job title',
-  extension: 'Extension',
+  phoneExtension: 'Phone extension',
   travelJustifications: 'Travel justification(s)',
   additionalDocuments: 'Additional document(s)',
   documentName: 'Name',
@@ -88,6 +88,10 @@ export function alreadyInReportWording(document: Document): string {
   return `Already in the report, as ${document.name}: chosen.`
 }
 
+/** What the Claimant is told before stating a missing receipt: what follows from it. */
+export const missingReceiptNotice =
+  "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it. Accounts Payable may not accept it, and may return the report."
+
 /** What is said under the name of a document that a document before it already has. */
 export const nameTakenWording = 'Another document already has this name.'
 
@@ -98,7 +102,7 @@ const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'paidInAnotherCurrency',
   'paidInCash',
   'missingReceipt',
-  'extension',
+  'phoneExtension',
   'additionalDocuments',
   'documentName',
   'domestic',
@@ -297,7 +301,7 @@ function writtenTextsOf(report: Report): readonly WrittenText[] {
         ['reasonForMissingReceipt', missing?.reason],
         ['paidTo', missing?.paidTo],
         ['jobTitle', missing?.jobTitle],
-        ['extension', missing?.extension],
+        ['phoneExtension', missing?.phoneExtension],
       ]
       return fields.map(
         ([field, value]): WrittenText => ({

@@ -81,7 +81,7 @@ function afterChanging(
  * The receipt and the bank statement of the expense of a rank: one each, added from a file or
  * chosen among those already in the report, and taken out of this expense only; a missing receipt
  * and Paid in cash, stated in their place. The dialog of an expense without a missing receipt
- * starts with the job title and the extension of the last expense added that has one.
+ * starts with the job title and the phone extension of the last expense added that has one.
  */
 function documentFieldsOf(index: number): readonly DocumentField[] {
   const expenseIn = (report: Report) => report.expenses[index] ?? new Expense()
@@ -114,7 +114,7 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
     const own = expenseIn(report).missingReceipt
     if (own !== undefined) return own
     const last = report.lastMissingReceipt
-    return { jobTitle: last?.jobTitle ?? '', extension: last?.extension }
+    return { jobTitle: last?.jobTitle ?? '', phoneExtension: last?.phoneExtension }
   }
   return [
     fieldOf(

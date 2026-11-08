@@ -102,7 +102,9 @@ The report document is written as `docs/specs/report-document.md` says:
   it; filled in from the expense and the report, its signature line left blank.
   The Claimant signs the saved report document, on paper or with a PDF reader,
   once its bank statements are redacted: a change to a signed PDF may invalidate
-  its signature.
+  its signature. Before stating a missing receipt, the Claimant is told that the
+  form will be written on their behalf, that they will have to sign it, and that
+  Accounts Payable may not accept it and may return the report.
 - **A per diem is one row of the cover per day and currency with a meal
   claimed**, among the expenses by date and numbered with them, its meals
   not claimed and their reasons on the line where an expense's documents

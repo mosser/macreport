@@ -29,9 +29,9 @@ describe('MissingReceipt', () => {
     )
   })
 
-  it('takes an extension or none, a blank one being none', () => {
-    expect(new MissingReceipt(stated).extension).toBeUndefined()
-    expect(new MissingReceipt({ ...stated, extension: ' ' }).extension).toBeUndefined()
-    expect(new MissingReceipt({ ...stated, extension: '24242' }).extension).toBe('24242')
+  it('takes a phone extension or none, a blank one being none', () => {
+    expect(new MissingReceipt(stated).phoneExtension).toBeUndefined()
+    expect(new MissingReceipt({ ...stated, phoneExtension: ' ' }).phoneExtension).toBeUndefined()
+    expect(new MissingReceipt({ ...stated, phoneExtension: '24242' }).phoneExtension).toBe('24242')
   })
 })

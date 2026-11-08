@@ -113,13 +113,15 @@ A Receipt that holds no document also offers **Missing receipt**, and a Bank
 statement that holds none **Paid in cash**. Neither is offered while a file is
 being added.
 
-**Paid in cash** takes the place of the field: *Paid in cash*, and **Take
-back**, a cross.
+**Paid in cash** takes the place of the field and of its name: *Paid in cash*, and
+**Take back**, a cross.
 
 **Missing receipt** opens a dialog over the step, under the heading *Missing
-receipt*. **Cancel**, or Escape, leaves the expense as it was. **Done**, offered
+receipt*, which states: *McMaster's official Missing Receipt Authorization Form
+will be written on your behalf. You will have to sign it. Accounts Payable may not
+accept it, and may return the report.* **Cancel**, or Escape, leaves the expense as it was. **Done**, offered
 once what is required is filled in, closes it: what it holds is kept then, not as
-it is typed. *Missing receipt* then takes the place of the field, with **Change**,
+it is typed. *Missing receipt* then takes the place of the field and of its name, with **Change**,
 a pen, which opens the dialog filled in, and **Take back**, a cross.
 
 | Field | Rule |
@@ -127,10 +129,10 @@ a pen, which opens the dialog filled in, and **Take back**, a cross.
 | Reason for missing original receipt or boarding pass(es) | Required. It may run over several lines: its line breaks are kept in the report document. |
 | Paid to | Required. |
 | Job title | Required: as Associate Prof, Research Engineer, PhD Student. |
-| Extension | Optional. |
+| Phone extension | Optional. |
 
 The dialog of an expense without a missing receipt starts with the job title and the
-extension of the last expense added that has one, when the report holds one.
+phone extension of the last expense added that has one, when the report holds one.
 Changed there, they change for this expense only.
 
 **Take back** asks for no confirmation: the field holds no document again, its

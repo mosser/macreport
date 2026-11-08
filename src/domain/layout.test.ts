@@ -323,7 +323,7 @@ describe('layoutOf', () => {
       reason: 'Lost in a taxi',
       paidTo: 'Taxis Parisiens',
       jobTitle: 'PhD Student',
-      extension: '24242',
+      phoneExtension: '24242',
     })
     const taxi = new Expense({
       date: new CalendarDate(2026, 10, 5),
@@ -388,7 +388,7 @@ describe('layoutOf', () => {
         reason: 'Lost in a taxi',
         paidTo: 'Taxis Parisiens',
         dated: '2026-10-05',
-        amount: '$55.00',
+        amount: 'CAD 55.00',
         description: 'Taxi',
         printedName: 'Zoë Lefèvre-Smith',
         title: 'PhD Student',
@@ -423,11 +423,11 @@ describe('layoutOf', () => {
           ? entry.authorization.amount
           : undefined
       }
-      expect(amountOf(new Amount(5500))).toBe('$55.00 (EUR 35.00)')
+      expect(amountOf(new Amount(5500))).toBe('CAD 55.00 (EUR 35.00)')
       expect(amountOf(undefined)).toBe('EUR 35.00')
     })
 
-    it('leaves the extension blank when it is not given', () => {
+    it('leaves the phone extension blank when it is not given', () => {
       const entry = authorizationsOf(
         report.afterAdding(
           taxi.afterChanging({

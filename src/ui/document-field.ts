@@ -100,14 +100,13 @@ function choicesOf(field: DocumentField, report: Report): Markup {
   </label>`
 }
 
-/** What is stated in place of a field, Change, a pen, when it can be changed, and Take back, a cross. */
+/** What is stated in place of a field and of its name, Change, a pen, when it can be changed, and Take back, a cross. */
 function statedOf(field: DocumentField, { wording, isChangeable }: StatedInstead): Markup {
   const change = isChangeable
     ? html`<button type="button" class="icon" data-change-stated="${field.field}"
         aria-label="Change: ${wording}" title="Change">${pen}</button>`
     : ''
   return html`<div class="field" data-field="${field.field}">
-    ${fieldName(field.field, false)}
     <div class="stated">
       <span class="stated-wording">${wording}</span>
       ${change}

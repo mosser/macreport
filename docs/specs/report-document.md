@@ -170,7 +170,8 @@ stamped as one, and the section's documents start after the last of them.
 One per expense with a missing receipt, which reproduces McMaster's Missing
 Receipt Authorization Form, filled in, on one page when it fits. Its text and
 lines are black. A frame runs across the page, within its margins, and rules
-across the frame divide it in four parts:
+across the frame divide it in four parts. On one page, the frame runs down to the
+bottom margin, the height left over shared among the gaps and the lines:
 
 1. The McMaster logo, on the left; level with its bottom, centred, bold and
    underlined, *Missing Receipt Authorization Form*; then:
@@ -200,12 +201,12 @@ across the frame divide it in four parts:
 | Reason for missing original receipt or boarding pass(es) | The expense's reason | 4, across the frame |
 | Paid to | The expense's *paid to* | 1 |
 | Dated | The expense's date | 1 |
-| Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses, or stands alone when the expense has no claimed amount | 1 |
+| Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses, or stands alone when the expense has no claimed amount; each names its currency, as *CAD 55.00 (EUR 35.00)* | 1 |
 | Description of Expense(s) | The expense's description | 3 |
 | Signature of Claimant | Left blank | 1 |
 | Printed Name | The claimant | 1 |
 | Title | The expense's job title | 1 |
-| Extension | The expense's extension, blank when not given | 1 |
+| Extension | The expense's phone extension, blank when not given; a short line, the email taking the rest | 1 |
 | Email | The claimant's | 1 |
 
 Each value is written in bold, standing on a line drawn to the end of its place. A

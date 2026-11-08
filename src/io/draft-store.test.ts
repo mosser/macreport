@@ -104,7 +104,7 @@ describe('the draft store', () => {
     expect(restored.expenses[0]?.isPaidInCash).toBe(false)
   })
 
-  it('keeps a missing receipt, its extension included', async () => {
+  it('keeps a missing receipt, its phone extension included', async () => {
     const factory = new IDBFactory()
     const stated = report
       .afterAdding(
@@ -114,7 +114,7 @@ describe('the draft store', () => {
             reason: 'Lost\nin a taxi',
             paidTo: 'Taxi Rio',
             jobTitle: 'PhD Student',
-            extension: '24242',
+            phoneExtension: '24242',
           }),
         }),
       )
@@ -131,7 +131,7 @@ describe('the draft store', () => {
         reason: 'Lost\nin a taxi',
         paidTo: 'Taxi Rio',
         jobTitle: 'PhD Student',
-        extension: '24242',
+        phoneExtension: '24242',
       }),
       new MissingReceipt({ reason: 'Lost', paidTo: 'Bus', jobTitle: 'Staff' }),
     ])

@@ -1035,7 +1035,7 @@ describe('a missing receipt authorization', () => {
           reason: 'The driver had no receipt book.',
           paidTo: 'Taxis Parisiens',
           jobTitle: 'Associate Prof',
-          extension: '24242',
+          phoneExtension: '24242',
           ...fields,
         }),
       }),
@@ -1071,7 +1071,7 @@ describe('a missing receipt authorization', () => {
         'Dated:',
         '2026-10-05',
         'Amount:',
-        '$55.00 (EUR 35.00)',
+        'CAD 55.00 (EUR 35.00)',
         'Description of Expense(s):',
         'Taxi from CDG to the hotel',
         'Signature of Claimant:',
@@ -1096,7 +1096,7 @@ describe('a missing receipt authorization', () => {
     for (const [name, value] of [
       ['Paid to:', 'Taxis Parisiens'],
       ['Dated:', '2026-10-05'],
-      ['Amount:', '$55.00 (EUR 35.00)'],
+      ['Amount:', 'CAD 55.00 (EUR 35.00)'],
       ['Printed Name:', 'Zoë Łukasiewicz'],
       ['Title:', 'Associate Prof'],
       ['Extension:', '24242'],
@@ -1116,6 +1116,27 @@ describe('a missing receipt authorization', () => {
     const without = await written(await reportOf('Air Canada'))
     const widths = without.getPages().flatMap((page) => imageWidthsOf(without, page))
     expect(widths).not.toContain(600)
+  })
+
+  it('uses the height of the page: its last line ends just above the bottom margin, on one page', async () => {
+    const lowest = async (report: Report) => {
+      const pdf = await written(report)
+      expect(pdf.getPageCount()).toBe(3)
+      return placesOf(pdf, pdf.getPage(2)).find(({ text }) => text === 'Email:')?.y ?? 0
+    }
+    // The bottom margin, the space under the last line of the frame, and the space under its text.
+    const expected = 54 + 12 + 3
+    expect(await lowest(stated())).toBeCloseTo(expected, 1)
+    const longer = Array.from({ length: 20 }, () => 'A reason that takes room').join(' ')
+    expect(await lowest(stated({ reason: longer }))).toBeCloseTo(expected, 1)
+  })
+
+  it('gives the phone extension a short line, and the email most of the line they share', async () => {
+    const pdf = await written(stated())
+    const places = placesOf(pdf, pdf.getPage(2))
+    const start = (text: string) => places.find((place) => place.text === text)?.x ?? 0
+    expect(start('Email:') - start('Extension:')).toBeLessThan(160)
+    expect(start('Amount:')).toBeGreaterThan(start('Email:'))
   })
 
   it('has a section page naming who was paid and the expense, and a stamp naming the expense', async () => {

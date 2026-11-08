@@ -672,6 +672,10 @@ dialog.missing-receipt {
   width: min(32rem, 100%);
 }
 
+dialog.missing-receipt .notice {
+  margin-top: 0;
+}
+
 dialog.missing-receipt textarea {
   min-height: 5rem;
 }
