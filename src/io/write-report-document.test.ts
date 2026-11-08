@@ -1012,6 +1012,81 @@ describe('writeReportDocument', () => {
   })
 })
 
+describe('the rows of a table', () => {
+  const expenseOf = (description: string, statement: Document) =>
+    new Expense({
+      date: new CalendarDate(2026, 10, 3),
+      description,
+      claimedAmount: new Amount(101235),
+      receipts: [new Document(Kind.receipt, `${description}.png`, png)],
+      bankStatements: [statement],
+    })
+  const reportWith = (...descriptions: readonly string[]) => {
+    const statement = new Document(Kind.bankStatement, 'visa.png', png)
+    return descriptions.reduce(
+      (report, description) => report.afterAdding(expenseOf(description, statement)),
+      new Report({
+        claimantName: 'Zoë Łukasiewicz',
+        position: 'Faculty',
+        email: 'zoe@mcmaster.ca',
+        purpose: 'ICSE 2026',
+        accountName: '20-123-456',
+      }),
+    )
+  }
+
+  it('centres each cell of the cover in the height of its row, on a line and between two', async () => {
+    const pdf = await written(reportWith('First\nSecond\nThird\nFourth'))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
+    const middle = (yOf('First') + yOf('Fourth')) / 2
+    expect(yOf('2026-10-03')).toBeCloseTo(middle, 5)
+    expect(yOf('$1,012.35')).toBeCloseTo(middle, 5)
+    const threeLines = await written(reportWith('First\nSecond\nThird'))
+    const three = placesOf(threeLines, threeLines.getPage(0))
+    const threeOf = (text: string) => three.find((place) => place.text === text)?.y
+    expect(threeOf('2026-10-03')).toBeCloseTo(threeOf('Second') ?? 0, 5)
+  })
+
+  it('centres the Entered box of a row', async () => {
+    const entered = async (description: string) => {
+      const pdf = await written(reportWith(description))
+      const box = pdf.getForm().getCheckBox('Entered, expense 1').acroField.getWidgets()[0]
+      const rectangle = box?.getRectangle()
+      const places = placesOf(pdf, pdf.getPage(0))
+      return {
+        middle: (rectangle?.y ?? 0) + (rectangle?.height ?? 0) / 2,
+        date: places.find(({ text }) => text === '2026-10-03')?.y ?? 0,
+      }
+    }
+    const short = await entered('Taxi')
+    const tall = await entered('First\nSecond\nThird\nFourth')
+    expect(tall.middle - tall.date).toBeCloseTo(short.middle - short.date, 5)
+  })
+
+  it('leaves the Entered box at the top of a row that continues on the next page', async () => {
+    const description = Array.from({ length: 120 }, (_, index) => `Line${index}`).join('\n')
+    const pdf = await written(reportWith(description))
+    const box = pdf.getForm().getCheckBox('Entered, expense 1').acroField.getWidgets()[0]
+    const places = placesOf(pdf, pdf.getPage(0))
+    const first = places.find(({ text }) => text === 'Line0')?.y ?? 0
+    expect(box?.getRectangle().y).toBeGreaterThan(first - 10)
+  })
+
+  it('centres the label of a section page beside the expenses of its document', async () => {
+    const pdf = await written(reportWith('Air Canada', 'Taxi', 'Hotel'))
+    const sectionPage = pdf
+      .getPages()
+      .find((page) => textsOf(pdf, page).includes('Bank statements') && page !== pdf.getPage(0))
+    const places = placesOf(pdf, sectionPage as PDFPage)
+    const yOf = (text: string) => places.find((place) => place.text === text)?.y ?? 0
+    expect(yOf('S1')).toBeCloseTo(yOf('Taxi'), 5)
+    expect(yOf('visa')).toBeCloseTo(yOf('Taxi'), 5)
+    expect(yOf('Air Canada')).toBeGreaterThan(yOf('Taxi'))
+    expect(yOf('Hotel')).toBeLessThan(yOf('Taxi'))
+  })
+})
+
 describe('a missing receipt authorization', () => {
   const stated = (
     fields: Partial<ConstructorParameters<typeof MissingReceipt>[0]> = {},

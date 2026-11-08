@@ -325,8 +325,15 @@ class Flow {
     this.y = height
   }
 
-  text(text: string, x: number, font: PDFFont, size: number, colour: Colour): void {
-    this.current?.drawText(text, { x, y: this.y - size, size, font, color: colourOf(colour) })
+  /** A text, its top at the cursor, or lower by what is given. */
+  text(text: string, x: number, font: PDFFont, size: number, colour: Colour, lower = 0): void {
+    this.current?.drawText(text, {
+      x,
+      y: this.y - size - lower,
+      size,
+      font,
+      color: colourOf(colour),
+    })
   }
 
   rule(colour: Colour, thickness: number): void {
@@ -474,7 +481,7 @@ class Writer {
       const place = this.tableRow(flow, columns, cells, this.regular, false, false)
       if (place !== undefined) {
         this.expenseRows.set(row.number, place)
-        this.enteredBox(row, place, columns)
+        this.enteredBox(row, place, columns, this.rowHeight(columns, cells, this.regular))
       }
       const under =
         row.mealsNotClaimed === '' ? row.supportingDocuments : [{ name: row.mealsNotClaimed }]
@@ -552,16 +559,25 @@ class Writer {
   }
 
   /**
-   * The Entered box of an expense, in the last column of its row: an empty form field a reader
-   * ticks on screen, or by hand on a printed copy.
+   * The Entered box of an expense, in the last column of its row, centred in its height, or at its
+   * top when the row continues on the next page: an empty form field a reader ticks on screen, or
+   * by hand on a printed copy.
    */
-  private enteredBox(row: ExpenseRow, place: Place, columns: readonly Column[]): void {
+  private enteredBox(
+    row: ExpenseRow,
+    place: Place,
+    columns: readonly Column[],
+    height: number,
+  ): void {
     const last = columns.at(-1)
     const left = margin + columns.slice(0, -1).reduce((sum, column) => sum + column.width, 0)
     const box = this.pdf.getForm().createCheckBox(`Entered, expense ${row.number}`)
     box.addToPage(place.page, {
       x: left + ((last?.width ?? 0) - enteredSize) / 2,
-      y: place.top - 4 - enteredSize,
+      y:
+        place.top - height < margin
+          ? place.top - cellPadding - enteredSize
+          : place.top - (height + enteredSize) / 2,
       width: enteredSize,
       height: enteredSize,
       textColor: colourOf(this.palette.maroon),
@@ -896,7 +912,8 @@ class Writer {
   }
 
   /**
-   * A row whose cells wrap; a row taller than what is left of the page continues on the next.
+   * A row whose cells wrap, each centred in the height of the row; a row taller than what is left
+   * of the page continues on the next.
    * A text that is a link starts a line of its own, each of its lines a link. A rule closes the
    * row unless something under it still belongs to it. Gives where the row starts.
    */
@@ -921,9 +938,16 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        const cell = wrapped[index]?.[line]
+        const lines = wrapped[index] ?? []
+        const centring = (lineCount - lines.length) / 2
+        const skipped = Math.floor(centring)
+        const cell = lines[line - skipped]
         const width = font.widthOfTextAtSize(cell?.text ?? '', tableSize)
-        this.cellLine(flow, cell, x + cellOffsetOf(column, width, isHeader), { font, colour })
+        this.cellLine(flow, cell, x + cellOffsetOf(column, width, isHeader), {
+          font,
+          colour,
+          lower: (centring - skipped) * lineHeight,
+        })
         x += column.width
       }
       flow.down(lineHeight)
@@ -953,14 +977,18 @@ class Writer {
     flow: Flow,
     line: CellLine | undefined,
     x: number,
-    { font, colour }: { readonly font: PDFFont; readonly colour: Colour },
+    {
+      font,
+      colour,
+      lower,
+    }: { readonly font: PDFFont; readonly colour: Colour; readonly lower: number },
   ): void {
     if (line === undefined || line.text === '') return
-    flow.text(line.text, x, font, tableSize, colour)
+    flow.text(line.text, x, font, tableSize, colour, lower)
     const page = flow.page
     if (page === undefined || line.target === undefined) return
     const end = x + font.widthOfTextAtSize(line.text, tableSize)
-    const baseline = flow.cursor - tableSize
+    const baseline = flow.cursor - tableSize - lower
     if (!line.isUnmarked) drawArrow(page, end, baseline, tableSize, colour)
     const width = end - x + (line.isUnmarked ? 0 : arrowRoom * tableSize)
     this.links.push({ page, x, y: baseline - 2, width, height: tableSize + 3, target: line.target })

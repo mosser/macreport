@@ -23,6 +23,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
   report, its signature left blank. The Review step reminds you to sign each one, once
   the bank statements are redacted.
 
+### Changed
+
+- In the tables of the cover and of section pages, each cell is vertically centred in
+  its row, so that a row with a long description or several expenses reads as one.
+
 ## [0.4.0] - 2026-11-08
 
 ### Added
