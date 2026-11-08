@@ -42,6 +42,7 @@ export const fieldNames = {
   documentName: 'Name',
   domestic: 'Domestic',
   international: 'International',
+  perMeal: 'Per meal',
   reason: 'Reason',
 } as const
 
@@ -88,6 +89,7 @@ const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'documentName',
   'domestic',
   'international',
+  'perMeal',
   'reason',
 ])
 

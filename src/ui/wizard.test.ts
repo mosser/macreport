@@ -1085,7 +1085,7 @@ describe('the per diems', () => {
     box.dispatchEvent(new Event('change'))
   }
 
-  function scope(day: string, value: 'domestic' | 'international'): void {
+  function scope(day: string, value: 'domestic' | 'international' | 'perMeal'): void {
     const radio = root.querySelector<HTMLInputElement>(
       `input[type="radio"][data-day="${day}"][value="${value}"]`,
     )
@@ -1264,7 +1264,7 @@ describe('the per diems', () => {
     expect(total).toEqual(['Total', '$1,040.75USD 57.70'])
   })
 
-  it('make one meal domestic or international, once asked for per meal, and whenever the meals of the day differ', async () => {
+  it('make one meal domestic or international, once Per meal is chosen, and whenever the meals of the day differ', async () => {
     fillReport()
     travel()
     type('lastDay', '2026-10-04')
@@ -1281,16 +1281,18 @@ describe('the per diems', () => {
         ),
       ].map((radio) => radio.value)
     expect(mealScope('2026-10-03', 'dinner')).toBeNull()
-    button('[data-per-meal][data-day="2026-10-03"]')?.click()
-    expect(button('[data-per-meal][data-day="2026-10-03"]')).toBeNull()
-    expect(button('[data-per-meal][data-day="2026-10-04"]')).not.toBeNull()
+    expect(dayScopes('2026-10-03')).toEqual(['domestic'])
+    scope('2026-10-03', 'perMeal')
+    expect(dayScopes('2026-10-03')).toEqual(['perMeal'])
+    expect(mealScope('2026-10-03', 'dinner')?.checked).toBe(false)
+    expect(mealScope('2026-10-04', 'dinner')).toBeNull()
     claim('2026-10-03', 'breakfast')
     claim('2026-10-03', 'dinner')
     const dinner = mealScope('2026-10-03', 'dinner')
     if (dinner === null) throw new TypeError('No dinner scope')
     dinner.checked = true
     dinner.dispatchEvent(new Event('change'))
-    expect(dayScopes('2026-10-03')).toEqual([])
+    expect(dayScopes('2026-10-03')).toEqual(['perMeal'])
     expect(amounts()).toEqual(['$28.40, USD 57.70'])
     button('[data-action="done"]')?.click()
     expect(
@@ -1299,6 +1301,7 @@ describe('the per diems', () => {
       ),
     ).toEqual(['Per diem, domestic: breakfast\nPer diem, international: dinner'])
     button('[data-action="manage-per-diems"]')?.click()
+    expect(dayScopes('2026-10-03')).toEqual(['perMeal'])
     expect(mealScope('2026-10-03', 'dinner')?.checked).toBe(true)
     expect(mealScope('2026-10-04', 'dinner')).toBeNull()
     scope('2026-10-03', 'domestic')

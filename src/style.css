@@ -485,16 +485,26 @@ footer p {
 }
 
 /*
- * The reason of a meal not claimed, at the width of its day; Add a reason and domestic or
- * international per meal, quiet until wanted.
+ * The reasons of the meals not claimed, their names in one column and their fields aligned in the
+ * next; Add a reason, quiet until wanted.
  */
-.per-diem-day .reason {
-  margin: 0.5rem 0 0;
+.reasons {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 32rem);
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.6rem;
   font-size: 0.9rem;
 }
 
-.per-diem-day .reason input {
-  max-width: 32rem;
+.reasons .reason {
+  display: contents;
+}
+
+@media (max-width: 40rem) {
+  .reasons {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 button.quiet {
