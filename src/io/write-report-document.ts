@@ -31,11 +31,13 @@ import type {
   Section,
   StampedExpense,
 } from '../domain/layout.ts'
+import type { DocumentsAsWritten } from './documents-as-written.ts'
 import { formatOf } from './format.ts'
 import { bytesOf } from './inlined.ts'
-import { type Orientation, orientationOf } from './orientation.ts'
+import type { Orientation } from './orientation.ts'
 import { type Box, fitOf, type PageView, portraitRotationOf, viewOf } from './page-view.ts'
 import type { Colour, Palette } from './palette.ts'
+import { leaveOutWhatNoReaderShows } from './unseen-data.ts'
 
 /** What the report document is written from. */
 export interface Writing {
@@ -45,6 +47,8 @@ export interface Writing {
   readonly version: string
   /** The date the document is written, under the cover's heading. */
   readonly writtenOn: CalendarDate
+  /** What the report document holds of each document. */
+  readonly documents: Pick<DocumentsAsWritten, 'imageOf' | 'pdfOf'>
 }
 
 const letterPortrait: [number, number] = [612, 792]
@@ -159,7 +163,9 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
   // pages are then added in the order of the report document.
   const sources = await Promise.all(
     writing.layout.sections.map((section) =>
-      Promise.all(section.documents.map((entry) => sourceOf(pdf, entry.document))),
+      Promise.all(
+        section.documents.map((entry) => sourceOf(pdf, entry.document, writing.documents)),
+      ),
     ),
   )
   writer.writeCover(writing.layout, writing.writtenOn)
@@ -177,17 +183,18 @@ export async function writeReportDocument(writing: Writing): Promise<Uint8Array>
 }
 
 /** A document ready to go into the report document: its pages copied, or its image embedded. */
-async function sourceOf(pdf: PDFDocument, document: Document): Promise<Source> {
-  const format = formatOf(document.content)
-  if (format === 'png') {
-    const orientation = { isMirrored: false, turn: 0 } as const
-    return { image: await pdf.embedPng(document.content), orientation, pageCount: 1 }
+async function sourceOf(
+  pdf: PDFDocument,
+  document: Document,
+  documents: Writing['documents'],
+): Promise<Source> {
+  if (formatOf(document.content) !== 'pdf') {
+    const { content, format, orientation } = await documents.imageOf(document)
+    const image = format === 'png' ? await pdf.embedPng(content) : await pdf.embedJpg(content)
+    return { image, orientation, pageCount: 1 }
   }
-  if (format === 'jpeg') {
-    const orientation = orientationOf(document.content)
-    return { image: await pdf.embedJpg(document.content), orientation, pageCount: 1 }
-  }
-  const source = await PDFDocument.load(document.content)
+  const source = await PDFDocument.load(await documents.pdfOf(document))
+  leaveOutWhatNoReaderShows(source)
   const pages = await pdf.copyPages(source, source.getPageIndices())
   return { pages, pageCount: pages.length }
 }

@@ -203,8 +203,8 @@ findings, if any.
 
 A heavy document shows its size next to its name. A heavy PDF document that
 reducing makes at least 10 % smaller also offers **Reduce to** its size once
-reduced, as *Reduce to 0.5 MB*. Once reduced, it shows its size before and after,
-as *9.4 MB → 0.5 MB*, even when no longer heavy, and offers **Restore**, which
+reduced, as *Reduce to 545 KB*. Once reduced, it shows its size before and after,
+as *9.4 MB → 545 KB*, even when no longer heavy, and offers **Restore**, which
 brings back the file added.
 
 With no finding, the step shows the size of the report document above Save the

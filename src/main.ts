@@ -5,7 +5,9 @@ import { CalendarDate } from './domain/calendar-date.ts'
 import { layoutOf } from './domain/layout.ts'
 import type { Report } from './domain/report.ts'
 import { documentOf } from './io/add-file.ts'
+import { canvasImageEncoder } from './io/canvas-image-encoder.ts'
 import { documentLinks } from './io/document-links.ts'
+import { DocumentsAsWritten } from './io/documents-as-written.ts'
 import { openDraftStore } from './io/draft-store.ts'
 import { paletteFrom } from './io/palette.ts'
 import { save } from './io/save.ts'
@@ -17,17 +19,25 @@ function today(): CalendarDate {
   return new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate())
 }
 
-async function saveReport(report: Report): Promise<string> {
-  const layout = layoutOf(report)
-  const style = getComputedStyle(document.documentElement)
-  const bytes = await writeReportDocument({
-    layout,
+const style = getComputedStyle(document.documentElement)
+const documentsAsWritten = new DocumentsAsWritten(
+  canvasImageEncoder(document, style.getPropertyValue('--mac-white').trim()),
+)
+
+function written(report: Report): Promise<Uint8Array> {
+  return writeReportDocument({
+    layout: layoutOf(report),
     palette: paletteFrom((token) => style.getPropertyValue(token)),
     version: __VERSION__,
     writtenOn: today(),
+    documents: documentsAsWritten,
   })
-  save(bytes, layout.fileName, document)
-  return layout.fileName
+}
+
+async function saveReport(report: Report): Promise<string> {
+  const { fileName } = layoutOf(report)
+  save(await written(report), fileName, document)
+  return fileName
 }
 
 const icon = document.createElement('link')
@@ -49,5 +59,6 @@ mountWizard(root, {
   logo,
   readFile: documentOf,
   saveReport,
-  links: documentLinks(),
+  weighReport: (report) => documentsAsWritten.weightsOf(report, () => written(report)),
+  links: documentLinks((added) => documentsAsWritten.contentShown(added)),
 })

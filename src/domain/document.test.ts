@@ -53,4 +53,17 @@ describe('Kind', () => {
   it('orders the sections: additional documents first, bank statements last', () => {
     expect(Kind.all.map((kind) => kind.letter)).toEqual(['A', 'R', 'M', 'S'])
   })
+
+  it('is not reduced until the Claimant asks, and stays the file added once reduced', () => {
+    const content = new Uint8Array([1, 2, 3])
+    const added = new Document(Kind.receipt, 'scan.pdf', content, 'Hotel')
+    expect(added.isReduced).toBe(false)
+    const reduced = added.afterReducing()
+    expect(reduced.isReduced).toBe(true)
+    expect(reduced.content).toBe(content)
+    expect(reduced.name).toBe('Hotel')
+    expect(reduced.afterNaming('Inn').isReduced).toBe(true)
+    expect(reduced.afterRestoring().isReduced).toBe(false)
+    expect(reduced.afterRestoring().content).toBe(content)
+  })
 })

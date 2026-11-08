@@ -60,6 +60,11 @@ grep -ln 'indexedDB' $business | grep -v '^src/io/draft-store.ts$' && fail "Inde
 grep -rniE 'upload|download' src docs/specs | grep -v '^src/io/save.ts:' && fail "\"upload\" or \"download\" in src/ or docs/specs/"
 grep -niE 'upload|download' src/io/save.ts 2>/dev/null | grep -viE 'download =|`download`|\bdownload attribute' && fail "src/io/save.ts may only set the download attribute"
 
+# ADR 0011: the canvas in one file; the sizes that keep the report document small in one place.
+grep -lE 'createImageBitmap|getContext\(|\.toBlob\(' $business | grep -v '^src/io/canvas-image-encoder.ts$' && fail "canvas used outside src/io/canvas-image-encoder.ts"
+[ -f config/document-sizes.json ] || fail "config/document-sizes.json must exist"
+grep -q 'checkDocumentSizes()' vite.config.ts || fail "vite.config.ts must check config/document-sizes.json"
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures ADR check(s) failed" >&2
   exit 1

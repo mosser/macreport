@@ -6,7 +6,7 @@ import type { DocumentLinks } from './document-link.ts'
 import { expensesStep } from './expenses-step.ts'
 import { html } from './html.ts'
 import { reportStep } from './report-step.ts'
-import { reviewStep, type SaveReport } from './review-step.ts'
+import { reviewStep, type SaveReport, type WeighReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
 
 /** What the wizard needs from the page it runs in. */
@@ -17,7 +17,8 @@ export interface WizardOptions {
   readonly logo: string
   readonly readFile: ReadFile
   readonly saveReport: SaveReport
-  /** Links that open a document in a new tab, from the bytes the Claimant added. */
+  readonly weighReport: WeighReport
+  /** Links that open a document in a new tab, from the bytes the Claimant added or reduced. */
   readonly links: DocumentLinks
   /** The draft the browser kept, or an empty report. */
   readonly draft: Report
@@ -38,7 +39,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     reportStep,
     expensesStep(options.readFile, options.links),
     additionalDocumentsStep(options.readFile),
-    reviewStep(options.saveReport, () => isDraftKept, options.links),
+    reviewStep(options.saveReport, options.weighReport, () => isDraftKept, options.links),
   ]
   let report = options.draft
   let isDraftKept = options.isDraftKept

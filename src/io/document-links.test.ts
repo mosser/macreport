@@ -38,4 +38,15 @@ describe('documentLinks', () => {
   it('tells a PDF, a JPEG image and a PNG image apart by their first bytes', () => {
     expect([png, jpeg, pdf].map(formatOf)).toEqual(['png', 'jpeg', 'pdf'])
   })
+
+  it('links to the bytes it is told to show of a document', async () => {
+    const reduced = new Uint8Array([0x25, 0x50, 0x44, 0x46, 9])
+    const links = documentLinks(() => reduced)
+    const url = links.urlOf(new Document(Kind.receipt, 'scan', pdf))
+    const blob = resolveObjectURL(url)
+    expect([...new Uint8Array((await blob?.arrayBuffer()) ?? new ArrayBuffer(0))]).toEqual([
+      ...reduced,
+    ])
+    links.forgetAll()
+  })
 })

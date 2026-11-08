@@ -21,6 +21,7 @@ receipt in small print, read at about three times its size on the page:
 | 2200 pixels | 85 | 828 KB | Clear |
 | 2200 pixels | 75 | 579 KB | Clear |
 | 1600 pixels | 75 | 243 KB | Digits soft enough to mistake an 8 |
+| 2200 pixels | 0.8, by Chrome's canvas | 251 KB | Clear |
 
 A small image has little to gain and something to lose: a phone screenshot of a
 ride receipt, 186 KB and 2400 pixels tall, comes to 134 KB by the same encoding,
@@ -39,8 +40,8 @@ text as outlines rather than as text: an 8-page conference programme weighs
 | Coordinates rounded to 0.01 point | 5.6 MB |
 | Each different shape kept once, and drawn from there, at 0.01 point | 0.5 MB |
 
-Rendered at 300 dpi by Ghostscript and Poppler, every page of that last file
-differs from the original by scattered pixels on the edges of glyphs only.
+Rendered by Ghostscript and Poppler, every page of that last file differs from
+the original by scattered pixels on the edges of glyphs only.
 
 Everything runs in the browser, from one file, with no network (ADR 0001). A
 page of a PDF document stays a page, with its text, its links and its form
@@ -131,7 +132,7 @@ Options considered for what makes a document heavy:
   are reduced like any other's.
 - **Reducing is worked out in advance, and offered with its result.** The Review
   step works it out for each heavy PDF document, and offers it, as *Reduce to
-  0.5 MB*, only when the result is at least 10 % smaller. The Claimant never
+  545 KB*, only when the result is at least 10 % smaller. The Claimant never
   presses a button that does nothing.
 - **Reducing is reversible.** The draft keeps the file added and whether the
   Claimant reduced it, not the reduced file, which is worked out again when

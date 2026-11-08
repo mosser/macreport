@@ -337,6 +337,16 @@ export class Report {
     return this.afterReplacingDocument(document, [document.afterNaming(name)])
   }
 
+  /** The same report, with a document reduced wherever it is. */
+  afterReducing(document: Document): Report {
+    return this.afterReplacingDocument(document, [document.afterReducing()])
+  }
+
+  /** The same report, with a document back to the file added wherever it is. */
+  afterRestoring(document: Document): Report {
+    return this.afterReplacingDocument(document, [document.afterRestoring()])
+  }
+
   /** The same report, without a document: no expense refers to it, nor is it of the report. */
   afterRemovingDocument(document: Document): Report {
     return this.afterReplacingDocument(document, [])

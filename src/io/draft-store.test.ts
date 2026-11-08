@@ -400,4 +400,26 @@ describe('the draft store, when another page holds an older draft open', () => {
     expect(store.isKept).toBe(false)
     older.close()
   })
+
+  it('keeps that a document is reduced, and the file added rather than what reducing gives', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    await store.keep(report.afterReducing(statement))
+    const restored = await (await openDraftStore(factory)).restore()
+    const kept = restored.documentsOf(Kind.bankStatement)[0]
+    expect(kept?.isReduced).toBe(true)
+    expect([...(kept?.content ?? [])]).toEqual([...statement.content])
+    expect(restored.documentsOf(Kind.receipt)[0]?.isReduced).toBe(false)
+  })
+
+  it('keeps that a document is restored', async () => {
+    const factory = new IDBFactory()
+    const store = await openDraftStore(factory)
+    const reduced = report.afterReducing(statement)
+    await store.keep(reduced)
+    const again = reduced.documentsOf(Kind.bankStatement)[0] ?? statement
+    await store.keep(reduced.afterRestoring(again))
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.documentsOf(Kind.bankStatement)[0]?.isReduced).toBe(false)
+  })
 })

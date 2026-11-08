@@ -1,3 +1,5 @@
+import type { Document } from '../domain/document.ts'
+import { documentSizes, type ReportWeights, sizeText } from '../domain/document-sizes.ts'
 import { fieldNames, findingsOf } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
 import { type ExpenseRow, type Layout, layoutOf, type Section } from '../domain/layout.ts'
@@ -10,6 +12,18 @@ import type { Context, Step } from './step.ts'
 
 /** Writes the report document of a report without findings and hands it to the browser; gives its file name. */
 export type SaveReport = (report: Report) => Promise<string>
+
+/** Works out the sizes of a report's documents and of its report document. */
+export type WeighReport = (report: Report) => Promise<ReportWeights>
+
+/** Sizes being worked out for a report; its weights once they are known. */
+interface Weighing {
+  readonly report: Report
+  weights?: ReportWeights
+}
+
+/** What a row of a document says of its size, and offers to change it. */
+type SizeOf = (document: Document) => Markup
 
 /** What an empty table of the Review step says, in grey, in a row across its columns. */
 function emptyRow(columns: number, wording: string): Markup {
@@ -86,7 +100,41 @@ function perDiemsOf(rows: readonly ExpenseRow[]): Markup {
     </table>`
 }
 
-function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
+/**
+ * What a row says of a document's size: its size before and after once reduced, with Restore; its
+ * size when it is heavy, with Reduce when that is worth offering; nothing otherwise.
+ */
+function sizesOf(report: Report, weights: ReportWeights | undefined): SizeOf {
+  return (document) => {
+    const weight = weights?.weights.get(document)
+    if (weight === undefined) return html``
+    const index = report.documents.indexOf(document)
+    if (document.isReduced) {
+      return html`<div class="document-size">
+        ${sizeText(weight.addedSize)} → ${sizeText(weight.size)}
+        <button data-action="restore" data-document="${index}">Restore</button>
+      </div>`
+    }
+    if (!documentSizes.isHeavy(weight.size)) return html``
+    const reduce =
+      weight.reducedSize === undefined
+        ? html``
+        : html`<button data-action="reduce" data-document="${index}">Reduce to ${sizeText(weight.reducedSize)}</button>`
+    return html`<div class="document-size">${sizeText(weight.size)} ${reduce}</div>`
+  }
+}
+
+/** The size of the report document, or that the sizes are not known yet. */
+function reportSizeOf(weights: ReportWeights | undefined): Markup {
+  if (weights === undefined) {
+    return html`<p class="report-size is-pending">Working out the sizes…</p>`
+  }
+  return weights.reportDocumentSize === undefined
+    ? html``
+    : html`<p class="report-size">Report document: ${sizeText(weights.reportDocumentSize)}</p>`
+}
+
+function sectionsOf(layout: Layout, linkOf: LinkOf, sizeOf: SizeOf): Markup[] {
   return layout.sections.map((section) => {
     const expenses = (cell: Markup) => (section.listsExpenses ? cell : '')
     const table = (documents: Section['documents']) => {
@@ -95,7 +143,7 @@ function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
           ({ description }) => html`<div>${description}</div>`,
         )
         const numbers = html`<td>${descriptions}</td>`
-        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}</td>${expenses(numbers)}</tr>`
+        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}${sizeOf(entry.document)}</td>${expenses(numbers)}</tr>`
       })
       return html`<table class="documents">
         <colgroup><col class="label" /><col />${expenses(html`<col />`)}</colgroup>
@@ -136,17 +184,41 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
   return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${redaction}${draft}`
 }
 
-/** Step 4: the report as it will be written, each document's name opening it in a new tab, then its findings, and Save the report. */
+/**
+ * Step 4: the report as it will be written, each document's name opening it in a new tab, a heavy
+ * document's size with what can be done of it, then its findings, the size of the report document,
+ * and Save the report.
+ */
 export function reviewStep(
   saveReport: SaveReport,
+  weighReport: WeighReport,
   isDraftKept: () => boolean,
   links: DocumentLinks,
 ): Step {
   let outcome: Outcome | undefined
-  return {
+  let weighing: Weighing | undefined
+  /** Where the step shows, for when the sizes are known: the wizard renders it anew on a refresh. */
+  let shown: { readonly panel: HTMLElement; readonly context: Context } | undefined
+
+  /** Shows what is known of the sizes once worked out, if the step still shows and the report is the same. */
+  function weigh(report: Report): void {
+    const started: Weighing = { report }
+    weighing = started
+    void weighReport(report)
+      .catch(() => ({ reportDocumentSize: undefined, weights: new Map() }))
+      .then((weights) => {
+        started.weights = weights
+        if (weighing === started && shown?.panel.isConnected) {
+          step.render(shown.panel, shown.context)
+        }
+      })
+  }
+
+  const step: Step = {
     title: 'Review',
 
     render(panel: HTMLElement, context: Context): void {
+      shown = { panel, context }
       const report = context.report
       const findings = findingsOf(report)
       if (findings.length > 0) {
@@ -154,13 +226,33 @@ export function reviewStep(
         panel.innerHTML = html`<h2>Review</h2><ul class="findings">${items}</ul>`.text
         return
       }
+      if (weighing?.report !== report) {
+        weigh(report)
+      }
+      const weights = weighing?.weights
       const layout = layoutOf(report)
       const linkOf = linksAnew(links)
       panel.innerHTML = html`<h2>Review</h2>
         ${coverOf(layout, linkOf, report.isBusinessTravel)}
-        ${sectionsOf(layout, linkOf)}
+        ${sectionsOf(layout, linkOf, sizesOf(report, weights))}
+        ${reportSizeOf(weights)}
         <button class="primary save" data-action="save">Save the report</button>
         ${statusOf(outcome, report, isDraftKept())}`.text
+      const changeOn = (action: string, changed: (document: Document) => Report) => {
+        for (const button of panel.querySelectorAll<HTMLButtonElement>(
+          `[data-action="${action}"]`,
+        )) {
+          button.addEventListener('click', () => {
+            const document = report.documents[Number(button.dataset.document)]
+            if (document !== undefined) {
+              context.change(changed(document))
+              context.refresh()
+            }
+          })
+        }
+      }
+      changeOn('reduce', (document) => report.afterReducing(document))
+      changeOn('restore', (document) => report.afterRestoring(document))
       panel.querySelector('[data-action="save"]')?.addEventListener('click', () => {
         saveReport(report)
           .then((fileName) => {
@@ -177,4 +269,5 @@ export function reviewStep(
       return false
     },
   }
+  return step
 }

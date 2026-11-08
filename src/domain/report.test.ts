@@ -318,4 +318,20 @@ describe('Report', () => {
       expect(claimed.afterNewReport().perDiems).toEqual([])
     })
   })
+
+  it('reduces a document wherever it is, and restores it', () => {
+    const shared = new Document(Kind.receipt, 'scan.pdf', new Uint8Array([1]))
+    const programme = new Document(Kind.additionalDocument, 'programme.pdf', new Uint8Array([2]))
+    const report = new Report({
+      expenses: [new Expense({ receipts: [shared] }), new Expense({ receipts: [shared] })],
+      additionalDocuments: [programme],
+    })
+    const reduced = report.afterReducing(shared)
+    expect(reduced.expenses.map((expense) => expense.receipts[0]?.isReduced)).toEqual([true, true])
+    expect(reduced.additionalDocuments[0]?.isReduced).toBe(false)
+    expect(reduced.documents).toHaveLength(2)
+    const again = reduced.afterRestoring(reduced.documents[0] as Document)
+    expect(again.documents[0]?.isReduced).toBe(false)
+    expect(again.documents[0]?.content).toBe(shared.content)
+  })
 })

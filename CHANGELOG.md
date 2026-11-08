@@ -6,6 +6,36 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- The Review step shows the size of the report document above **Save the
+  report**, and the size of each heavy document: above 2 MB, a size set in
+  `config/document-sizes.json`.
+- **Reduce to** a size, on the Review step, makes a heavy PDF document smaller
+  when that saves at least 10 %: its large JPEG images are written with fewer
+  pixels and each shape it draws repeatedly is kept once, its pages, text, links
+  and form fields staying as they are. A conference programme of 8 pages printed
+  from a web page goes from 9.4 MB to 545 KB and looks the same. The document's
+  name then opens its reduced file, so that it can be read before saving, and
+  **Restore** brings back the file added. A bank statement's shapes are not
+  shared, so that a PDF reader's redaction tool still reaches them.
+
+### Changed
+
+- An image above 1 MB, also set in `config/document-sizes.json`, is written with
+  a long side of at most 2200 pixels: a 5 MB phone photo weighs well under 1 MB
+  in the report document, and its small print stays readable. A PNG stays a PNG
+  unless that is more than twice the size of the same JPEG, so that a
+  screenshot's text stays crisp. The draft keeps the file added, and a smaller
+  image keeps its pixels.
+- A page copied from a PDF document leaves out what no reader shows: its
+  thumbnail, the private data of the editor that wrote it, and its metadata.
+
+### Fixed
+
+- A photo's Exif data, the location it was taken at among it, no longer reaches
+  the report document.
+
 ## [0.3.1] - 2026-11-07
 
 ### Fixed

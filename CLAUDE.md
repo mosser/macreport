@@ -18,7 +18,8 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** v0.2.0, plus the unreleased list of expenses and per
+**Current state:** v0.3.1, plus images written smaller and a heavy PDF document
+reduced on request (ADR 0011), on top of the list of expenses and per
 diems: one report, its expenses listed by date, each added, changed or
 removed, with one receipt and one bank statement, chosen again among those
 already in the report, and a foreign amount and currency; the locations and
