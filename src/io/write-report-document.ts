@@ -59,6 +59,8 @@ const letter = { width: letterPortrait[0], height: letterPortrait[1] }
 const margin = 54
 const stampBaseline = 24
 const logoWidth = 170
+/** The space under the logo of a generated page. */
+const logoGap = 18
 const bodySize = 10
 const tableSize = 9
 const stampSize = 8
@@ -306,6 +308,15 @@ class Flow {
     return letterPortrait[1] - margin
   }
 
+  /** The height a page offers, under its logo. */
+  get pageRoom(): number {
+    return this.top - this.logoHeight - logoGap - margin
+  }
+
+  private get logoHeight(): number {
+    return (logoWidth * this.writer.logo.height) / this.writer.logo.width
+  }
+
   /** The page being written; absent when only counting. */
   get page(): PDFPage | undefined {
     return this.current
@@ -379,14 +390,13 @@ class Flow {
     this.pageCount += 1
     this.current = this.isCounting ? undefined : this.writer.addGeneratedPage()
     this.y = this.top
-    const logoHeight = (logoWidth * this.writer.logo.height) / this.writer.logo.width
     this.current?.drawImage(this.writer.logo, {
       x: margin,
-      y: this.y - logoHeight,
+      y: this.y - this.logoHeight,
       width: logoWidth,
-      height: logoHeight,
+      height: this.logoHeight,
     })
-    this.y -= logoHeight + 18
+    this.y -= this.logoHeight + logoGap
   }
 }
 
@@ -439,21 +449,32 @@ class Writer {
     const policyLines = layout.policyDocuments.flatMap(({ name, url }) =>
       wrap(name, this.regular, bodySize, policyWidth).map((line) => ({ line, url })),
     )
-    // Both sections start on one page, level with each other; what follows goes under the longer.
-    flow.ensure(
-      headingHeight + lineHeight * Math.max(layout.attachedInformation.length, policyLines.length),
-    )
-    const top = flow.cursor
-    this.policySection(flow, policyLines)
-    const policyBottom = flow.cursor
-    flow.backUpTo(top)
-    this.sectionHeading(flow, 'Attached information')
-    for (const information of layout.attachedInformation) {
-      flow.box(margin, bodySize, this.palette.black, information.isAttached)
-      flow.text(information.kind.plural, margin + 18, this.regular, bodySize, this.palette.black)
-      flow.down(lineHeight)
+    const attachedInformation = () => {
+      this.sectionHeading(flow, 'Attached information')
+      for (const information of layout.attachedInformation) {
+        flow.ensure(lineHeight)
+        flow.box(margin, bodySize, this.palette.black, information.isAttached)
+        flow.text(information.kind.plural, margin + 18, this.regular, bodySize, this.palette.black)
+        flow.down(lineHeight)
+      }
     }
-    flow.backUpTo(Math.min(flow.cursor, policyBottom))
+    const height =
+      headingHeight + lineHeight * Math.max(layout.attachedInformation.length, policyLines.length)
+    if (height <= flow.pageRoom) {
+      // Both sections start on one page, level with each other; what follows goes under the longer.
+      flow.ensure(height)
+      const top = flow.cursor
+      this.policySection(flow, policyLines)
+      const policyBottom = flow.cursor
+      flow.backUpTo(top)
+      attachedInformation()
+      flow.backUpTo(Math.min(flow.cursor, policyBottom))
+    } else {
+      // A policy longer than a page cannot stand beside anything: it goes under, and continues.
+      attachedInformation()
+      flow.down(12)
+      this.policySection(flow, policyLines)
+    }
     flow.down(12)
     this.sectionHeading(flow, 'Expenses')
     const columns: Column[] = [
@@ -500,10 +521,13 @@ class Writer {
     const { black, maroon } = this.palette
     const heading = 'Policy'
     const headingWidth = this.bold.widthOfTextAtSize(heading, sectionHeadingSize)
+    const headingHeight = sectionHeadingSize * leading + sectionHeadingGap
+    flow.ensure(headingHeight + bodySize * leading)
     flow.text(heading, right - headingWidth, this.bold, sectionHeadingSize, maroon)
-    flow.down(sectionHeadingSize * leading + sectionHeadingGap)
+    flow.down(headingHeight)
     const arrow = arrowRoom * bodySize
     for (const { line, url } of lines) {
+      flow.ensure(bodySize * leading)
       const width = this.regular.widthOfTextAtSize(line, bodySize)
       const x = right - arrow - width
       flow.text(line, x, this.regular, bodySize, black)
@@ -527,7 +551,8 @@ class Writer {
   /**
    * The last row of the cover: Total under the descriptions, then, in the column of the claimed
    * amounts, each line of the total, the codes on the left and the amounts on the right. An amount
-   * too wide for the column runs on into the empty Entered cell.
+   * too wide for the column runs on into the empty Entered cell, and a total longer than a page
+   * continues on the next.
    */
   private totalRow(flow: Flow, columns: readonly Column[], total: readonly TotalLine[]): void {
     const widths = columns.map((column) => column.width)
@@ -540,15 +565,16 @@ class Writer {
       Math.max(...total.map(({ amount }) => widthOf(amount)))
     const right = left + Math.max((widths[4] ?? 0) - 2 * cellPadding, needed)
     const lineHeight = tableSize * leading
-    flow.ensure(total.length * lineHeight + 2 * cellPadding)
+    flow.ensure(Math.min(total.length * lineHeight + 2 * cellPadding, flow.pageRoom))
     flow.down(cellPadding)
     const { black } = this.palette
-    flow.text('Total', description, this.bold, tableSize, black)
-    for (const { currencyCode, amount } of total) {
+    total.forEach(({ currencyCode, amount }, index) => {
+      flow.ensure(lineHeight + cellPadding)
+      if (index === 0) flow.text('Total', description, this.bold, tableSize, black)
       flow.text(currencyCode, left, this.bold, tableSize, black)
       flow.text(amount, right - widthOf(amount), this.bold, tableSize, black)
       flow.down(lineHeight)
-    }
+    })
     flow.down(cellPadding)
     flow.rule(this.palette.rule, 0.5)
   }

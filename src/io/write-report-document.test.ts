@@ -680,6 +680,37 @@ describe('writeReportDocument', () => {
       }
     })
 
+    it('continues on the next page when it is longer than a page, under the attached information', async () => {
+      const documents = Array.from({ length: 70 }, (_, index) => ({
+        name: `Document ${index + 1}`,
+        url: first.url,
+      }))
+      const report = await reportOf('Air Canada, YYZ–CDG return')
+      const bytes = await writeReportDocument({
+        layout: { ...layoutOf(report), policyDocuments: documents },
+        palette,
+        version: '0.1.0',
+        writtenOn: new CalendarDate(2026, 11, 7),
+        documents: new DocumentsAsWritten(neverEncoding),
+      })
+      const pdf = await PDFDocument.load(bytes, { updateMetadata: false })
+      const pages = pdf.getPages().map((page) => placesOf(pdf, page))
+      const written = pages.flat().filter((place) => place.text.startsWith('Document '))
+      expect(new Set(written.map((place) => place.text)).size).toBe(70)
+      for (const place of written) {
+        expect(place.y).toBeGreaterThanOrEqual(54)
+      }
+      const onFirst = pages[0]?.filter((place) => place.text.startsWith('Document ')) ?? []
+      const on = (text: string) => pages[0]?.find((place) => place.text === text)
+      expect(on('Policy')?.y).toBeLessThan(on('Receipts')?.y ?? 0)
+      expect(onFirst.length).toBeLessThan(70)
+      const links = (pdf.getPage(1).node.Annots()?.asArray() ?? [])
+        .map((reference) => pdf.context.lookup(reference, PDFDict))
+        .filter((annotation) => annotation.has(PDFName.of('A')))
+      expect(links.length).toBeGreaterThan(0)
+      expect(pages.flat().some((place) => place.text === 'Expenses')).toBe(true)
+    })
+
     it('pushes the expenses under it when it is longer than the attached information', async () => {
       const documents = Array.from({ length: 8 }, (_, index) => ({
         name: `Document ${index + 1}`,
@@ -690,6 +721,32 @@ describe('writeReportDocument', () => {
       expect(at('Expenses')?.y).toBeLessThan(at('Document 8')?.y ?? 0)
       expect(at('Document 8')?.y).toBeLessThan(at('Receipts')?.y ?? 0)
     })
+  })
+
+  it('continues a total longer than a page on the next, each of its lines on a page', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const expense = report.expenses[0] ?? new Expense()
+    const currencies = Currency.all.slice(0, 70)
+    const paid = currencies.map((currency) =>
+      expense.afterChanging({
+        description: 'Paid abroad',
+        claimedAmount: undefined,
+        isPaidInAnotherCurrency: true,
+        foreignAmount: new Amount(1000),
+        currency,
+      }),
+    )
+    const pdf = await written(
+      paid.reduce((each, other) => each.afterAdding(other), report.afterRemovingExpense(expense)),
+    )
+    const places = pdf
+      .getPages()
+      .flatMap((page) => placesOf(pdf, page))
+      .filter((place) => /^[A-Z]{3}$/.test(place.text))
+    expect(places.map((place) => place.text)).toEqual(currencies.map(({ code }) => code))
+    for (const place of places) {
+      expect(place.y).toBeGreaterThanOrEqual(54)
+    }
   })
 
   it('keeps an amount of the total too wide for its column clear of its currency', async () => {

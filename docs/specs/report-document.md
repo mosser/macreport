@@ -81,6 +81,8 @@ the template's fields and its table, so that nothing else needs filling in.
   right margin: its heading, then the name of each document `config/policy.json`
   lists, one per line, each a link followed by its arrow. A longer name wraps, clear
   of the attached information, and the expenses start under the longer of the two.
+  A policy that does not fit a page stands under the attached information instead,
+  and continues on the next page.
 - **Expenses.** A table of every expense and every per diem with a meal
   claimed, sorted by date, the expenses of a day in the order they were
   added and its per diem after them, and numbered in that order, each on two
@@ -124,7 +126,8 @@ the template's fields and its table, so that nothing else needs filling in.
   the foreign amounts of the expenses without a claimed amount, US dollars
   including the international meals claimed. Each line is the currency's code
   then the amount, CAD included, the codes aligned on the left of the column
-  and the amounts on its right.
+  and the amounts on its right. A total that does not fit a page continues on the
+  next.
 
   A per diem row's description is *Per diem*, *domestic* or *international*,
   then its meals claimed, in the order breakfast, lunch, dinner. Its amount
