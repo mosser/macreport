@@ -280,24 +280,25 @@ describe('writeReportDocument', () => {
     expect(cover?.[0]?.bottom).toBe(cover?.[1]?.bottom)
     expect(cover?.[0]?.left).toBeCloseTo(54 + 22 + 62 + 4)
     for (const links of [boarding, pass, statement]) {
-      expect(links?.[1]?.to).toBe(1)
-      expect(links?.[1]?.how).toBe('/XYZ')
+      expect(links?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
     }
-    const row = boarding?.[1]?.top ?? 0
+    const row = boarding?.[0]?.top ?? 0
     expect(row).toBeGreaterThan(54)
     expect(row).toBeLessThan(792 - 54)
-    expect(statement?.[1]?.top).toBe(row)
-    expect(boarding?.[1]?.width).toBeGreaterThan(120)
+    expect(statement?.[0]?.top).toBe(row)
+    expect(boarding?.[0]?.width).toBeGreaterThan(120)
   })
 
-  it('links the label of a stamp to the row of its document on its section page', async () => {
-    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
-    const [boarding, pass, statement] = [2, 3, 5].map((index) => linksOf(pdf, pdf.getPage(index)))
-    expect(boarding?.[0]?.to).toBe(2)
-    expect(boarding?.[0]?.how).toBe('/XYZ')
-    expect(pass?.[0]?.top).toBe(boarding?.[0]?.top)
-    expect(statement?.[0]?.to).toBe(5)
-    expect(statement?.[0]?.how).toBe('/XYZ')
+  it('links the label of a stamp to its section page only for a document with no expense to go back to', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const pdf = await written(
+      report.afterChanging({
+        additionalDocuments: [new Document(Kind.additionalDocument, 'invitation.png', png)],
+      }),
+    )
+    const [invitation, boarding] = [2, 4].map((index) => linksOf(pdf, pdf.getPage(index)))
+    expect(invitation?.map(({ to, how }) => [to, how])).toEqual([[2, '/XYZ']])
+    expect(boarding?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
   })
 
   it('links a label and its pages on a section page to the first page of the document', async () => {
@@ -325,7 +326,7 @@ describe('writeReportDocument', () => {
     const statement = pdf.getPages().at(-1)
     if (invitation === undefined || statement === undefined) throw new TypeError('No page')
     expect(strokes(invitation)).toBe(3)
-    expect(strokes(statement)).toBe(6)
+    expect(strokes(statement)).toBe(3)
   })
 
   it('makes a link wide enough to click its arrow too', async () => {
@@ -355,10 +356,7 @@ describe('writeReportDocument', () => {
       Array.from({ length: 8 }, (_, index) => `Expense ${index + 1}: Taxi ${index + 1}`),
     )
     const links = linksOf(pdf, boarding)
-    expect(links.map(({ to, how }) => [to, how])).toEqual([
-      [2, '/XYZ'],
-      ...expenseLines.map(() => [1, '/XYZ']),
-    ])
+    expect(links.map(({ to, how }) => [to, how])).toEqual(expenseLines.map(() => [1, '/XYZ']))
     const crop = boarding.getCropBox()
     for (const link of links) {
       expect(link.left).toBeGreaterThanOrEqual(crop.x)
@@ -813,7 +811,7 @@ describe('writeReportDocument', () => {
         /^R1 · Expense 1: Air Canada, YYZ–CDG return · \d \/ 7$/,
       )
     }
-    const link = linksOf(pdf, turned as PDFPage)[1]
+    const link = linksOf(pdf, turned as PDFPage)[0]
     const crop = (turned as PDFPage).getCropBox()
     expect(link?.left).toBeGreaterThan(crop.x + crop.width - 60)
     expect(link?.width).toBeLessThan(15)

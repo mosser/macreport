@@ -205,8 +205,8 @@ it reads upright on screen, whatever the page's size and rotation:
 - on a page of a receipt, a bank statement or a missing receipt
   authorization: its label, each expense the document supports, by its
   number and the start of its description, then the page number out of the
-  total, as in `R3 ↗ · Expense 2: Taxi, CDG–hotel ↗ · 12 / 30` or
-  `S1 ↗ · Expense 1: Air Canada, YYZ–CDG return ↗ · Expense 3: Dinner with the
+  total, as in `R3 · Expense 2: Taxi, CDG–hotel ↗ · 12 / 30` or
+  `S1 · Expense 1: Air Canada, YYZ–CDG return ↗ · Expense 3: Dinner with the
   programme comm… ↗ · 14 / 30`. A description is written on one line, its line
   breaks as spaces, and one longer than 30 characters is cut to its first 30,
   followed by an ellipsis;
@@ -236,7 +236,7 @@ label of their row already showing where they go.
 | Section page | A label, or its pages | The first page of its document |
 | Section page | An expense's description | The expense's row on the cover |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
-| Stamp | The label | The document's row on its section page |
+| Stamp | The label of an additional document, which has no expense to go back to | The document's row on its section page |
 
 Going to a row opens the page that holds it, with the row at the top of the
 window. *cash*, a document's name and page numbers in the stamp are not links. A link changes

@@ -123,8 +123,8 @@ interface StampedPage {
 }
 
 /**
- * A piece of a stamp: an expense in it is a link to the expense's row on the cover, a label a link
- * to the document's row on its section page.
+ * A piece of a stamp: an expense in it is a link to the expense's row on the cover, the label of a
+ * document that supports none a link to the document's row on its section page.
  */
 interface StampPiece {
   readonly text: string
@@ -520,10 +520,10 @@ class Writer {
   }
 
   /**
-   * Stamps every page: the label of its document, a link to its row on its section page, the name
-   * of an additional document, and each expense a document supports, by its number and the start of
-   * its description, a link to the expense's row on the cover; then the page number out of the
-   * total. When the stamp is wider than the page less its margins, the expenses go on lines of
+   * Stamps every page: the label of its document, the name of an additional document, and each
+   * expense a document supports, by its number and the start of its description, a link to the
+   * expense's row on the cover; then the page number out of the total. The label is a link, to the
+   * document's row on its section page, only for a document with no expense to go back to. When the stamp is wider than the page less its margins, the expenses go on lines of
    * their own above it.
    */
   stampEveryPage(): void {
@@ -531,8 +531,7 @@ class Writer {
     this.pages.forEach(({ page, entry }, index) => {
       const view = viewOf(page.getCropBox(), page.getRotation().angle)
       const room = view.width - 2 * margin
-      const label: StampPiece[] =
-        entry === undefined ? [] : [{ text: entry.label, label: entry.label }]
+      const label = entry === undefined ? [] : [stampedLabelOf(entry)]
       const name: StampPiece[] =
         entry?.stampedName === undefined ? [] : [{ text: entry.stampedName }]
       const expenses = (entry?.expenses ?? []).map((expense) => ({ text: expense.name, expense }))
@@ -945,6 +944,11 @@ class Writer {
     flow.down(padding)
     flow.rule(this.palette.rule, 0.5)
   }
+}
+
+/** The label of a stamp: a link only for a document supporting no expense to go back to. */
+function stampedLabelOf({ label, expenses }: LabelledDocument): StampPiece {
+  return expenses.length === 0 ? { text: label, label } : { text: label }
 }
 
 /** What a piece of a stamp is a link to, when it is one. */

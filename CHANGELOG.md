@@ -33,8 +33,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
   *Statement*, whatever their names, which now stand on the section pages and,
   for an additional document, in its stamp. An arrow after a link shows what can
   be clicked, on the cover, on section pages and in stamps.
-- The label in a stamp goes to the document's row on its section page, and a
-  label or its pages on a section page go to the document.
+- The label of an additional document in its stamp goes to its row on its section
+  page, and a label or its pages on a section page go to the document.
 - The footer names the McMaster Centre for Software Certification.
 - The table of the expenses has a title, *Itemized expenses*, on the Expenses and
   Review steps.
