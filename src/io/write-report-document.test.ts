@@ -84,7 +84,7 @@ async function reportOf(description: string): Promise<Report> {
     position: 'Faculty',
     email: 'zoe@mcmaster.ca',
     purpose: 'ICSE 2026',
-    account: '20-123-456',
+    accountName: '20-123-456',
   }).afterAdding(
     new Expense({
       date: new CalendarDate(2026, 10, 3),
@@ -521,7 +521,7 @@ describe('writeReportDocument', () => {
     const places = placesOf(pdf, pdf.getPage(0))
     const at = (text: string) => places.find((place) => place.text === text)
     for (const text of [
-      'Locations',
+      'Location(s)',
       'Rio de Janeiro, Brazil',
       'Per diem, international: breakfast, dinner',
       'Not claimed: lunch (provided by the conference)',

@@ -382,6 +382,11 @@ footer p {
   margin: 0.25rem 0;
 }
 
+/* A reminder after the report document is saved: what is left to do before it is submitted. */
+.status.reminder {
+  font-weight: 600;
+}
+
 .status.is-failure {
   color: var(--color-error);
   font-weight: 600;
@@ -520,6 +525,12 @@ button.quiet {
   color: var(--color-link);
   font-size: 0.9rem;
   text-decoration: underline;
+}
+
+/* An empty table of the Review step, saying so in grey. */
+tr.empty td {
+  color: var(--color-secondary-text);
+  font-style: italic;
 }
 
 td.not-claimed {

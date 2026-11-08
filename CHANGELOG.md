@@ -17,18 +17,20 @@ project adheres to [Semantic Versioning](https://semver.org/).
   Canadian dollars for a domestic meal and in US dollars for an international
   one. Each day is domestic or international (**All domestic** and **All
   international** set every day at once), or, with **Per meal**, each of
-  its meals. On a day with a meal claimed,
-  **Add a reason for not claiming** a meal says why, optionally. Above the
-  expenses, the days claimed and their total, then each of those days with
-  its meals claimed and its meals not claimed; a report may claim per diems
-  only. The
-  Review step shows them in a section of their own, then the total of the
-  report. In the report document, each day with a meal claimed is a row of
-  the cover's table, among the expenses by date, with its Entered box, and
-  its meals not claimed and their reasons under it, a day of domestic and
-  international meals taking a row for each; international meals are in the
-  foreign amount column, in US dollars, and in the total by currency. Changing the dates drops the per diems of the days left out;
-  unticking business travel drops them all.
+  its meals. On a day with a meal claimed, **Add a reason for not claiming**
+  a meal says why, optionally. Above the expenses, the days claimed and their
+  total, then each of those days with its meals claimed and its meals not
+  claimed; a report may claim per diems only. The Review step shows them in a
+  section of their own, then the total of the report. In the report
+  document, each day with a meal claimed is a row of the cover's table, among
+  the expenses by date, with its Entered box, and its meals not claimed and
+  their reasons under it, a day of domestic and international meals taking a
+  row for each; international meals are in the foreign amount column, in US
+  dollars, and in the total by currency. Changing the dates drops the per
+  diems of the days left out; unticking business travel drops them all.
+- After the report document is saved, the Review step reminds the Claimant
+  to redact the bank statements in it before submitting it, when the report
+  has some.
 
 - Several expenses per report. The Expenses step lists them, sorted by date,
   each with its amounts, its documents, each a link that opens it in a new
@@ -57,6 +59,17 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Account** is now an **Account name**, required, and an optional
+  **Account code**, written after the name in parentheses on the cover
+  (*NSERC Discovery (20-123-456)*). A draft kept by 0.2.0 opens with its
+  account as the account name.
+- The cover starts with the purpose, its dates and its locations, then the
+  claimant, then the account.
+- New report keeps the supervisor of a student or a postdoctoral fellow, and
+  the host of a visitor, as well as the claimant.
+- The Review step says, in grey, when the table of the expenses is empty
+  (*No expense entered*), or the per diems of a business travel
+  (*No per diem entered*).
 - New report asks for confirmation in a dialog over the step, rather than in
   the browser's own.
 - The trash can next to a receipt or a bank statement takes it out of this

@@ -28,7 +28,8 @@ export const fieldNames = {
   firstDay: 'First day',
   lastDay: 'Last day',
   locations: 'Location(s)',
-  account: 'Account',
+  accountName: 'Account name',
+  accountCode: 'Account code',
   date: 'Date',
   description: 'Description',
   claimedAmount: 'Claimed amount (CAD)',
@@ -84,6 +85,7 @@ export const nameTakenWording = 'Another document already has this name.'
 /** The fields that are optional; every other field, when asked, is required. */
 const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'businessTravel',
+  'accountCode',
   'paidInAnotherCurrency',
   'additionalDocuments',
   'documentName',
@@ -165,7 +167,7 @@ export function findingsOfReportStep(report: Report): readonly Finding[] {
       ['locations', report.locations],
     )
   }
-  required.push(['account', report.account])
+  required.push(['accountName', report.accountName])
   const findings = required
     .filter(([, value]) => value === undefined)
     .map(([field]) => missing('Report', field))

@@ -24,7 +24,7 @@ const report = new Report({
   isBusinessTravel: true,
   firstDay: new CalendarDate(2026, 10, 3),
   lastDay: new CalendarDate(2026, 10, 7),
-  account: '20-123-456',
+  accountName: '20-123-456',
 }).afterAdding(
   new Expense({
     date: new CalendarDate(2026, 10, 3),
@@ -231,11 +231,11 @@ describe('the draft store', () => {
     const expense = report.expenses[0] ?? new Expense()
     const replaced = new Document(Kind.receipt, 'new.pdf', new Uint8Array([1]))
     const halfDone = report
-      .afterChanging({ account: undefined })
+      .afterChanging({ accountName: undefined })
       .afterReplacing(expense, expense.afterChanging({ receipts: [replaced], date: undefined }))
     await store.keep(halfDone)
     const restored = await (await openDraftStore(factory)).restore()
-    expect(restored.account).toBeUndefined()
+    expect(restored.accountName).toBeUndefined()
     expect(restored.expenses[0]?.date).toBeUndefined()
     expect(restored.expenses[0]?.receipts.map((document) => document.fileName)).toEqual(['new.pdf'])
     const keys = await new Promise<IDBValidKey[]>((resolve) => {
@@ -254,6 +254,17 @@ describe('the draft store', () => {
     await store.keep(report)
     expect(await store.discard()).toBe(true)
     expect(await (await openDraftStore(factory)).restore()).toEqual(new Report())
+  })
+
+  it("keeps the account's name and code, and reads a 0.2.0 draft's account as its name", async () => {
+    const factory = new IDBFactory()
+    const coded = report.afterChanging({ accountName: 'NSERC Discovery', accountCode: '20-123' })
+    expect(await (await openDraftStore(factory)).keep(coded)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect([restored.accountName, restored.accountCode]).toEqual(['NSERC Discovery', '20-123'])
+    await written(factory, { account: ' 20-123-456 ' }, {})
+    const older = await (await openDraftStore(factory)).restore()
+    expect([older.accountName, older.accountCode]).toEqual(['20-123-456', undefined])
   })
 
   it('writes again a document taken out of the draft, then put back as it was', async () => {

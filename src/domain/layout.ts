@@ -124,7 +124,7 @@ interface Complete {
   readonly position: string
   readonly email: string
   readonly purpose: string
-  readonly account: string
+  readonly accountName: string
 }
 
 /**
@@ -215,18 +215,18 @@ function entriesOf(expenses: readonly Expense[], perDiems: readonly PerDiem[]): 
 
 function completeReport(report: Report): Complete {
   const findings = findingsOf(report)
-  const { claimantName, position, email, purpose, account } = report
+  const { claimantName, position, email, purpose, accountName } = report
   if (
     findings.length > 0 ||
     claimantName === undefined ||
     position === undefined ||
     email === undefined ||
     purpose === undefined ||
-    account === undefined
+    accountName === undefined
   ) {
     throw new TypeError('Only a report without findings has a report document')
   }
-  return { claimantName, position, email, purpose, account }
+  return { claimantName, position, email, purpose, accountName }
 }
 
 /**
@@ -244,12 +244,26 @@ function fileNameOf(complete: Complete, date: CalendarDate | undefined): string 
   return `expense-report-${date?.toString() ?? ''}-${claimant}.pdf`
 }
 
+/**
+ * The fields of the cover: the purpose first, with the dates and the locations of a business
+ * travel; then the claimant's name, position and email, the supervisor of a student or a
+ * postdoctoral fellow, the host of a visitor; then the account, its name followed by its code in
+ * parentheses when it is given.
+ */
 function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
-  const fields: CoverField[] = [
+  const fields: CoverField[] = [{ name: fieldNames.purpose, value: complete.purpose }]
+  const dates = report.isBusinessTravel ? datesOf(report.firstDay, report.lastDay) : undefined
+  if (dates !== undefined) {
+    fields.push({ name: 'Dates', value: dates })
+  }
+  if (report.isBusinessTravel && report.locations !== undefined) {
+    fields.push({ name: fieldNames.locations, value: report.locations })
+  }
+  fields.push(
     { name: fieldNames.claimantName, value: complete.claimantName },
     { name: fieldNames.position, value: complete.position },
     { name: fieldNames.email, value: complete.email },
-  ]
+  )
   if (report.asksForSupervisor) {
     fields.push(
       { name: fieldNames.supervisorName, value: report.supervisorName ?? '' },
@@ -262,15 +276,8 @@ function coverFieldsOf(report: Report, complete: Complete): CoverField[] {
       { name: fieldNames.hostEmail, value: report.hostEmail ?? '' },
     )
   }
-  fields.push({ name: fieldNames.purpose, value: complete.purpose })
-  const dates = report.isBusinessTravel ? datesOf(report.firstDay, report.lastDay) : undefined
-  if (dates !== undefined) {
-    fields.push({ name: 'Dates', value: dates })
-  }
-  if (report.isBusinessTravel && report.locations !== undefined) {
-    fields.push({ name: 'Locations', value: report.locations })
-  }
-  fields.push({ name: fieldNames.account, value: complete.account })
+  const code = report.accountCode === undefined ? '' : ` (${report.accountCode})`
+  fields.push({ name: 'Account', value: `${complete.accountName}${code}` })
   return fields
 }
 
