@@ -578,16 +578,23 @@ describe('writeReportDocument', () => {
     expect(place('55.00')?.x).toBeGreaterThan(place('1,012.35')?.x ?? 0)
   })
 
-  it('writes the titles of the last columns of the cover on two lines, each on its own', async () => {
+  it('writes the titles of the last columns of the cover on two lines, each centred in its column', async () => {
     const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
     const places = placesOf(pdf, pdf.getPage(0))
     const at = (text: string) => places.find((place) => place.text === text)
     const [claimed, currency, entered, mosaic] = ['Claimed', '(CAD)', 'Entered', '(Mosaic)'].map(at)
-    expect(currency?.x).toBe(claimed?.x)
     expect(currency?.y).toBeLessThan(claimed?.y ?? 0)
-    expect(mosaic?.x).toBe(entered?.x)
     expect(mosaic?.y).toBe(currency?.y)
     expect(entered?.y).toBe(claimed?.y)
+    // The shorter line of each title starts further on, and neither leaves its column.
+    const claimedColumn = 54 + 22 + 62 + 220 + 76
+    expect(currency?.x).toBeGreaterThan(claimed?.x ?? 0)
+    expect(claimed?.x).toBeGreaterThan(claimedColumn)
+    expect(claimed?.x).toBeLessThan(claimedColumn + 76 / 2)
+    const enteredColumn = claimedColumn + 76
+    expect(entered?.x).toBeGreaterThan(mosaic?.x ?? 0)
+    expect(mosaic?.x).toBeGreaterThanOrEqual(enteredColumn)
+    expect(mosaic?.x).toBeLessThan(enteredColumn + 48 / 2)
   })
 
   it('keeps an amount of the total too wide for its column clear of its currency', async () => {

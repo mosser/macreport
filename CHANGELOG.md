@@ -36,7 +36,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   be clicked, on the cover, on section pages and in stamps.
 - The label of an additional document in its stamp goes to its row on its section
   page, and a label or its pages on a section page go to the document.
-- The cover of the report document titles its last columns on two lines:
+- The cover of the report document titles its last columns on two lines, centred:
   *Claimed (CAD)* and *Entered (Mosaic)*.
 - The footer names the McMaster Centre for Software Certification.
 - The table of the expenses has a title, *Itemized expenses*, on the Expenses and

@@ -80,6 +80,8 @@ const arrowThickness = 0.6
 interface Column {
   readonly title: string
   readonly width: number
+  /** Whether each line of its title is centred in the column; at its left otherwise. */
+  readonly isTitleCentred?: boolean
 }
 
 /** A text of a table that is a link: to a document, or to an expense's row on the cover. */
@@ -427,8 +429,8 @@ class Writer {
       { title: 'Date', width: 62 },
       { title: 'Description', width: 220 },
       { title: 'Foreign amount', width: 76 },
-      { title: 'Claimed\n(CAD)', width: 76 },
-      { title: 'Entered\n(Mosaic)', width: 48 },
+      { title: 'Claimed\n(CAD)', width: 76, isTitleCentred: true },
+      { title: 'Entered\n(Mosaic)', width: 48, isTitleCentred: true },
     ]
     this.table(flow, columns, [])
     for (const row of layout.expenses) {
@@ -837,7 +839,12 @@ class Writer {
       flow.ensure(lineHeight + padding)
       let x = margin
       for (const [index, column] of columns.entries()) {
-        this.cellLine(flow, wrapped[index]?.[line], x + padding, { font, colour })
+        const cell = wrapped[index]?.[line]
+        const left =
+          isHeader && column.isTitleCentred
+            ? x + (column.width - font.widthOfTextAtSize(cell?.text ?? '', tableSize)) / 2
+            : x + padding
+        this.cellLine(flow, cell, left, { font, colour })
         x += column.width
       }
       flow.down(lineHeight)
