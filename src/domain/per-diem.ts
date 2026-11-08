@@ -2,6 +2,7 @@ import type { Amount } from './amount.ts'
 import type { CalendarDate } from './calendar-date.ts'
 import { Currency } from './currency.ts'
 import { Meal } from './meal.ts'
+import { perDiemRates } from './per-diem-rates.ts'
 
 /** What a per diem is made of, besides its day; a per diem starts all domestic, no meal claimed. */
 export interface PerDiemFields {
@@ -86,7 +87,7 @@ export class PerDiem {
    */
   amountOfMealsThat(areInternational: boolean): Amount | undefined {
     return this.mealsClaimedThat(areInternational)
-      .map((meal) => meal.rate)
+      .map((meal) => perDiemRates.rateOf(meal, areInternational))
       .reduce<Amount | undefined>((total, rate) => total?.plus(rate) ?? rate, undefined)
   }
 
@@ -103,7 +104,8 @@ export class PerDiem {
 
   /** The rate of a meal, as $28.40 for a domestic meal, USD 28.40 for an international one. */
   rateTextOf(meal: Meal): string {
-    return written(meal.rate, this.isInternational(meal))
+    const isInternational = this.isInternational(meal)
+    return written(perDiemRates.rateOf(meal, isInternational), isInternational)
   }
 
   /** The same per diem, with the fields given changed. */

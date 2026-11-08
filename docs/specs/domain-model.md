@@ -31,7 +31,7 @@ document.
 | Per diem | What a business travel claims for the meals of one of its days, at their rates rather than on receipts: each meal domestic or international, the meals claimed, and, for a meal not claimed, the reason when the Claimant gives one. A business travel has one per day, from its first day to its last. |
 | Meal | Breakfast, lunch or dinner, the three meals of a per diem. |
 | Domestic, international | What the Claimant says a meal of a per diem is. It decides the currency of its rate: the Canadian dollar for a domestic meal, the US dollar for an international one. The meals of a day, and of a business travel, are most often all one or all the other. |
-| Rate | What a meal claimed is worth: breakfast 28.40, lunch 27.40, dinner 57.70, in Canadian dollars for a domestic meal, in US dollars for an international one. |
+| Rate | What a meal claimed is worth, in Canadian dollars for a domestic meal, in US dollars for an international one. The rates are configured, one for each meal and each of domestic and international, in `config/per-diems.json`: today breakfast 28.40, lunch 27.40 and dinner 57.70, either way. |
 | Total | What the report claims: the sum of the claimed amounts and of the domestic meals claimed, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount, and, in US dollars, of the international meals claimed. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
 | Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |

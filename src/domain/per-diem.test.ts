@@ -7,11 +7,11 @@ const day = new CalendarDate(2026, 10, 4)
 const lunchReason = new Map([[Meal.lunch, 'provided by the conference']])
 
 describe('Meal', () => {
-  it('is breakfast at 28.40, lunch at 27.40 and dinner at 57.70, in the order of a day', () => {
-    expect(Meal.all.map((meal) => [meal.name, meal.title, meal.rate.typed])).toEqual([
-      ['breakfast', 'Breakfast', '28.40'],
-      ['lunch', 'Lunch', '27.40'],
-      ['dinner', 'Dinner', '57.70'],
+  it('is breakfast, lunch and dinner, in the order of a day', () => {
+    expect(Meal.all.map((meal) => [meal.name, meal.title])).toEqual([
+      ['breakfast', 'Breakfast'],
+      ['lunch', 'Lunch'],
+      ['dinner', 'Dinner'],
     ])
     expect(Meal.named('dinner')).toBe(Meal.dinner)
     expect(Meal.named('supper')).toBeUndefined()

@@ -107,8 +107,9 @@ The report document is written as `docs/specs/report-document.md` says:
   not. Each meal is domestic or international, set for the whole travel or
   a day at once; the amount of international meals is in US dollars, in the
   foreign amount column, and stays unconverted. A day with no meal claimed claims nothing
-  and has no row. The rates are the system's, as the specification states
-  them.
+  and has no row. The rates are the system's, configured in
+  `config/per-diems.json`, one per meal for domestic and for international
+  meals, and built into the system: a claimant cannot change them.
 - **An expense paid in cash** has no bank statement; the cover says *cash*
   where its statement's label would be.
 - **The cover's table names each expense's documents**, on a line under the
@@ -169,8 +170,9 @@ The report document is written as `docs/specs/report-document.md` says:
   is a reproduction of McMaster's form. If the administration requires the
   official documents, this ADR is amended.
 - When McMaster changes the wording of its form, the system changes with it.
-- When McSCert changes its per diem rates, the system changes with them; a
-  report document keeps the rates of the version that wrote it.
+- When McSCert changes its per diem rates, `config/per-diems.json` changes
+  and a new version is released; a report document keeps the rates of the
+  version that wrote it.
 - A report document with a missing receipt authorization is not complete until
   the Claimant has signed it.
 
@@ -179,8 +181,11 @@ The report document is written as `docs/specs/report-document.md` says:
 A change is compliant with this ADR when:
 
 - the report document follows `docs/specs/report-document.md`, and a change to
-  its layout, to the wording of the missing receipt authorization or to a
-  per diem rate changes that spec in the same commit;
+  its layout or to the wording of the missing receipt authorization changes
+  that spec in the same commit;
+- the per diem rates are in `config/per-diems.json` only, which the system
+  reads when it is built and refuses unless it holds a rate for each meal,
+  domestic and international;
 - tests read the written report document back and check its order, its pages,
   its labels, its names, its stamps, the target of each link, the Entered box
   of each expense, the size and turn of each page, and the fields of each

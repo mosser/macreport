@@ -61,6 +61,7 @@ src/io/       reading documents, writing the report document (@cantoo/pdf-lib),
 src/ui/       the wizard and its four steps: Report, Expenses, Additional documents, Review
 src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
+config/       per-diems.json: the per diem rates, inlined at build time
 src/style.css McMaster palette tokens and all styling
 scripts/      check-adr.sh: the scriptable ADR checks; release.sh and
               release-notes.sh: cutting a release (ADR 0003)
