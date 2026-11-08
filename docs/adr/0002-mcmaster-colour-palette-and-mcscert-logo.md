@@ -1,7 +1,7 @@
 # ADR 0002: The McMaster colour palette and the McSCert logo
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -58,7 +58,9 @@ no colour literal of its own.
 2. **Accents are for signalling**: status, icons, findings. Never chrome.
 3. **Tints and shades are not invented.** An intermediate tone is derived from
    a token with `color-mix()` or opacity, never added as a literal. Dundurn
-   Grey is the light neutral for dividers and subtle backgrounds.
+   Grey is the light neutral for dividers and subtle backgrounds on screen. The
+   report document draws its rules in Heritage Grey: a rule of half a point in
+   Dundurn Grey does not show in a PDF reader at normal zoom.
 4. **Text contrast** meets WCAG AA (4.5:1). Approved pairings:
 
    | Text | Background | Ratio |

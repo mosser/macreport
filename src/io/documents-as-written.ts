@@ -8,15 +8,16 @@ import {
 import { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
 import { formatOf } from './format.ts'
-import { imageAsWritten, type WrittenImage } from './image-as-written.ts'
+import { imageAsAdded, imageReduced, reducedImage, type WrittenImage } from './image-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
+import { withOrientationOf } from './orientation.ts'
 import { reducedPdf } from './reduce-pdf.ts'
 
 /** What reducing gives in one way, by the file added. */
 class Reductions {
   readonly known = new WeakMap<Uint8Array, Promise<Uint8Array | undefined>>()
-  /** What reducing gave, for what must be told at once, as a link to the document. */
-  readonly reduced = new WeakMap<Uint8Array, Uint8Array>()
+  /** What a link to the reduced file opens, told at once: a photo says how it shows upright. */
+  readonly shown = new WeakMap<Uint8Array, Uint8Array>()
 }
 
 /** Whether reducing a document shares its shapes: a bank statement's stay on its pages. */
@@ -26,12 +27,12 @@ function sharesShapes(document: Document): boolean {
 
 /**
  * What the report document holds of each document, worked out once per file added and kept in
- * memory, so that the Review step and saving share it. One document is worked out at a time: an
- * image takes a canvas of tens of megabytes.
+ * memory, so that the Review step and saving share it. One document is reduced at a time: an image
+ * takes a canvas of tens of megabytes.
  */
 export class DocumentsAsWritten {
   private readonly encoder: ImageEncoder
-  private readonly images = new WeakMap<Uint8Array, Promise<WrittenImage>>()
+  private readonly images = new WeakMap<Uint8Array, WrittenImage>()
   private readonly sharingShapes = new Reductions()
   private readonly keepingShapes = new Reductions()
   private last: Promise<unknown> = Promise.resolve()
@@ -50,13 +51,26 @@ export class DocumentsAsWritten {
     return next
   }
 
-  /** An image document as the report document holds it. */
-  imageOf(document: Document): Promise<WrittenImage> {
-    const known = this.images.get(document.content)
+  /** An image as added, without its Exif data. */
+  private imageAsAdded(content: Uint8Array): WrittenImage {
+    const known = this.images.get(content)
     if (known !== undefined) return known
-    const image = this.inTurn(() => imageAsWritten(document.content, this.encoder))
-    this.images.set(document.content, image)
+    const image = imageAsAdded(content)
+    this.images.set(content, image)
     return image
+  }
+
+  /** An image document as the report document holds it: reduced when the Claimant asked. */
+  async imageOf(document: Document): Promise<WrittenImage> {
+    const reduced = document.isReduced ? await this.reductionOf(document) : undefined
+    return reduced === undefined
+      ? this.imageAsAdded(document.content)
+      : imageReduced(document.content, reduced)
+  }
+
+  /** The size of a document when it is not reduced: that of the file added, an image without Exif. */
+  private sizeAsAdded({ content }: Document): number {
+    return formatOf(content) === 'pdf' ? content.length : this.imageAsAdded(content).content.length
   }
 
   /** A PDF document as the report document holds it: reduced when the Claimant asked. */
@@ -69,11 +83,11 @@ export class DocumentsAsWritten {
   /** The bytes a document's link opens: its reduced file once it is known, or the file added. */
   contentShown(document: Document): Uint8Array {
     return document.isReduced
-      ? (this.reductionsFor(document).reduced.get(document.content) ?? document.content)
+      ? (this.reductionsFor(document).shown.get(document.content) ?? document.content)
       : document.content
   }
 
-  /** What reducing a PDF document gives, when that is worth offering. */
+  /** What reducing a document gives, when that is worth offering. */
   private reductionOf(document: Document): Promise<Uint8Array | undefined> {
     const { known } = this.reductionsFor(document)
     const found = known.get(document.content)
@@ -86,12 +100,18 @@ export class DocumentsAsWritten {
   private async reduction(document: Document): Promise<Uint8Array | undefined> {
     const { content } = document
     try {
-      const reduced = await reducedPdf(content, this.encoder, sharesShapes(document))
-      if (!isWorthReducing(content.length, reduced.length)) return undefined
-      this.reductionsFor(document).reduced.set(content, reduced)
+      const reduced =
+        formatOf(content) === 'pdf'
+          ? await reducedPdf(content, this.encoder, sharesShapes(document))
+          : await reducedImage(content, this.encoder)
+      if (!isWorthReducing(this.sizeAsAdded(document), reduced.length)) return undefined
+      this.reductionsFor(document).shown.set(
+        content,
+        formatOf(content) === 'pdf' ? reduced : withOrientationOf(content, reduced),
+      )
       return reduced
     } catch {
-      // A PDF that cannot be read has nothing to offer; saving says why when it comes to that.
+      // A file that cannot be read has nothing to offer; saving says why when it comes to that.
       return undefined
     }
   }
@@ -99,19 +119,12 @@ export class DocumentsAsWritten {
   /** The size of a document, and what reducing it would make it, as the Review step shows them. */
   async weightOf(document: Document): Promise<DocumentWeight> {
     const addedSize = document.content.length
-    if (formatOf(document.content) !== 'pdf') {
-      const image = await this.imageOf(document)
-      return { addedSize, size: image.content.length }
-    }
-    if (!document.isReduced && !documentSizes.isHeavy(addedSize)) {
-      return { addedSize, size: addedSize }
+    const size = this.sizeAsAdded(document)
+    if (!document.isReduced && !documentSizes.isHeavy(size)) {
+      return { addedSize, size }
     }
     const reducedSize = (await this.reductionOf(document))?.length
-    return {
-      addedSize,
-      size: document.isReduced ? (reducedSize ?? addedSize) : addedSize,
-      reducedSize,
-    }
+    return { addedSize, size: document.isReduced ? (reducedSize ?? size) : size, reducedSize }
   }
 
   /** The sizes of a report's documents, and of the report document that `write` writes. */

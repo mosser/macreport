@@ -10,6 +10,7 @@ import {
   fieldRules,
   findingsOf,
   findingsOfAdditionalDocumentsStep,
+  findingsOfCharacters,
   findingsOfExpensesStep,
   findingsOfReportStep,
   isRequired,
@@ -47,7 +48,7 @@ describe('findings of the Report step', () => {
     expect(wordings(findingsOfReportStep(new Report()))).toEqual([
       'Name of claimant is required.',
       'Position is required.',
-      'Email is required.',
+      'Email is required, as an email address.',
       'Purpose is required.',
       'Account name is required.',
     ])
@@ -68,7 +69,7 @@ describe('findings of the Report step', () => {
     for (const position of ['Student', 'Postdoctoral fellow'] as const) {
       expect(wordings(findingsOfReportStep(complete.afterChanging({ position })))).toEqual([
         'Supervisor is required.',
-        "Supervisor's email is required.",
+        "Supervisor's email is required, as an email address.",
       ])
     }
   })
@@ -77,7 +78,7 @@ describe('findings of the Report step', () => {
     const visitor = complete.afterChanging({ position: 'Visitor' })
     expect(wordings(findingsOfReportStep(visitor))).toEqual([
       'Host is required.',
-      "Host's email is required.",
+      "Host's email is required, as an email address.",
     ])
   })
 
@@ -186,6 +187,95 @@ describe('findings of the Expenses step', () => {
       'Expenses',
       'Additional documents',
     ])
+  })
+})
+
+describe('findings of the characters the report document cannot write', () => {
+  const wordingsOf = (report: Report) => wordings(findingsOfCharacters(report))
+
+  it('finds none in what the font holds', () => {
+    expect(findingsOfCharacters(complete)).toEqual([])
+  })
+
+  it('names a field of the report, and the character by itself and its code', () => {
+    expect(wordingsOf(complete.afterChanging({ purpose: 'ICSE 日' }))).toEqual([
+      'Purpose holds a character the report document cannot write: 日 (U+65E5).',
+    ])
+  })
+
+  it('names every character of a text once, in one finding', () => {
+    expect(wordingsOf(complete.afterChanging({ locations: '東京 東京 😀' }))).toEqual([
+      'Location(s) holds characters the report document cannot write: 東 (U+6771), 京 (U+4EAC), 😀 (U+1F600).',
+    ])
+  })
+
+  it('checks every field the report document writes', () => {
+    const texts = {
+      claimantName: '日',
+      email: '日@mcmaster.ca',
+      purpose: '日',
+      accountName: '日',
+      accountCode: '日',
+    }
+    expect(wordingsOf(complete.afterChanging(texts))).toHaveLength(5)
+    const student = complete.afterChanging({
+      position: 'Student',
+      supervisorName: '日',
+      supervisorEmail: '日@mcmaster.ca',
+    })
+    expect(wordingsOf(student)).toHaveLength(2)
+    const visitor = complete.afterChanging({
+      position: 'Visitor',
+      hostName: '日',
+      hostEmail: '日@mcmaster.ca',
+    })
+    expect(wordingsOf(visitor)).toHaveLength(2)
+  })
+
+  it('names an expense by its date and its description', () => {
+    const expense = new Expense({ date: new CalendarDate(2026, 10, 3), description: 'Dinner 😀' })
+    expect(wordingsOf(complete.afterAdding(expense))).toEqual([
+      'Expense 2026-10-03, Dinner 😀: Description holds a character the report document cannot write: 😀 (U+1F600).',
+    ])
+  })
+
+  it('names the meal of a per diem, for a day with a meal claimed only', () => {
+    const day = new CalendarDate(2026, 10, 4)
+    const reasons = new Map([[Meal.lunch, '日']])
+    expect(
+      wordingsOf(
+        complete.afterChangingPerDiem(new PerDiem(day, { mealsClaimed: [Meal.dinner], reasons })),
+      ),
+    ).toEqual([
+      'Per diem 2026-10-04, lunch: Reason holds a character the report document cannot write: 日 (U+65E5).',
+    ])
+    expect(wordingsOf(complete.afterChangingPerDiem(new PerDiem(day, { reasons })))).toEqual([])
+  })
+
+  it('names a document by its kind and its file name, and looks at its name, not at its file name', () => {
+    const receipt = new Document(Kind.receipt, '領収書.pdf', new Uint8Array())
+    const expense = new Expense({ receipts: [receipt] })
+    expect(wordingsOf(complete.afterAdding(expense))).toEqual([
+      'Receipt 領収書.pdf: Name holds characters the report document cannot write: 領 (U+9818), 収 (U+53CE), 書 (U+66F8).',
+    ])
+    const renamed = complete.afterAdding(
+      new Expense({ receipts: [receipt.afterNaming('Receipt')] }),
+    )
+    expect(wordingsOf(renamed)).toEqual([])
+    const invitation = new Document(Kind.additionalDocument, '招待.pdf', new Uint8Array())
+    const [finding] = findingsOfCharacters(
+      complete.afterChanging({ travelJustifications: [invitation] }),
+    )
+    expect(finding?.step).toBe('Additional documents')
+    expect(finding?.wording).toContain('Additional document 招待.pdf: Name holds')
+  })
+
+  it('stands between the report and its report document, and holds no step', () => {
+    const report = complete.afterChanging({ purpose: '日' })
+    expect(wordings(findingsOf(report))).toContain(
+      'Purpose holds a character the report document cannot write: 日 (U+65E5).',
+    )
+    expect(findingsOfReportStep(report)).toEqual([])
   })
 })
 

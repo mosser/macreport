@@ -8,32 +8,65 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- The Review step shows the size of the report document above **Save the
-  report**, and the size of each heavy document: above 2 MB, a size set in
+- The cover of the report document has a **Policy** section beside the attached
+  information, and the footer of every step has two links: both go to McMaster's AP-01 policy and its guidelines,
+  whose addresses are set in `config/policy.json`.
+- The Review step shows at its top the size of the report document, and the
+  size of each heavy document: above 2 MB, a size set in
   `config/document-sizes.json`.
-- **Reduce to** a size, on the Review step, makes a heavy PDF document smaller
-  when that saves at least 10 %: its large JPEG images are written with fewer
-  pixels and each shape it draws repeatedly is kept once, its pages, text, links
-  and form fields staying as they are. A conference programme of 8 pages printed
-  from a web page goes from 9.4 MB to 545 KB and looks the same. The document's
-  name then opens its reduced file, so that it can be read before saving, and
+- **Reduce**, an icon and the size it reaches, at the top of the Review step,
+  makes a heavy document smaller when that saves at least 10 %, and **Reduce all**
+  does so for every document on offer. Nothing is reduced unless the Claimant asks.
+  An image is written with a long side of at most 2200 pixels: a 5 MB phone photo
+  comes to well under 1 MB, its small print still readable. A PNG stays a PNG unless
+  that is more than twice the size of the same JPEG, so that a screenshot's text
+  stays crisp. A PDF document has its large JPEG images written with fewer pixels and
+  each shape it draws repeatedly kept once, its pages, text, links and form fields
+  staying as they are: a conference programme of 8 pages printed from a web page goes
+  from 9.4 MB to 545 KB and looks the same. Links to the original and to the reduced
+  file then let them be compared before saving, and
   **Restore** brings back the file added. A bank statement's shapes are not
   shared, so that a PDF reader's redaction tool still reaches them.
 
 ### Changed
 
-- An image above 1 MB, also set in `config/document-sizes.json`, is written with
-  a long side of at most 2200 pixels: a 5 MB phone photo weighs well under 1 MB
-  in the report document, and its small print stays readable. A PNG stays a PNG
-  unless that is more than twice the size of the same JPEG, so that a
-  screenshot's text stays crisp. The draft keeps the file added, and a smaller
-  image keeps its pixels.
+- The Expenses step lists the expenses first, then the per diems, under a title
+  of their own and in columns aligned on their dates. A date stays on one line, and
+  a per diem shows its day of the week above it. The line giving the number of days
+  and their total is gone: the Review step gives the amounts.
+- Typing a date moves on from the year by itself, as it does from the month,
+  with no Tab to press in between.
+- **Last day**, left empty, takes the day after **First day**, and its picker
+  offers no date before the first day.
+- The cover of the report document calls an expense's documents *Receipt* and
+  *Statement*, whatever their names, which now stand on the section pages and,
+  for an additional document, in its stamp. An arrow after a link shows what can
+  be clicked, on the cover, on section pages and in stamps.
+- The label of an additional document in its stamp goes to its row on its section
+  page, and a label or its pages on a section page go to the document.
+- The cover of the report document titles its last columns on two lines, centred:
+  *Claimed (CAD)* and *Entered (Mosaic)*. The claimed amounts stand on the right of
+  their column, ending with those of the total.
+- The footer names the McMaster Centre for Software Certification.
+- The table of the expenses has a title, *Itemized expenses*, on the Expenses and
+  Review steps.
+- The total of the report, on the Review step and on the cover of the report
+  document, writes every line with its currency's code, as *CAD 1,068.15*, the
+  codes and the amounts aligned.
 - A page copied from a PDF document leaves out what no reader shows: its
   thumbnail, the private data of the editor that wrote it, its metadata, and the
   Exif data of its JPEG images.
 
 ### Fixed
 
+- The finding of an email address missing or invalid says what is needed: *Email
+  is required, as an email address.*
+- A character the report document cannot write, such as Chinese, Japanese or an
+  emoji, no longer vanishes from it silently: it is a finding on the Review step,
+  naming the field and the character, and the report cannot be saved until it is
+  corrected.
+- The lines between the expenses, and between the rows of every table of the
+  report document, show at normal zoom: they were too pale to be seen.
 - A photo's Exif data, the location it was taken at among it, no longer reaches
   the report document.
 

@@ -12,8 +12,10 @@ Report step; otherwise it opens on an empty report.
 When the browser refuses to keep a draft, the system says so on every step:
 closing the page will lose the report. Everything else works.
 
-Under every step, the footer names the system and its version, McSCert and
-McMaster University, and states: *Everything you enter and add stays in this
+Under every step, the footer names the system and its version, and the
+McMaster Centre for Software Certification; gives the name of each document
+`config/policy.json` lists, separated by a middle dot, each a link that opens it
+in a new tab of the browser; and states: *Everything you enter and add stays in this
 browser, on this computer. Nothing is collected, sent or shared.*
 
 **New report** is offered on every step. It asks for confirmation, in a
@@ -31,7 +33,9 @@ kept in the draft as soon as it is made, incomplete as it may be: a required
 field left empty, an expense whose receipt is still to come. A required
 field is marked with an asterisk (*) next to its name; what it needs besides
 being filled in is shown next to it. A value typed that does not follow its
-field's rule is shown with that rule, and kept once it does.
+field's rule is shown with that rule, and kept once it does. A date is typed
+in its parts, moving on from one to the next by itself, with no key to press
+between them.
 
 ### 1. Report
 
@@ -52,7 +56,7 @@ locations) and
 | Purpose | Required. |
 | Business travel | Ticked for a report whose purpose took the claimant away. Unticked, the report has no dates. |
 | First day | Asked of a business travel, and then required: a calendar date. |
-| Last day | Asked of a business travel, and then required: a calendar date, not before the first day. |
+| Last day | Asked of a business travel, and then required: a calendar date, not before the first day. Its picker offers no date before the first day. Left empty, it takes the day after the first day once the Claimant leaves First day; it may be changed, to the first day for a travel of one day. |
 | Location(s) | Asked of a business travel, and then required: where it took the claimant, as free text. |
 | Account name | Required, free text. |
 | Account code | Optional, free text. Written after the account's name, in parentheses. |
@@ -64,18 +68,19 @@ diems of the days no longer between them. Continue is offered once every require
 
 ### 2. Expenses
 
-The expenses, sorted by date, then in the order they were added. Each shows
-its date, its description, its foreign amount, its claimed amount, its
+The expenses, under the heading *Itemized expenses* once there is one, sorted
+by date, then in the order they were added. Each shows
+its date, on one line, its description, its foreign amount, its claimed amount, its
 receipt or that its receipt is missing, its bank statement or that it was
 paid in cash, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them, and, for a
 business travel whose dates are valid, **Manage per diems**, next to it.
-When a meal is claimed, the per diems stand above the expenses: on one line,
-the number of days with a meal claimed and their total, in Canadian dollars
-then in US dollars; then each of those days, by date, as on the cover of the
-report document: its meals claimed, domestic then international, then its
+When a meal is claimed, the per diems stand under the expenses, under the
+heading *Per diems*: each of those days, by its day of the week in full, on a
+line of its own, and its date, in a column as wide as the dates of the expenses,
+as on the cover of the report document: its meals claimed, domestic then international, then its
 meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
@@ -124,7 +129,7 @@ not offered while they are open, and **Done** closes them.
 | Field | Rule |
 |---|---|
 | Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows Per meal. **All domestic** and **All international**, above the days, set every meal at once, and every day to Domestic or International, a day on Per meal included. |
-| Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the line above the expenses, the Review step and the report document give them. |
+| Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the Review step and the report document give them. |
 | Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. The trash can next to the field takes the reason out, and Add a reason back. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
 
 Continue is offered once there is at least one expense or a meal claimed,
@@ -187,9 +192,10 @@ Continue is not offered.
 
 ### 4. Review
 
-The report as it will be written: the cover, with the table of the
-expenses, each on two lines as in the report document, or *No expense
-entered* in grey; the per diems of a business travel, under their own
+With a finding, the step shows its findings, as errors, and nothing else. Without
+one, it shows the report as it will be written: the cover, with the table of the
+expenses, under the heading *Itemized expenses*, each on two lines as in the report document, its documents by their
+names, or *No expense entered* in grey; the per diems of a business travel, under their own
 heading, one row per day with a meal claimed, or *No per diem entered* in
 grey, with its numbers on
 the cover, its date, domestic, international or both, each meal claimed with
@@ -198,18 +204,19 @@ total, one amount per currency; then the total of the report, as on the
 cover of the report document; then each section with its documents, their labels and their names, every table
 of documents spaced alike. A document's name opens the document in a new
 tab of the browser, from the file the Claimant added, or from its reduced file
-once reduced. The Entered boxes are the report document's alone. Then the
-findings, if any.
+once reduced. The Entered boxes and the Policy section are the report document's alone.
 
-A heavy document shows its size next to its name. A heavy PDF document that
-reducing makes at least 10 % smaller also offers **Reduce to** its size once
-reduced, as *Reduce to 545 KB*. Once reduced, it shows its size before and after,
-as *9.4 MB → 545 KB*, even when no longer heavy, and offers **Restore**, which
-brings back the file added.
-
-With no finding, the step shows the size of the report document above Save the
-report. It says *Working out the sizes…* until the sizes are known; Save the
-report stays offered meanwhile.
+The sizes stand at the top of the step: the size of the report
+document, or *Working out the sizes…* until the sizes are known, Save the report
+staying offered meanwhile; then each document heavy or reduced, by its label and
+its name, with its size. Nothing is reduced unless the Claimant asks. A heavy
+document that reducing makes at least 10 %
+smaller also offers **Reduce**, an icon and its size once reduced, as *545 KB*,
+named *Reduce to 545 KB*. Once reduced, even when no longer heavy, it shows a link
+to the file added and one to its reduced file, each opening in a new tab of the
+browser, so that the Claimant can compare them, a photo showing upright in both,
+as *Original 9.4 MB → Reduced 545 KB*, and offers **Restore**, which brings back the file added. **Reduce all**, an icon and its name, reduces every
+document on offer, when there is more than one.
 
 | Finding | Wording |
 |---|---|
@@ -218,7 +225,7 @@ report stays offered meanwhile.
 | An expense breaks a rule of the Expenses step | The expense, by its date and description, and the rule. |
 | A business travel has no travel justification | At least one travel justification is required. |
 | A document has the name of a document before it | The document, by its file name, and its name. |
-| A text holds a character the report document cannot write | The field, the expense or the per diem when it is one, and the character. For a name: the document, by its kind and file name. |
+| A text holds a character the report document cannot write | The field, the expense or the per diem when it is one, and each character with its code, as *日 (U+65E5)*. For a name: the document, by its kind and file name. It holds no step: it is found here. |
 
 **Save the report** is offered when there is no finding. It writes the report
 document (`report-document.md`) and hands it to the browser to be saved as

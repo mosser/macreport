@@ -28,6 +28,7 @@ document.
 | Claimed amount | The amount in Canadian dollars asked back for an expense, more than zero, to the cent. An expense paid in another currency may have none: McSCert then works it out from the foreign amount. |
 | Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt: more than zero, to the cent. The system converts nothing and asks for no exchange rate. |
 | Currency | A currency other than the Canadian dollar, by its three-letter ISO 4217 code and its name in English: EUR, Euro. |
+| Itemized expenses | The expenses of a report apart from its per diems, as the Expenses and Review steps title them. |
 | Per diem | What a business travel claims for the meals of one of its days, at their rates rather than on receipts: each meal domestic or international, the meals claimed, and, for a meal not claimed, the reason when the Claimant gives one. A business travel has one per day, from its first day to its last. |
 | Meal | Breakfast, lunch or dinner, the three meals of a per diem. |
 | Domestic, international | What the Claimant says a meal of a per diem is. It decides the currency of its rate: the Canadian dollar for a domestic meal, the US dollar for an international one. The meals of a day, and of a business travel, are most often all one or all the other. |
@@ -46,8 +47,9 @@ document.
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
-| Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: a PDF document by the size of its file, or of its reduced file once reduced, an image by its size as written in the report document. |
-| Reduce | The Claimant asks the system to make a heavy PDF document smaller: its images written with fewer pixels and, unless it is a bank statement, each shape it draws repeatedly kept once. Its pages, text, links and form fields stay as they are. |
+| Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: by the size it is written at: that of the file added, a JPEG without its Exif data, or of its reduced file once reduced. |
+| Reduce | The Claimant asks the system to make a heavy document smaller: its images written with fewer pixels and, for a PDF document that is not a bank statement, each shape it draws repeatedly kept once. The pages, text, links and form fields of a PDF document stay as they are. Nothing is reduced unless the Claimant asks. |
+| Original | The file the Claimant added, as the Review step calls it next to the reduced file of a document. |
 | Restore | The Claimant takes back reducing a document: the report document holds the file added again. |
 | Draft | The report as the Claimant left it, kept by the browser on their computer so that closing the page loses nothing. Keeping it is best effort. |
 | New report | Discarding the draft, its expenses and its documents, to start another report for the same claimant: their name, position and email, and the supervisor of a student or a postdoctoral fellow or the host of a visitor, are kept. |
@@ -56,11 +58,13 @@ document.
 | Layout | What the report document holds, worked out from a report without findings: the fields of the cover, the expenses and the per diems numbered with their total, the sections in order, and each document with its label and the expenses it supports. How it falls into pages is left to the writing. |
 | Save | The system hands the report document to the browser, which writes it on the Claimant's computer. The document is built in the browser: nothing is fetched or sent over a network. |
 | Cover | The first page or pages of the report document, which take the place of the McSCert Expense Report Template: the report's fields, the attached information, the table of the expenses and the per diems, and their total. |
-| Entered | The box of an expense or a per diem on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense. |
+| Entered | The box of an expense or a per diem on the cover, left empty by the system, that McSCert's administrative staff tick once they have entered the expense in Mosaic. |
+| Policy | The documents setting the rules of reimbursement, as `config/policy.json` lists them, each a name and an address: linked from the report document and from the footer of the interface, never copied. |
+| Mosaic | The system McSCert's administrative staff enter the expenses in. |
 | Section | The part of the report document holding the documents of one kind, opened by its section pages. |
 | Section page | A page that opens a section: its title and the list of its documents, each with its label, its name, its pages and the expenses it supports, by their description. The list continues on as many section pages as it needs. |
 | Stamp | The line written in the margin of every page of the report document: the label of the document the page belongs to, when it belongs to one, the name of an additional document, the expenses that document supports, each by its number and the start of its description, and the page number out of the total. |
-| Link | A label, a document's name or an expense number in the report document that a reader clicks, on screen, to go to the document's first page or to the expense's row on the cover. |
+| Link | A label, a document on the cover or an expense in the report document that a reader clicks, on screen, to go to the document's first page, the document's row on its section page or the expense's row on the cover. An arrow after it shows that it is one. |
 
 ### Kinds of document
 

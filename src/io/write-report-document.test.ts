@@ -11,6 +11,7 @@ import {
   type PDFPage,
   PDFRawStream,
   PDFRef,
+  PDFString,
   StandardFonts,
 } from '@cantoo/pdf-lib'
 import { describe, expect, it } from 'vitest'
@@ -23,6 +24,7 @@ import { Kind } from '../domain/kind.ts'
 import { layoutOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import { PerDiem } from '../domain/per-diem.ts'
+import { type PolicyDocument, policy } from '../domain/policy.ts'
 import { Report } from '../domain/report.ts'
 import { DocumentsAsWritten } from './documents-as-written.ts'
 import type { ImageEncoder } from './image-encoder.ts'
@@ -203,6 +205,21 @@ function textsOf(pdf: PDFDocument, page: PDFPage): string[] {
   return texts
 }
 
+/** The texts of a page, each line of a stamp as one: its pieces are written one by one, around their arrows. */
+function stampedTextsOf(pdf: PDFDocument, page: PDFPage): string[] {
+  const texts: string[] = []
+  let isJoining = false
+  for (const text of textsOf(pdf, page)) {
+    if (text === ' · ' || isJoining) {
+      texts[texts.length - 1] += text
+      isJoining = text === ' · '
+    } else {
+      texts.push(text)
+    }
+  }
+  return texts
+}
+
 /** Where a page shows each text it writes: the text, read back, and where its baseline starts. */
 function placesOf(pdf: PDFDocument, page: PDFPage) {
   const fonts = fontsOf(pdf, page)
@@ -227,6 +244,7 @@ function linksOf(pdf: PDFDocument, page: PDFPage) {
   const annotations = (page.node.Annots()?.asArray() ?? [])
     .map((reference) => pdf.context.lookup(reference, PDFDict))
     .filter((annotation) => annotation.get(PDFName.of('Subtype')) === PDFName.of('Link'))
+    .filter((annotation) => annotation.has(PDFName.of('Dest')))
   return annotations.map((annotation) => {
     const destination = annotation.lookup(PDFName.of('Dest'), PDFArray)
     const top = destination.lookupMaybe(3, PDFNumber)?.asNumber()
@@ -253,12 +271,10 @@ function shown(page: PDFPage): number[] {
 }
 
 describe('writeReportDocument', () => {
-  it("links each name of an expense's row to its document, and each page of a document back to the row", async () => {
+  it("links each document of an expense's row to its first page, and each page of a document back to the row", async () => {
     const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
     const pages = pdf.getPages()
-    const [cover, receipts, boarding, pass, statements, statement] = pages.map((page) =>
-      linksOf(pdf, page),
-    )
+    const [cover, , boarding, pass, , statement] = pages.map((page) => linksOf(pdf, page))
     expect(cover?.map(({ to, how }) => [to, how])).toEqual([
       [3, '/Fit'],
       [6, '/Fit'],
@@ -266,7 +282,7 @@ describe('writeReportDocument', () => {
     expect(cover?.[0]?.left).toBeLessThan(cover?.[1]?.left ?? 0)
     expect(cover?.[0]?.bottom).toBe(cover?.[1]?.bottom)
     expect(cover?.[0]?.left).toBeCloseTo(54 + 22 + 62 + 4)
-    for (const links of [receipts, statements, boarding, pass, statement]) {
+    for (const links of [boarding, pass, statement]) {
       expect(links?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
     }
     const row = boarding?.[0]?.top ?? 0
@@ -274,6 +290,58 @@ describe('writeReportDocument', () => {
     expect(row).toBeLessThan(792 - 54)
     expect(statement?.[0]?.top).toBe(row)
     expect(boarding?.[0]?.width).toBeGreaterThan(120)
+  })
+
+  it('links the label of a stamp to its section page only for a document with no expense to go back to', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const pdf = await written(
+      report.afterChanging({
+        additionalDocuments: [new Document(Kind.additionalDocument, 'invitation.png', png)],
+      }),
+    )
+    const [invitation, boarding] = [2, 4].map((index) => linksOf(pdf, pdf.getPage(index)))
+    expect(invitation?.map(({ to, how }) => [to, how])).toEqual([[2, '/XYZ']])
+    expect(boarding?.map(({ to, how }) => [to, how])).toEqual([[1, '/XYZ']])
+  })
+
+  it('links a label and its pages on a section page to the first page of the document', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const [label, pages, expense] = linksOf(pdf, pdf.getPage(1))
+    expect([label?.to, label?.how]).toEqual([3, '/Fit'])
+    expect([pages?.to, pages?.how]).toEqual([3, '/Fit'])
+    expect([expense?.to, expense?.how]).toEqual([1, '/XYZ'])
+  })
+
+  it('marks every link of a stamp with an arrow of three strokes, and nothing else', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const pdf = await written(
+      report.afterChanging({
+        additionalDocuments: [new Document(Kind.additionalDocument, 'invitation.png', png)],
+      }),
+    )
+    const strokes = (page: PDFPage) =>
+      streamsOf(pdf, page)
+        .map((stream) => decoded(stream).match(/\bl\s+S\b/g)?.length ?? 0)
+        .reduce((sum, count) => sum + count, 0)
+    const invitation = pdf
+      .getPages()
+      .find((page) => stampedTextsOf(pdf, page).at(-1)?.startsWith('A1'))
+    const statement = pdf.getPages().at(-1)
+    if (invitation === undefined || statement === undefined) throw new TypeError('No page')
+    expect(strokes(invitation)).toBe(3)
+    expect(strokes(statement)).toBe(3)
+  })
+
+  it('makes a link wide enough to click its arrow too', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const [receipt, statement] = linksOf(pdf, pdf.getPage(0))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const separator = places.find((place) => place.text === ' · ')
+    expect(places.some((place) => place.text === 'Receipt')).toBe(true)
+    expect(places.some((place) => place.text === 'Statement')).toBe(true)
+    // The link of the receipt ends where the separator after its arrow starts.
+    expect((receipt?.left ?? 0) + (receipt?.width ?? 0)).toBeCloseTo(separator?.x ?? 0)
+    expect(statement?.width).toBeGreaterThan(receipt?.width ?? 0)
   })
 
   it('puts the expenses of a stamp too wide for its page on lines of their own, above it', async () => {
@@ -285,7 +353,7 @@ describe('writeReportDocument', () => {
     )
     const pdf = await written(others.reduce((each, other) => each.afterAdding(other), report))
     const boarding = pdf.getPage(2)
-    const [content, base, ...expenseLines] = textsOf(pdf, boarding)
+    const [content, base, ...expenseLines] = stampedTextsOf(pdf, boarding)
     expect([content, base]).toEqual(['Boarding', 'R1 · 3 / 6'])
     expect(expenseLines.toReversed()).toEqual(
       Array.from({ length: 8 }, (_, index) => `Expense ${index + 1}: Taxi ${index + 1}`),
@@ -318,8 +386,8 @@ describe('writeReportDocument', () => {
         'Additional documents',
         'Air Canada, YYZ–CDG return',
         '$1,012.35',
-        'air-canada',
-        'statement-octobre',
+        'Receipt',
+        'Statement',
         'Entered',
         'Total',
         '1 / 6',
@@ -338,8 +406,10 @@ describe('writeReportDocument', () => {
       ]),
     )
     expect(receipts).not.toContain('1')
-    expect(boarding).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
-    expect(pass).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
+    const stamps = pdf.getPages().map((page) => stampedTextsOf(pdf, page))
+    expect(stamps[2]).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 3 / 6'])
+    expect(stamps[3]).toEqual(['Boarding', 'R1 · Expense 1: Air Canada, YYZ–CDG return · 4 / 6'])
+    expect(boarding).toHaveLength(pass?.length ?? 0)
     expect(statements).toEqual(
       expect.arrayContaining([
         'Bank statements',
@@ -350,7 +420,8 @@ describe('writeReportDocument', () => {
         '5 / 6',
       ]),
     )
-    expect(statement).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
+    expect(stamps[5]).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 6 / 6'])
+    expect(statement?.at(0)).toBe('S1')
   })
 
   it('opens with the additional documents, travel justifications first, closes with the bank statements, and calls each document by its name', async () => {
@@ -378,7 +449,8 @@ describe('writeReportDocument', () => {
     const texts = pdf.getPages().map((page) => textsOf(pdf, page))
     expect(texts).toHaveLength(9)
     const [cover, additional, justification, itineraryPage, receipts, , , statements, last] = texts
-    expect(cover).toEqual(expect.arrayContaining(['air-canada', 'Visa, October', '1 / 9']))
+    expect(cover).toEqual(expect.arrayContaining(['Receipt', 'Statement', '1 / 9']))
+    expect(cover).not.toContain('Visa, October')
     expect(additional).toEqual(
       expect.arrayContaining([
         'Additional documents',
@@ -398,11 +470,15 @@ describe('writeReportDocument', () => {
     expect(at('A1')).toBeGreaterThan(at('Travel justifications'))
     expect(others).toBeGreaterThan(at('A1'))
     expect(at('A2')).toBeGreaterThan(others)
-    expect(justification).toEqual(['A1 · Invitation from ICSE · 3 / 9'])
-    expect(itineraryPage).toEqual(['Itinerary', 'A2 · itinerary · 4 / 9'])
+    const stamps = pdf.getPages().map((page) => stampedTextsOf(pdf, page))
+    expect(stamps[2]).toEqual(['A1 · Invitation from ICSE · 3 / 9'])
+    expect(stamps[3]).toEqual(['Itinerary', 'A2 · itinerary · 4 / 9'])
+    expect(justification?.at(0)).toBe('A1')
+    expect(itineraryPage?.at(0)).toBe('Itinerary')
     expect(receipts).toEqual(expect.arrayContaining(['Receipts', 'R1']))
     expect(statements).toEqual(expect.arrayContaining(['Bank statements', 'S1', 'Visa, October']))
-    expect(last).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 9 / 9'])
+    expect(stamps[8]).toEqual(['S1 · Expense 1: Air Canada, YYZ–CDG return · 9 / 9'])
+    expect(last?.at(0)).toBe('S1')
   })
 
   it('gives each expense an Entered box on the cover, empty, which needs no font of its own', async () => {
@@ -434,9 +510,9 @@ describe('writeReportDocument', () => {
     expect(at('Supporting documents')).toBeUndefined()
     const [description, receipt, separator, statement] = [
       'Air Canada, YYZ–CDG return',
-      'air-canada',
+      'Receipt',
       ' · ',
-      'statement-octobre',
+      'Statement',
     ].map(at)
     expect(receipt?.x).toBeCloseTo(description?.x ?? 0)
     expect(receipt?.y).toBeLessThan(description?.y ?? 0)
@@ -460,7 +536,7 @@ describe('writeReportDocument', () => {
     )
     expect(flight?.x).toBe(meal?.x)
     expect(meal?.y).toBeLessThan(flight?.y ?? 0)
-    const links = linksOf(pdf, statements)
+    const links = linksOf(pdf, statements).filter(({ to }) => to === 1)
     expect(links.map(({ to, how }) => [to, how])).toEqual([
       [1, '/XYZ'],
       [1, '/XYZ'],
@@ -476,7 +552,7 @@ describe('writeReportDocument', () => {
     )
     expect(second?.x).toBe(first?.x)
     expect(second?.y).toBeLessThan(first?.y ?? 0)
-    expect(textsOf(pdf, pdf.getPage(2)).at(-1)).toBe(
+    expect(stampedTextsOf(pdf, pdf.getPage(2)).at(-1)).toBe(
       'R1 · Expense 1: Dinner with: Ada Lovelace (McM… · 3 / 6',
     )
   })
@@ -495,14 +571,200 @@ describe('writeReportDocument', () => {
     const places = placesOf(pdf, pdf.getPage(0))
     const place = (text: string) => places.find((each) => each.text === text)
     expect(place('EUR 55.00')).toBeDefined()
-    const [cad, euro] = places
-      .filter((each) => ['$1,012.35', 'EUR 55.00'].includes(each.text))
-      .slice(-2)
-    expect(cad?.text).toBe('$1,012.35')
-    expect(euro?.text).toBe('EUR 55.00')
+    const [cad, euro] = [place('CAD'), place('EUR')]
     expect(euro?.x).toBe(cad?.x)
     expect(euro?.y).toBeLessThan(cad?.y ?? 0)
     expect(place('Total')?.y).toBe(cad?.y)
+    // Right-aligned: digits are of one width in Noto Sans, so the shorter amount starts further on.
+    expect(place('1,012.35')?.y).toBe(cad?.y)
+    expect(place('55.00')?.y).toBe(euro?.y)
+    expect(place('55.00')?.x).toBeGreaterThan(place('1,012.35')?.x ?? 0)
+  })
+
+  it('writes the titles of the last columns of the cover on two lines, each centred in its column', async () => {
+    const pdf = await written(await reportOf('Air Canada, YYZ–CDG return'))
+    const places = placesOf(pdf, pdf.getPage(0))
+    const at = (text: string) => places.find((place) => place.text === text)
+    const [claimed, currency, entered, mosaic] = ['Claimed', '(CAD)', 'Entered', '(Mosaic)'].map(at)
+    expect(currency?.y).toBeLessThan(claimed?.y ?? 0)
+    expect(mosaic?.y).toBe(currency?.y)
+    expect(entered?.y).toBe(claimed?.y)
+    // The shorter line of each title starts further on, and neither leaves its column.
+    const claimedColumn = 54 + 22 + 62 + 220 + 76
+    expect(currency?.x).toBeGreaterThan(claimed?.x ?? 0)
+    expect(claimed?.x).toBeGreaterThan(claimedColumn)
+    expect(claimed?.x).toBeLessThan(claimedColumn + 76 / 2)
+    const enteredColumn = claimedColumn + 76
+    expect(entered?.x).toBeGreaterThan(mosaic?.x ?? 0)
+    expect(mosaic?.x).toBeGreaterThanOrEqual(enteredColumn)
+    expect(mosaic?.x).toBeLessThan(enteredColumn + 48 / 2)
+  })
+
+  it('writes the claimed amounts on the right of their column, ending with those of the total', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const flight = report.expenses[0] ?? new Expense()
+    const pdf = await written(
+      report.afterAdding(flight.afterChanging({ claimedAmount: new Amount(1000) })),
+    )
+    const places = placesOf(pdf, pdf.getPage(0))
+    const at = (text: string) => places.find((place) => place.text === text)
+    const [large, small, total] = [at('$1,012.35'), at('$10.00'), at('1,022.35')]
+    expect(small?.x).toBeGreaterThan(large?.x ?? 0)
+    // Bold digits are of one width too: the same text ends at the same place in either font.
+    const column = 54 + 22 + 62 + 220 + 76
+    expect(large?.x).toBeGreaterThan(column + 4)
+    expect(total?.x).toBeGreaterThan(large?.x ?? 0)
+  })
+
+  describe('the Policy section', () => {
+    const [first, second] = policy.documents
+    if (first === undefined || second === undefined) throw new TypeError('No policy')
+
+    /** The cover of a report whose policy holds the documents given. */
+    async function coverWith(documents: readonly PolicyDocument[]) {
+      const report = await reportOf('Air Canada, YYZ–CDG return')
+      const bytes = await writeReportDocument({
+        layout: { ...layoutOf(report), policyDocuments: documents },
+        palette,
+        version: '0.1.0',
+        writtenOn: new CalendarDate(2026, 11, 7),
+        documents: new DocumentsAsWritten(neverEncoding),
+      })
+      const pdf = await PDFDocument.load(bytes, { updateMetadata: false })
+      return { pdf, places: placesOf(pdf, pdf.getPage(0)) }
+    }
+
+    it('stands level with the attached information, against the right margin', async () => {
+      const { places } = await coverWith(policy.documents)
+      const at = (text: string) => places.find((place) => place.text === text)
+      expect(at('Policy')?.y).toBe(at('Attached information')?.y)
+      expect(at(first.name)?.y).toBe(at('Additional documents')?.y)
+      expect(at(second.name)?.y).toBe(at('Bank statements')?.y)
+      expect(at('Policy')?.x).toBeGreaterThan(400)
+      // Each name ends at the same place: the longer one starts earlier.
+      expect(at(second.name)?.x).toBeLessThan(at(first.name)?.x ?? 0)
+      expect(at('Expenses')?.y).toBeLessThan(at('Receipts')?.y ?? 0)
+    })
+
+    it('links each name to its address, its arrow included, within the right margin', async () => {
+      const { pdf } = await coverWith(policy.documents)
+      const links = (pdf.getPage(0).node.Annots()?.asArray() ?? [])
+        .map((reference) => pdf.context.lookup(reference, PDFDict))
+        .filter((annotation) => annotation.has(PDFName.of('A')))
+      const actions = links.map((link) => link.lookup(PDFName.of('A'), PDFDict))
+      expect(actions.map((action) => action.get(PDFName.of('S')))).toEqual([
+        PDFName.of('URI'),
+        PDFName.of('URI'),
+      ])
+      expect(
+        actions.map((action) => action.lookup(PDFName.of('URI'), PDFString).asString()),
+      ).toEqual(policy.documents.map(({ url }) => url))
+      for (const link of links) {
+        const [left = 0, , right = 0] = link
+          .lookup(PDFName.of('Rect'), PDFArray)
+          .asArray()
+          .map((value) => (value as PDFNumber).asNumber())
+        expect(right).toBeCloseTo(612 - 54)
+        expect(left).toBeGreaterThan(612 - 54 - 290 - 10)
+      }
+    })
+
+    it('wraps a long name clear of the attached information', async () => {
+      const name = Array.from({ length: 12 }, () => 'Reimbursements').join(' ')
+      const { places } = await coverWith([{ name, url: first.url }])
+      const lines = places.filter((place) => place.text.startsWith('Reimbursements'))
+      expect(lines.length).toBeGreaterThan(1)
+      const widest = places.find((place) => place.text === 'Missing receipt authorizations')
+      for (const line of lines) {
+        expect(line.x).toBeGreaterThan((widest?.x ?? 0) + 150)
+      }
+    })
+
+    it('continues on the next page when it is longer than a page, under the attached information', async () => {
+      const documents = Array.from({ length: 70 }, (_, index) => ({
+        name: `Document ${index + 1}`,
+        url: first.url,
+      }))
+      const report = await reportOf('Air Canada, YYZ–CDG return')
+      const bytes = await writeReportDocument({
+        layout: { ...layoutOf(report), policyDocuments: documents },
+        palette,
+        version: '0.1.0',
+        writtenOn: new CalendarDate(2026, 11, 7),
+        documents: new DocumentsAsWritten(neverEncoding),
+      })
+      const pdf = await PDFDocument.load(bytes, { updateMetadata: false })
+      const pages = pdf.getPages().map((page) => placesOf(pdf, page))
+      const written = pages.flat().filter((place) => place.text.startsWith('Document '))
+      expect(new Set(written.map((place) => place.text)).size).toBe(70)
+      for (const place of written) {
+        expect(place.y).toBeGreaterThanOrEqual(54)
+      }
+      const onFirst = pages[0]?.filter((place) => place.text.startsWith('Document ')) ?? []
+      const on = (text: string) => pages[0]?.find((place) => place.text === text)
+      expect(on('Policy')?.y).toBeLessThan(on('Receipts')?.y ?? 0)
+      expect(onFirst.length).toBeLessThan(70)
+      const links = (pdf.getPage(1).node.Annots()?.asArray() ?? [])
+        .map((reference) => pdf.context.lookup(reference, PDFDict))
+        .filter((annotation) => annotation.has(PDFName.of('A')))
+      expect(links.length).toBeGreaterThan(0)
+      expect(pages.flat().some((place) => place.text === 'Expenses')).toBe(true)
+    })
+
+    it('pushes the expenses under it when it is longer than the attached information', async () => {
+      const documents = Array.from({ length: 8 }, (_, index) => ({
+        name: `Document ${index + 1}`,
+        url: first.url,
+      }))
+      const { places } = await coverWith(documents)
+      const at = (text: string) => places.find((place) => place.text === text)
+      expect(at('Expenses')?.y).toBeLessThan(at('Document 8')?.y ?? 0)
+      expect(at('Document 8')?.y).toBeLessThan(at('Receipts')?.y ?? 0)
+    })
+  })
+
+  it('continues a total longer than a page on the next, each of its lines on a page', async () => {
+    const report = await reportOf('Air Canada, YYZ–CDG return')
+    const expense = report.expenses[0] ?? new Expense()
+    const currencies = Currency.all.slice(0, 70)
+    const paid = currencies.map((currency) =>
+      expense.afterChanging({
+        description: 'Paid abroad',
+        claimedAmount: undefined,
+        isPaidInAnotherCurrency: true,
+        foreignAmount: new Amount(1000),
+        currency,
+      }),
+    )
+    const pdf = await written(
+      paid.reduce((each, other) => each.afterAdding(other), report.afterRemovingExpense(expense)),
+    )
+    const places = pdf
+      .getPages()
+      .flatMap((page) => placesOf(pdf, page))
+      .filter((place) => /^[A-Z]{3}$/.test(place.text))
+    expect(places.map((place) => place.text)).toEqual(currencies.map(({ code }) => code))
+    for (const place of places) {
+      expect(place.y).toBeGreaterThanOrEqual(54)
+    }
+  })
+
+  it('keeps an amount of the total too wide for its column clear of its currency', async () => {
+    const report = await reportOf('A very large claim')
+    const expense = report.expenses[0] ?? new Expense()
+    const pdf = await written(
+      report.afterReplacing(
+        expense,
+        expense.afterChanging({ claimedAmount: new Amount(12_345_678_900) }),
+      ),
+    )
+    const places = placesOf(pdf, pdf.getPage(0))
+    const [code, amount] = [
+      places.find((place) => place.text === 'CAD'),
+      places.find((place) => place.text === '123,456,789.00'),
+    ]
+    expect(amount?.y).toBe(code?.y)
+    expect(amount?.x).toBeGreaterThan((code?.x ?? 0) + 18)
   })
 
   it('itemizes each per diem with a meal claimed on the cover, its meals not claimed under it, with an Entered box', async () => {
@@ -541,7 +803,8 @@ describe('writeReportDocument', () => {
     ]) {
       expect(at(text), text).toBeDefined()
     }
-    expect(places.filter((place) => place.text === 'USD 86.10')).toHaveLength(2)
+    expect(at('USD 86.10')).toBeDefined()
+    expect(at('86.10')?.y).toBe(at('USD')?.y)
     expect(at('Not claimed: lunch (provided by the conference)')?.x).toBeCloseTo(
       at('Per diem, international: breakfast, dinner')?.x ?? 0,
     )
@@ -573,12 +836,14 @@ describe('writeReportDocument', () => {
         }),
       )
       const pdf = await written(many.reduce((each, other) => each.afterAdding(other), report))
-      const pageOf = (isWanted: (text: string) => boolean) =>
-        pdf.getPages().findIndex((page) => textsOf(pdf, page).some(isWanted))
-      const tall = shorter + 1
-      const description = pageOf((text) => text.startsWith(`Taxi ${tall} ride`))
-      expect(description).toBeGreaterThanOrEqual(0)
-      expect(pageOf((text) => text === `receipt-${tall}`)).toBe(description)
+      const covers = pdf
+        .getPages()
+        .map((page) => textsOf(pdf, page))
+        .filter((texts) => texts.includes('Description'))
+      for (const texts of covers) {
+        const expenses = texts.filter((text) => /^Taxi \d+ ride/.test(text))
+        expect(texts.filter((text) => text === 'Receipt')).toHaveLength(expenses.length)
+      }
     }
   }, 30_000)
 
@@ -646,7 +911,7 @@ describe('writeReportDocument', () => {
     expect(page.getMediaBox()).toEqual(page.getCropBox())
     const wrapper = decoded(streamsOf(pdf, page)[0])
     expect(wrapper).toMatch(/20 30 180 500 re\s+W\s+n\s+1 0 0 1 0 0 cm/)
-    expect(textsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 4 / 6'])
+    expect(stampedTextsOf(pdf, page)).toEqual(['Till', 'R1 · Expense 1: Taxi · 4 / 6'])
     const kept = (page.node.Annots()?.asArray() ?? [])
       .map((reference) => pdf.context.lookup(reference, PDFDict))
       .filter((annotation) => annotation.get(PDFName.of('Subtype')) === PDFName.of('Square'))
@@ -713,7 +978,7 @@ describe('writeReportDocument', () => {
       if (page === undefined) throw new TypeError('No page')
       const [width = 0, height = 0] = shown(page)
       expect(width).toBeLessThan(height)
-      expect(textsOf(pdf, page).at(-1)).toMatch(
+      expect(stampedTextsOf(pdf, page).at(-1)).toMatch(
         /^R1 · Expense 1: Air Canada, YYZ–CDG return · \d \/ 7$/,
       )
     }
@@ -763,9 +1028,10 @@ describe('the size of what it holds', () => {
   async function writtenWith(
     content: Uint8Array,
     encoder: ImageEncoder = neverEncoding,
+    isReduced = false,
   ): Promise<PDFDocument> {
     const base = await reportOf('Taxi')
-    const replaced = new Document(Kind.receipt, 'taxi', content)
+    const replaced = new Document(Kind.receipt, 'taxi', content, undefined, isReduced)
     const report = new Report({ ...base, expenses: [] }).afterAdding(
       (base.expenses[0] as Expense).afterChanging({ receipts: [replaced] }),
     )
@@ -817,12 +1083,22 @@ describe('the size of what it holds', () => {
     expect(String.fromCharCode(...(image?.contents ?? []))).not.toContain('Exif')
   })
 
-  it('holds a large image as encoded, on a Letter page', async () => {
+  it('holds a large image as added until the Claimant reduces it, encoding nothing', async () => {
+    const large = new Uint8Array(5_000_000)
+    large.set(jpegOf(4000, 3000))
+    const pdf = await writtenWith(large)
+    const image = streamsOf(pdf).find(
+      (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
+    )
+    expect(image?.contents.length).toBe(large.length)
+  })
+
+  it('holds a large image the Claimant reduced as encoded, on a Letter page', async () => {
     const large = new Uint8Array(2_000_000)
     large.set(jpegOf(4000, 3000))
     const encoded = jpegOf(2200, 1650)
     const encoder: ImageEncoder = { jpeg: async () => encoded, png: async () => encoded }
-    const pdf = await writtenWith(large, encoder)
+    const pdf = await writtenWith(large, encoder, true)
     const image = streamsOf(pdf).find(
       (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),
     )
@@ -838,7 +1114,7 @@ describe('the size of what it holds', () => {
     const notSmaller = new Uint8Array(1_000_000)
     notSmaller.set([0x89, 0x50, 0x4e, 0x47])
     const encoder: ImageEncoder = { jpeg: async () => encoded, png: async () => notSmaller }
-    const pdf = await writtenWith(large, encoder)
+    const pdf = await writtenWith(large, encoder, true)
     expect(
       streamsOf(pdf).some(
         (stream) => stream.dict.get(PDFName.of('Filter')) === PDFName.of('DCTDecode'),

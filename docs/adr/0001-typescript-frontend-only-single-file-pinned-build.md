@@ -1,7 +1,7 @@
 # ADR 0001: TypeScript, front-end only, single-file Vite build with pinned dependencies
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -54,7 +54,8 @@ project's GitHub Pages site (ADR 0003).
 - **Nothing crosses a network.** The page fetches nothing at runtime, by
   relative URL or otherwise, and sends nothing. Files are read where the
   Claimant hands them over, and the report document is written in the
-  browser (ADR 0009).
+  browser (ADR 0009). A link to McMaster's policy is followed only by the reader,
+  in a tab of its own (ADR 0012).
 - Persistence is on the client only, and best effort (ADR 0008).
 
 ### 3. Build system: Vite, with every dependency pinned

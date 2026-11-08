@@ -44,18 +44,17 @@ R1, R2, and so on.
   margins when it is larger, never enlarged, and centred.
 - A JPEG image is first mirrored and turned as its Exif orientation says, so
   that a photo taken with a phone shows upright.
-- An image document of at most the size `config/document-sizes.json` sets,
-  today 1 MB, keeps its pixels as added. A larger one is written with a long
-  side of at most 2200 pixels, never enlarged. A JPEG is encoded at quality 0.8,
-  and keeps the pixels it was added with when that is not smaller. A PNG stays a
-  PNG unless that is more than twice the size of the same image as a JPEG, a
+- An image document keeps its pixels as added, whatever its size, unless the
+  Claimant reduced it (`prepare-an-expense-report.md`). Reduced, its long side is
+  at most 2200 pixels, never enlarged: a JPEG is encoded at quality 0.8; a PNG stays
+  a PNG unless that is more than twice the size of the same image as a JPEG, a
   transparent background becoming white.
 - A JPEG image holds its image and its colour profile only, without the Exif
   data of a photo.
 - A PDF document the Claimant reduced (`prepare-an-expense-report.md`) has the
   same pages, text, links and form fields. Each JPEG in RGB, by a colour profile
   or not, or in plain grey, without a mask or decoding parameters, with a long
-  side above 2200 pixels is encoded by the rule above, an RGB one keeping its
+  side above 2200 pixels is encoded at that size and quality, an RGB one keeping its
   colour space. A shape filled and drawn more than once is kept once and drawn
   from there, within 0.01 point of where it was, unless the document is a bank
   statement. A page holding an inline image, a page with a string running from one
@@ -78,6 +77,12 @@ the template's fields and its table, so that nothing else needs filling in.
   parentheses when it is given (*NSERC Discovery (20-123-456)*).
 - **Attached information.** The four kinds of document, in alphabetical
   order, each with a box ticked when its section exists.
+- **Policy.** Beside the attached information, level with it and against the
+  right margin: its heading, then the name of each document `config/policy.json`
+  lists, one per line, each a link followed by its arrow. A longer name wraps, clear
+  of the attached information, and the expenses start under the longer of the two.
+  A policy that does not fit a page stands under the attached information instead,
+  and continues on the next page.
 - **Expenses.** A table of every expense and every per diem with a meal
   claimed, sorted by date, the expenses of a day in the order they were
   added and its per diem after them, and numbered in that order, each on two
@@ -86,26 +91,30 @@ the template's fields and its table, so that nothing else needs filling in.
   domestic and international takes two rows, its domestic meals then its
   international ones.
 
-  | # | Date | Description | Foreign amount | Claimed (CAD) | Entered |
+  | # | Date | Description | Foreign amount | Claimed<br>(CAD) | Entered<br>(Mosaic) |
   |---|---|---|---|---|---|
   | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
-  | | | *Air Canada booking · Visa, October* | | | |
+  | | | *Receipt ↗ · Statement ↗* | | | |
   | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | | ☐ |
-  | | | *Taxi, CDG–hotel · cash* | | | |
+  | | | *Receipt ↗ · cash* | | | |
   | 3 | 2026-10-05 | Per diem, international: breakfast, dinner | USD 86.10 | | ☐ |
   | | | *Not claimed: lunch (provided by the conference)* | | | |
   | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch | | $55.80 | ☐ |
   | | | | | | |
   | 5 | 2026-10-06 | Per diem, international: dinner | USD 57.70 | | ☐ |
-  | | | **Total** | | **$1,068.15**<br>**EUR 55.00**<br>**USD 143.80** | |
+  | | | **Total** | | **CAD 1,068.15**<br>**EUR 55.00**<br>**USD 143.80** | |
 
-  A description keeps its line breaks. The foreign amount is the currency
+  The titles *Claimed (CAD)* and *Entered (Mosaic)* each stand on two lines,
+  centred in their columns. An amount is always written with two decimals, as
+  *$10.00*. The claimed amounts stand on the right of their column, ending with
+  those of the total. A description keeps its line breaks. The foreign amount is the currency
   code then the amount, empty for an expense paid in Canadian dollars;
   nothing is converted. The claimed amount is empty for an expense that has
-  none, McSCert working it out from the foreign amount. The supporting documents are the names of the expense's
-  documents, in grey, separated by a middle dot, in the order of the report
-  document, and *cash* for an expense paid in cash; a missing receipt
-  authorization is named by the expense's description. They run from under
+  none, McSCert working it out from the foreign amount. The supporting documents are
+  the expense's documents, in grey, separated by a middle dot, in the order of
+  the report document, each called by its kind whatever its name, *Receipt*,
+  *Missing receipt* or *Statement*, followed by the arrow of a link, and *cash*
+  for an expense paid in cash. They run from under
   the description to the claimed amount, and on to the next line when they
   do not fit. *Entered* is an empty box, a form field that McSCert's
   administrative staff tick on screen, or by hand on a printed copy, once
@@ -115,7 +124,10 @@ the template's fields and its table, so that nothing else needs filling in.
   of the claimed amounts and of the domestic meals claimed, when there is
   one, then, one per line and by currency in alphabetical order, the sum of
   the foreign amounts of the expenses without a claimed amount, US dollars
-  including the international meals claimed.
+  including the international meals claimed. Each line is the currency's code
+  then the amount, CAD included, the codes aligned on the left of the column
+  and the amounts on its right. A total that does not fit a page continues on the
+  next.
 
   A per diem row's description is *Per diem*, *domestic* or *international*,
   then its meals claimed, in the order breakfast, lunch, dinner. Its amount
@@ -135,7 +147,7 @@ The title of the section, then a table of its documents:
 
 | Label | Name | Pages | Expenses |
 |---|---|---|---|
-| S1 | Visa, October | 9–11 | Air Canada, YYZ–CDG return<br>Taxi, CDG–hotel<br>Dinner with the programme comm… |
+| S1 ↗ | Visa, October | 9–11 | Air Canada, YYZ–CDG return ↗<br>Taxi, CDG–hotel ↗<br>Dinner with the programme comm… ↗ |
 
 Pages are the pages of the report document. The expenses a document
 supports are named by their description, one per line, a description longer
@@ -202,13 +214,13 @@ it reads upright on screen, whatever the page's size and rotation:
 - on a page of a receipt, a bank statement or a missing receipt
   authorization: its label, each expense the document supports, by its
   number and the start of its description, then the page number out of the
-  total, as in `R3 · Expense 2: Taxi, CDG–hotel · 12 / 30` or
-  `S1 · Expense 1: Air Canada, YYZ–CDG return · Expense 3: Dinner with the
-  programme comm… · 14 / 30`. A description is written on one line, its line
+  total, as in `R3 · Expense 2: Taxi, CDG–hotel ↗ · 12 / 30` or
+  `S1 · Expense 1: Air Canada, YYZ–CDG return ↗ · Expense 3: Dinner with the
+  programme comm… ↗ · 14 / 30`. A description is written on one line, its line
   breaks as spaces, and one longer than 30 characters is cut to its first 30,
   followed by an ellipsis;
 - on a page of an additional document: its label, its name, then the page
-  number out of the total, as in `A1 · Invitation from ICSE · 3 / 30`; a
+  number out of the total, as in `A1 ↗ · Invitation from ICSE · 3 / 30`; a
   name longer than 30 characters is cut as a description is;
 - on the cover and on section pages: the page number out of the total.
 
@@ -223,18 +235,21 @@ receipt and back.
 ## Links
 
 Labels and expense numbers are links: clicked in a PDF reader, they go to
-what they name.
+what they name. An arrow pointing up and to the right, drawn after a link in the
+colour of its text, shows that it is one; a section page's pages have none, the
+label of their row already showing where they go.
 
 | Where | Link | Goes to |
 |---|---|---|
-| Cover, expenses | A name among the supporting documents | The first page of its document |
+| Cover, expenses | A document among the supporting documents | The first page of its document |
 | Section page | A label, or its pages | The first page of its document |
 | Section page | An expense's description | The expense's row on the cover |
+| Cover, Policy | The name of a document | The address `config/policy.json` gives it, opened as the PDF reader opens a link |
 | Stamp | An expense, its number and its description | The expense's row on the cover |
-| Stamp | The label | The document's row on its section page |
+| Stamp | The label of an additional document, which has no expense to go back to | The document's row on its section page |
 
 Going to a row opens the page that holds it, with the row at the top of the
-window. *cash* and page numbers in the stamp are not links. A link changes
+window. *cash*, a document's name and page numbers in the stamp are not links. A link changes
 nothing on a printed copy, where the stamp does its work.
 
 ## Text
@@ -250,7 +265,7 @@ names included, is a finding at the Review step
 ## Look
 
 The colours are those of the McMaster palette: maroon titles and table
-headers, grey secondary text, Dundurn Grey rules. The logo is the McSCert
+headers, grey secondary text and rules. The logo is the McSCert
 logo, in colour, as supplied, on the cover, on section pages and on missing
 receipt authorizations.
 

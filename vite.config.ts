@@ -4,6 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 import { defineConfig } from 'vitest/config'
 import { DocumentSizes } from './src/domain/document-sizes.ts'
 import { PerDiemRates } from './src/domain/per-diem-rates.ts'
+import { Policy } from './src/domain/policy.ts'
 
 const { version } = JSON.parse(readFileSync('./package.json', 'utf8')) as { version: string }
 
@@ -35,8 +36,7 @@ function checkPerDiemRates(): Plugin {
 }
 
 /**
- * Refuses to build unless `config/document-sizes.json` holds both sizes, each more than zero
- * (ADR 0011), rather than writing a page that would fail as it opens.
+ * Refuses to build unless `config/document-sizes.json` holds its size, more than zero (ADR 0011), rather than writing a page that would fail as it opens.
  */
 function checkDocumentSizes(): Plugin {
   return {
@@ -47,10 +47,29 @@ function checkDocumentSizes(): Plugin {
   }
 }
 
+/**
+ * Refuses to build unless `config/policy.json` holds at least one document, each with a name the
+ * report document can write and an https address (ADR 0012).
+ */
+function checkPolicy(): Plugin {
+  return {
+    name: 'macreport:check-policy',
+    buildStart() {
+      Policy.from(JSON.parse(readFileSync('./config/policy.json', 'utf8')))
+    },
+  }
+}
+
 export default defineConfig({
   base: './',
   define: { __VERSION__: JSON.stringify(version) },
-  plugins: [checkPerDiemRates(), checkDocumentSizes(), viteSingleFile(), nameAfterVersion()],
+  plugins: [
+    checkPerDiemRates(),
+    checkDocumentSizes(),
+    checkPolicy(),
+    viteSingleFile(),
+    nameAfterVersion(),
+  ],
   build: { assetsInlineLimit: Number.MAX_SAFE_INTEGER },
   test: {
     include: ['src/**/*.test.ts'],

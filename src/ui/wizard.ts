@@ -1,10 +1,11 @@
+import { policy } from '../domain/policy.ts'
 import type { Report } from '../domain/report.ts'
 import { additionalDocumentsStep } from './additional-documents-step.ts'
 import { confirmed } from './confirmation.ts'
 import type { ReadFile } from './document-field.ts'
 import type { DocumentLinks } from './document-link.ts'
 import { expensesStep } from './expenses-step.ts'
-import { html } from './html.ts'
+import { html, type Markup } from './html.ts'
 import { reportStep } from './report-step.ts'
 import { reviewStep, type SaveReport, type WeighReport } from './review-step.ts'
 import type { Context, Step } from './step.ts'
@@ -28,6 +29,14 @@ export interface WizardOptions {
   readonly keep: (report: Report) => Promise<boolean>
   /** Deletes the draft and its documents, for New report; gives whether the browser did. */
   readonly discard: () => Promise<boolean>
+}
+
+/** The documents of the policy, one after the other, each a link that opens it in a new tab. */
+function policyLinks(): Markup[] {
+  return policy.documents.flatMap(({ name, url }, index) => {
+    const link = html`<a href="${url}" target="_blank" rel="noopener noreferrer">${name}</a>`
+    return index === 0 ? [link] : [html` · `, link]
+  })
 }
 
 /**
@@ -136,7 +145,8 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         </div>
       </main>
       <footer>
-        <p>McSCert Expense Report v${options.version} · McSCert · McMaster University</p>
+        <p>McSCert Expense Report v${options.version} · McMaster Centre for Software Certification</p>
+        <p class="policy-links">${policyLinks()}</p>
         <p class="privacy">Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.</p>
       </footer>`.text
 

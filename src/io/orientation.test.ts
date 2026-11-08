@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { orientationOf } from './orientation.ts'
+import { orientationOf, withOrientationOf } from './orientation.ts'
 
 /** A JPEG header, its Exif orientation in the byte order given, then its frame and its end. */
 function jpegOf(orientation?: number, isLittleEndian = false): Uint8Array {
@@ -20,6 +20,40 @@ function jpegOf(orientation?: number, isLittleEndian = false): Uint8Array {
   bytes.push(0xff, 0xc0, 0, 11, 8, 1, 44, 1, 144, 1, 1, 0x11, 0, 0xff, 0xd9)
   return new Uint8Array(bytes)
 }
+
+describe('withOrientationOf', () => {
+  /** A JPEG of an Exif orientation, or without one. */
+  function photoOf(orientation?: number): Uint8Array {
+    const tiff = [0x4d, 0x4d, 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1]
+    const exif = [0x45, 0x78, 0x69, 0x66, 0, 0, ...tiff, 0, orientation ?? 1, 0, 0, 0, 0, 0, 0]
+    const segment = orientation === undefined ? [] : [0xff, 0xe1, 0, exif.length + 2, ...exif]
+    return new Uint8Array([0xff, 0xd8, ...segment, 0xff, 0xda, 0, 2, 1, 2, 3])
+  }
+  const encoded = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 2, 0xff, 0xda, 0, 2, 9, 9])
+
+  it.each([2, 3, 4, 5, 6, 7, 8])('says orientation %i of the original', (orientation) => {
+    const shown = withOrientationOf(photoOf(orientation), encoded)
+    expect(orientationOf(shown)).toEqual(orientationOf(photoOf(orientation)))
+    expect([...shown.subarray(-encoded.length + 2)]).toEqual([...encoded.subarray(2)])
+    expect([...shown.subarray(0, 2)]).toEqual([0xff, 0xd8])
+  })
+
+  it('gives the bytes given when there is no orientation to say', () => {
+    expect(withOrientationOf(photoOf(), encoded)).toBe(encoded)
+    expect(withOrientationOf(photoOf(1), encoded)).toBe(encoded)
+    expect(withOrientationOf(new Uint8Array([0xff, 0xd8, 0xff]), encoded)).toBe(encoded)
+  })
+
+  it('gives the bytes given for what is not a JPEG', () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+    expect(withOrientationOf(photoOf(6), png)).toBe(png)
+  })
+
+  it('keeps nothing of the original but its orientation', () => {
+    const shown = withOrientationOf(photoOf(6), encoded)
+    expect(shown).toHaveLength(encoded.length + 36)
+  })
+})
 
 describe('orientationOf', () => {
   const turn = (content: Uint8Array) => orientationOf(content).turn

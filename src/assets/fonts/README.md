@@ -1,5 +1,9 @@
 # Fonts
 
+`src/domain/writable-characters.ts` holds the characters of these fonts, for the
+finding of a character the report document cannot write. A test fails when they
+differ: cutting the fonts otherwise means changing that file too.
+
 Noto Sans Regular and Bold, version 2.015, from
 `notofonts/latin-greek-cyrillic` (release `NotoSans-v2.015`, unhinted TTF),
 under the SIL Open Font License 1.1 (`OFL.txt`).

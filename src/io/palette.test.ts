@@ -14,6 +14,7 @@ describe('paletteFrom', () => {
     const palette = paletteFrom((token) => ` ${tokens.get(token) ?? ''}`)
     expect(palette.maroon).toEqual({ red: 122 / 255, green: 0, blue: 60 / 255 })
     expect(palette.grey).toEqual({ red: 73 / 255, green: 89 / 255, blue: 101 / 255 })
+    expect(palette.rule).toEqual(palette.grey)
     expect(palette.white).toEqual({ red: 1, green: 1, blue: 1 })
     expect(palette.black).toEqual({ red: 0, green: 0, blue: 0 })
   })

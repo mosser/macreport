@@ -7,6 +7,11 @@ function icon(paths: string) {
   )
 }
 
+/** Two arrows pointing at each other: Reduce. */
+export const reduceArrows = icon(
+  '<path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>',
+)
+
 /** A trash can: Remove. */
 export const trashCan = icon(
   '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',

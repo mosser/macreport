@@ -1,4 +1,3 @@
-import { documentSizes } from '../domain/document-sizes.ts'
 import { formatOf } from './format.ts'
 import type { ImageEncoder } from './image-encoder.ts'
 import { withoutExif } from './jpeg.ts'
@@ -14,45 +13,38 @@ export interface WrittenImage {
   readonly orientation: Orientation
 }
 
+/** An image of a format as the report document holds it, from what it holds of its pixels. */
+function writtenImage(content: Uint8Array, orientation: Orientation): WrittenImage {
+  return { content, format: formatOf(content) === 'png' ? 'png' : 'jpeg', orientation }
+}
+
+/** The pixels of an image, as added: a JPEG holds no Exif data. */
+function pixelsOf(content: Uint8Array): Uint8Array {
+  return formatOf(content) === 'jpeg' ? withoutExif(content) : content
+}
+
+/** An image the Claimant did not reduce: its pixels as added, a JPEG without its Exif data. */
+export function imageAsAdded(content: Uint8Array): WrittenImage {
+  return writtenImage(pixelsOf(content), orientationOf(content))
+}
+
+/** An image the Claimant reduced, from what reducing gave, shown as its Exif orientation says. */
+export function imageReduced(content: Uint8Array, reduced: Uint8Array): WrittenImage {
+  return writtenImage(reduced, orientationOf(content))
+}
+
 /**
- * An image as the report document holds it. Up to the size configured, it keeps its pixels as
- * added. Above it, it is encoded again, and stays as it was added when that is not smaller, or when
- * it cannot be encoded. A JPEG holds no Exif data, either way.
+ * What reducing an image gives: encoded again, handed over without its Exif data. A PNG stays a PNG
+ * so that a screenshot's text stays crisp, unless a photo's bytes make that more than twice the size
+ * of the same JPEG. Rejects an image it cannot encode.
  */
-export async function imageAsWritten(
+export async function reducedImage(
   content: Uint8Array,
   encoder: ImageEncoder,
-): Promise<WrittenImage> {
-  const orientation = orientationOf(content)
-  const kept = formatOf(content) === 'jpeg' ? withoutExif(content) : content
-  const encoded = documentSizes.isImageToReduce(kept.length)
-    ? await encodedOrNothing(kept, encoder)
-    : undefined
-  const chosen = encoded !== undefined && encoded.length < kept.length ? encoded : kept
-  return {
-    content: chosen,
-    format: formatOf(chosen) === 'png' ? 'png' : 'jpeg',
-    orientation,
-  }
-}
-
-async function encodedOrNothing(
-  content: Uint8Array,
-  encoder: ImageEncoder,
-): Promise<Uint8Array | undefined> {
-  try {
-    return formatOf(content) === 'png'
-      ? await smallerOf(content, encoder)
-      : await encoder.jpeg(content)
-  } catch {
-    // The image is written as it was added: larger, but readable, and the Claimant loses nothing.
-    return undefined
-  }
-}
-
-/** A PNG encoded again: as a PNG so that a screenshot's text stays crisp, unless a photo's bytes. */
-async function smallerOf(content: Uint8Array, encoder: ImageEncoder): Promise<Uint8Array> {
-  const png = await encoder.png(content)
-  const jpeg = await encoder.jpeg(content)
+): Promise<Uint8Array> {
+  const pixels = pixelsOf(content)
+  if (formatOf(pixels) !== 'png') return encoder.jpeg(pixels)
+  const png = await encoder.png(pixels)
+  const jpeg = await encoder.jpeg(pixels)
   return png.length > jpeg.length * largestPngShare ? jpeg : png
 }

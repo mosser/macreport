@@ -13,7 +13,7 @@ import {
   lacksOf,
 } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
-import { mealsNotClaimedOf, perDiemDescriptionsOf, totalOf } from '../domain/layout.ts'
+import { mealsNotClaimedOf, perDiemDescriptionsOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
@@ -26,7 +26,7 @@ import {
   type ReadFile,
 } from './document-field.ts'
 import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
-import { fieldName, fieldRule } from './field.ts'
+import { fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
 import type { Context, Step } from './step.ts'
@@ -167,7 +167,7 @@ function formOf(
   return html`<h2>Expense</h2>
     <label class="field">
       ${fieldName('date')}
-      <input name="date" type="date" value="${shown('date', expense.date?.toString())}" />
+      <input name="date" type="date" value="${shown('date', expense.date?.toString())}" max="${latestDate}" />
       ${fieldRule('date')}
     </label>
     <label class="field">
@@ -196,7 +196,8 @@ function formOf(
 /**
  * The expenses, sorted by date, each with its fields, its documents, each a link that opens it in
  * a new tab, and what it still lacks,
- * Change, a pen, and Remove, a trash can; Add an expense above them.
+ * Change, a pen, and Remove, a trash can, under Itemized expenses; Add an expense above them, the
+ * per diems under them.
  */
 function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
@@ -205,7 +206,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
     const lacks = lacksOf(report, expense).map((lack) => html`<li>${lack}</li>`)
     const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
-        <td>${expense.date?.toString() ?? ''}</td>
+        <td class="date">${expense.date?.toString() ?? ''}</td>
         <td class="description">${expense.description ?? ''}</td>
         <td>${expense.foreignAmountText}</td>
         <td>${expense.claimedAmount?.toString() ?? ''}</td>
@@ -220,9 +221,10 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
   })
   const table =
     rows.length > 0
-      ? html`<table class="expenses expense-list">
+      ? html`<h3>Itemized expenses</h3>
+        <table class="expenses expense-list">
           <thead><tr>
-            <th>Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th><th></th>
+            <th class="date">Date</th><th>Description</th><th>Foreign amount</th><th>Claimed (CAD)</th><th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>`
@@ -235,33 +237,30 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
       <button type="button" class="add-expense" data-action="add-expense">Add an expense</button>
       ${managePerDiems}
     </div>
-    ${perDiemsLineOf(report)}
-    ${table}`
+    ${table}
+    ${perDiemsOf(report)}`
 }
 
 /**
- * The per diems, when a meal is claimed: on one line, the number of days with a meal claimed and
- * their total, in Canadian dollars then in US dollars; then each of those days, by date: its meals
- * claimed, domestic then international, then its meals not claimed and their reasons. No amount
- * but the total.
+ * The per diems, when a meal is claimed, under their title: each of those days, by the day of the
+ * week on a line of its own and its date: its meals claimed, domestic then international, then its
+ * meals not claimed and their reasons. No amount.
  */
-function perDiemsLineOf(report: Report): Markup {
+function perDiemsOf(report: Report): Markup {
   const claimed = report.claimedPerDiems
   if (claimed.length === 0) {
     return html``
   }
-  const days = claimed.length === 1 ? '1 day' : `${claimed.length} days`
-  const line = [days, ...totalOf([], claimed)].join(' · ')
   const rows = claimed.map(
     (perDiem) => html`<tr class="expense">
-        <td>${perDiem.date.toString()}</td>
+        <td class="date" rowspan="2"><div>${perDiem.date.dayOfWeek}</div><div>${perDiem.date.toString()}</div></td>
         <td class="description">${perDiemDescriptionsOf(perDiem).join('\n')}</td>
       </tr>
-      <tr class="supporting"><td></td><td>${mealsNotClaimedOf(perDiem)}</td></tr>`,
+      <tr class="supporting"><td>${mealsNotClaimedOf(perDiem)}</td></tr>`,
   )
-  return html`<p class="per-diems-line">Per diems: ${line}</p>
+  return html`<h3>Per diems</h3>
     <table class="expenses per-diem-list">
-      <thead><tr><th>Date</th><th>Description</th></tr></thead>
+      <thead><tr><th class="date">Date</th><th>Description</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>`
 }

@@ -38,6 +38,6 @@ export function paletteFrom(readToken: (token: string) => string): Palette {
     grey: read('--mac-grey'),
     black: read('--mac-black'),
     white: read('--mac-white'),
-    rule: read('--mac-accent-light-grey'),
+    rule: read('--mac-grey'),
   }
 }

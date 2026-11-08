@@ -5,6 +5,7 @@ import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
 import type { DocumentWeight, ReportWeights } from '../domain/document-sizes.ts'
 import { Kind } from '../domain/kind.ts'
+import { policy } from '../domain/policy.ts'
 import { Report } from '../domain/report.ts'
 import { mountWizard, type WizardOptions } from './wizard.ts'
 
@@ -44,7 +45,7 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
       return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
     },
     links: {
-      urlOf: (document) => `blob:${document.fileName}`,
+      urlOf: (document) => `blob:${document.fileName}${document.isReduced ? '#reduced' : ''}`,
       forgetAll: () => {
         forgotten += 1
       },
@@ -179,7 +180,10 @@ describe('the wizard', () => {
     expect(root.querySelector('h2')?.textContent).toBe('Report')
     expect(root.textContent).toContain('closing the page will lose the report')
     const footer = root.querySelector('footer')?.textContent?.replace(/\s+/g, ' ')
-    expect(footer).toContain('McSCert Expense Report v0.1.0 · McSCert · McMaster University')
+    expect(footer).toContain(
+      'McSCert Expense Report v0.1.0 · McMaster Centre for Software Certification',
+    )
+    expect(footer).not.toContain('McMaster University')
     expect(footer).toContain(
       'Everything you enter and add stays in this browser, on this computer. Nothing is collected, sent or shared.',
     )
@@ -279,6 +283,89 @@ describe('the wizard', () => {
     )
   })
 
+  describe('the dates of a business travel', () => {
+    const field = (name: string) => root.querySelector<HTMLInputElement>(`[name="${name}"]`)
+    const leave = (name: string) => field(name)?.dispatchEvent(new Event('blur'))
+
+    beforeEach(() => {
+      fillReport()
+      tick('businessTravel', true)
+    })
+
+    it('ends every date on a year of four digits, after which the browser moves on by itself', () => {
+      expect(field('firstDay')?.max).toBe('9999-12-31')
+      expect(field('lastDay')?.max).toBe('9999-12-31')
+    })
+
+    it('offers no last day before the first day, as soon as it is typed and when shown again', () => {
+      expect(field('lastDay')?.min).toBe('')
+      type('firstDay', '2026-10-03')
+      expect(field('lastDay')?.min).toBe('2026-10-03')
+      type('locations', 'Rio de Janeiro, Brazil')
+      leave('firstDay')
+      proceed()
+      button('[data-step="0"]')?.click()
+      expect(field('lastDay')?.min).toBe('2026-10-03')
+      type('firstDay', '')
+      expect(field('lastDay')?.min).toBe('')
+    })
+
+    it('takes the day after the first day as the last day on leaving the first day, not while it is typed', () => {
+      type('firstDay', '2026-12-31')
+      expect(field('lastDay')?.value).toBe('')
+      expect(kept.at(-1)?.lastDay).toBeUndefined()
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('2027-01-01')
+      expect(kept.at(-1)?.lastDay?.toString()).toBe('2027-01-01')
+    })
+
+    it('takes no last day after the last date a field takes', () => {
+      type('firstDay', '9999-12-31')
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('')
+      expect(kept.at(-1)?.lastDay).toBeUndefined()
+    })
+
+    it('counts a last day taken that way for Continue', () => {
+      type('locations', 'Rio de Janeiro, Brazil')
+      type('firstDay', '2026-10-03')
+      expect(continueButton()?.disabled).toBe(true)
+      leave('firstDay')
+      expect(continueButton()?.disabled).toBe(false)
+    })
+
+    it('leaves a last day already there, and takes none without a first day', () => {
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('')
+      type('firstDay', '2026-10-03')
+      type('lastDay', '2026-10-03')
+      leave('firstDay')
+      expect(field('lastDay')?.value).toBe('2026-10-03')
+    })
+  })
+
+  describe('the footer', () => {
+    const links = () => [...root.querySelectorAll<HTMLAnchorElement>('footer .policy-links a')]
+
+    it('links to each document of the policy, in a new tab, on every step', () => {
+      const expected = policy.documents.map(({ name, url }) => [name, url])
+      const shown = () => links().map((link) => [link.textContent, link.getAttribute('href')])
+      expect(shown()).toEqual(expected)
+      expect(links().every((link) => link.target === '_blank')).toBe(true)
+      expect(links().every((link) => link.rel === 'noopener noreferrer')).toBe(true)
+      fillReport()
+      proceed()
+      expect(shown()).toEqual(expected)
+    })
+
+    it('separates them by a middle dot, and offers no help in the header', () => {
+      expect(root.querySelector('footer .policy-links')?.textContent).toBe(
+        policy.documents.map(({ name }) => name).join(' · '),
+      )
+      expect(root.querySelector('.masthead [data-action="help"]')).toBeNull()
+    })
+  })
+
   it('asks a student or a postdoctoral fellow for their supervisor, and takes them out for another position', () => {
     fillReport()
     choose('position', 'Student')
@@ -344,6 +431,7 @@ describe('the wizard', () => {
       expect(text).toContain(expected)
     }
     expect([...root.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Itemized expenses',
       'Receipts',
       'Bank statements',
     ])
@@ -453,6 +541,28 @@ describe('the wizard', () => {
     button('[data-step="1"]')?.click()
     button('[data-action="back"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Report')
+  })
+
+  it('reaches the Review step with a character the report document cannot write, which holds the save until it is corrected', async () => {
+    fillReport()
+    type('purpose', 'ICSE 日')
+    expect(continueButton()?.disabled).toBe(false)
+    proceed()
+    await fillExpense()
+    proceed()
+    proceed()
+    const findings = () =>
+      [...root.querySelectorAll('.findings li')].map((finding) => finding.textContent)
+    expect(findings()).toEqual([
+      'Purpose holds a character the report document cannot write: 日 (U+65E5).',
+    ])
+    expect(button('[data-action="save"]')).toBeNull()
+    expect(root.querySelector('table.expenses')).toBeNull()
+    button('[data-step="0"]')?.click()
+    type('purpose', 'ICSE 2026')
+    button('[data-step="3"]')?.click()
+    expect(findings()).toEqual([])
+    expect(button('[data-action="save"]')).not.toBeNull()
   })
 
   it('reviews the findings of a report reached with something missing', async () => {
@@ -848,7 +958,12 @@ describe('the wizard', () => {
     expect(root.textContent).not.toContain('poster')
     proceed()
     const sections = [...root.querySelectorAll('h3')].map((heading) => heading.textContent)
-    expect(sections).toEqual(['Additional documents', 'Receipts', 'Bank statements'])
+    expect(sections).toEqual([
+      'Itemized expenses',
+      'Additional documents',
+      'Receipts',
+      'Bank statements',
+    ])
     const additional = root.querySelectorAll('table.documents')[0]
     expect(additional?.textContent).toContain('Itinerary')
     expect(additional?.textContent).not.toContain('Expenses')
@@ -873,6 +988,7 @@ describe('the wizard', () => {
     expect(continueButton()?.disabled).toBe(false)
     proceed()
     expect([...root.querySelectorAll('h3')].map((heading) => heading.textContent)).toEqual([
+      'Itemized expenses',
       'Per diems',
       'Additional documents',
       'Receipts',
@@ -911,6 +1027,7 @@ describe('the Expenses step', () => {
     fillReport()
     proceed()
     expect(root.querySelector('table.expense-list')).toBeNull()
+    expect(root.textContent).not.toContain('Itemized expenses')
     await fillExpense()
     button('[data-action="done"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
@@ -1060,7 +1177,7 @@ describe('the Expenses step', () => {
     proceed()
     proceed()
     const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
-    expect(total).toEqual(['Total', 'EUR 640.00'])
+    expect(total).toEqual(['Total', 'EUR640.00'])
     button('[data-step="1"]')?.click()
     button('[data-change="0"]')?.click()
     expect(root.querySelector<HTMLInputElement>('[name="foreignAmount"]')?.value).toBe('640.00')
@@ -1283,7 +1400,7 @@ describe('the per diems', () => {
     expect(root.querySelector('input[name="reason"]')).toBeNull()
   })
 
-  it('show above the expenses once a meal is claimed, which is enough to continue, and in their own section on review', async () => {
+  it('show under the expenses once a meal is claimed, which is enough to continue, and in their own section on review', async () => {
     fillReport()
     travel()
     proceed()
@@ -1294,25 +1411,52 @@ describe('the per diems', () => {
     button('[data-add-reason][data-day="2026-10-05"][data-meal="lunch"]')?.click()
     reason('2026-10-05', 'lunch', 'provided by the conference')
     button('[data-action="done"]')?.click()
-    expect(root.querySelector('.per-diems-line')?.textContent).toBe(
-      'Per diems: 2 days · $28.40 · USD 57.70',
+    expect(root.querySelector('table.per-diem-list')?.previousElementSibling?.outerHTML).toBe(
+      '<h3>Per diems</h3>',
     )
+    expect(root.textContent).not.toContain('2 days')
+    expect(root.textContent).not.toContain('$28.40')
     const listed = [...root.querySelectorAll('table.per-diem-list tbody tr')].map((row) =>
       [...row.querySelectorAll('td')].map((cell) => cell.textContent?.trim()),
     )
+    expect(
+      [...root.querySelectorAll('table.per-diem-list td.date')].map((cell) =>
+        [...cell.querySelectorAll('div')].map((line) => line.textContent),
+      )[0],
+    ).toEqual(['Sunday', '2026-10-04'])
     expect(listed).toEqual([
-      ['2026-10-04', 'Per diem, domestic: breakfast'],
-      ['', 'Not claimed: lunch, dinner'],
-      ['2026-10-05', 'Per diem, international: dinner'],
-      ['', 'Not claimed: breakfast, lunch (provided by the conference)'],
+      ['Sunday2026-10-04', 'Per diem, domestic: breakfast'],
+      ['Not claimed: lunch, dinner'],
+      ['Monday2026-10-05', 'Per diem, international: dinner'],
+      ['Not claimed: breakfast, lunch (provided by the conference)'],
     ])
     expect(continueButton()?.disabled).toBe(false)
     await fillExpense()
+    button('[data-action="done"]')?.click()
+    expect(
+      [...root.querySelectorAll('table.expense-list, table.per-diem-list')].map(
+        (element) => element.className,
+      ),
+    ).toEqual(['expenses expense-list', 'expenses per-diem-list'])
+    expect(
+      [...root.querySelectorAll('table.expense-list th, table.per-diem-list th')]
+        .filter((heading) => heading.textContent === 'Date')
+        .map((heading) => heading.className),
+    ).toEqual(['date', 'date'])
+    expect(root.querySelector('table.expense-list')?.previousElementSibling?.textContent).toBe(
+      'Itemized expenses',
+    )
     proceed()
     await add('travelJustifications', 'invitation.pdf')
     proceed()
     const expenses = [...root.querySelectorAll('table.expenses tbody tr.expense')]
     expect(expenses).toHaveLength(1)
+    expect(
+      [...root.querySelectorAll('h3')].slice(0, 2).map((heading) => heading.textContent),
+    ).toEqual(['Itemized expenses', 'Per diems'])
+    expect(root.querySelector('table.expenses')?.previousElementSibling?.textContent).toBe(
+      'Itemized expenses',
+    )
     expect(root.textContent).not.toContain('Per diem, domestic')
     const perDiems = [...root.querySelectorAll('table.per-diems tbody tr')].map((row) =>
       [...row.querySelectorAll('td')].map((cell) => cell.textContent?.replace(/\s+/g, ' ').trim()),
@@ -1330,7 +1474,7 @@ describe('the per diems', () => {
       ],
     ])
     const total = [...root.querySelectorAll('tr.total > *')].map((cell) => cell.textContent)
-    expect(total).toEqual(['Total', '$1,040.75USD 57.70'])
+    expect(total).toEqual(['Total', 'CAD1,040.75USD57.70'])
     expect(root.querySelector('tr.empty')).toBeNull()
   })
 
@@ -1576,8 +1720,9 @@ describe('the per diems', () => {
       receiptWeighing({ addedSize: 3 * megabyte, size: 3 * megabyte })
       await review()
       await vi.waitFor(() => expect(root.querySelector('.document-size')).not.toBeNull())
-      expect(root.querySelector('.document-size')?.textContent?.trim()).toBe('3.0 MB')
+      expect(root.querySelector('.document-size .size')?.textContent).toBe('3.0 MB')
       expect(button('[data-action="reduce"]')).toBeNull()
+      expect(button('[data-action="reduce-all"]')).toBeNull()
     })
 
     it('offers to reduce a heavy document, keeps the choice, and takes it back with Restore', async () => {
@@ -1595,18 +1740,53 @@ describe('the per diems', () => {
       await review()
       await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
       const row = () =>
-        root.querySelector('.document-size')?.textContent?.replace(/\s+/g, ' ').trim()
-      expect(row()).toBe('9.4 MB Reduce to 500 KB')
+        root.querySelector('.document-size .size')?.textContent?.replace(/\s+/g, ' ').trim()
+      expect(row()).toBe('9.4 MB')
+      const reduce = button('[data-action="reduce"]')
+      expect(reduce?.textContent?.trim()).toBe('500 KB')
+      expect(reduce?.getAttribute('aria-label')).toBe('Reduce to 500 KB')
+      expect(reduce?.querySelector('svg')).not.toBeNull()
+      expect(root.querySelector('.document-sizes')?.previousElementSibling?.tagName).toBe('H2')
 
       button('[data-action="reduce"]')?.click()
       expect(kept.at(-1)?.documents[0]?.isReduced).toBe(true)
       expect(kept.at(-1)?.documents[1]?.isReduced).toBe(false)
       await vi.waitFor(() => expect(button('[data-action="restore"]')).not.toBeNull())
-      expect(row()).toBe('9.4 MB → 500 KB Restore')
+      expect(row()).toBe('Original 9.4 MB → Reduced 500 KB')
+      const links = [...root.querySelectorAll<HTMLAnchorElement>('.document-size .size a')]
+      expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
+        ['Original 9.4 MB', `blob:${kept.at(-1)?.documents[0]?.fileName}`],
+        ['Reduced 500 KB', `blob:${kept.at(-1)?.documents[0]?.fileName}#reduced`],
+      ])
+      expect(links.every((link) => link.target === '_blank')).toBe(true)
+      expect(root.querySelector('.document-size')?.querySelector('td:nth-child(2) a')).toBeNull()
 
       button('[data-action="restore"]')?.click()
       expect(kept.at(-1)?.documents[0]?.isReduced).toBe(false)
       await vi.waitFor(() => expect(button('[data-action="reduce"]')).not.toBeNull())
+    })
+
+    it('offers Reduce all when more than one document can be reduced, and reduces them all', async () => {
+      weigh = (report) => ({
+        reportDocumentSize: 4 * megabyte,
+        weights: new Map(
+          report.documents.map((document) => [
+            document,
+            document.isReduced
+              ? { addedSize: 9 * megabyte, size: megabyte }
+              : { addedSize: 9 * megabyte, size: 9 * megabyte, reducedSize: megabyte },
+          ]),
+        ),
+      })
+      await review()
+      await vi.waitFor(() => expect(button('[data-action="reduce-all"]')).not.toBeNull())
+      expect(button('[data-action="reduce-all"]')?.querySelector('svg')).not.toBeNull()
+      button('[data-action="reduce-all"]')?.click()
+      expect(kept.at(-1)?.documents.map((document) => document.isReduced)).toEqual(
+        kept.at(-1)?.documents.map(() => true),
+      )
+      await vi.waitFor(() => expect(button('[data-action="restore"]')).not.toBeNull())
+      expect(button('[data-action="reduce-all"]')).toBeNull()
     })
 
     it('stops saying the report was saved once a document is reduced', async () => {

@@ -6,6 +6,7 @@ import { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
 import { Kind } from './kind.ts'
 import type { PerDiem } from './per-diem.ts'
+import { type PolicyDocument, policy } from './policy.ts'
 import type { Report } from './report.ts'
 
 /** A field of the cover: its name and its value. */
@@ -20,11 +21,19 @@ export interface AttachedInformation {
   readonly isAttached: boolean
 }
 
-/** A document supporting an expense on the cover: named, and a link to it by its label. */
+/** A document supporting an expense on the cover: called by its kind, and a link to it by its label. */
 export interface SupportingDocument {
   readonly label: string
   readonly name: string
   readonly document: Document
+}
+
+/** A line of the total, in one currency. */
+export interface TotalLine {
+  /** CAD, or the code of another currency. */
+  readonly currencyCode: string
+  /** The amount as 1,012.35, without its currency. */
+  readonly amount: string
 }
 
 /** A row of the cover's table of expenses: an expense, or a per diem with a meal claimed. */
@@ -114,7 +123,9 @@ export interface Layout {
    * when there is one, then, by currency in alphabetical order, the sum of the foreign amounts of
    * the expenses without a claimed amount, US dollars including the international per diems.
    */
-  readonly total: readonly string[]
+  readonly total: readonly TotalLine[]
+  /** The documents of the policy, in the section beside the attached information. */
+  readonly policyDocuments: readonly PolicyDocument[]
   readonly sections: readonly Section[]
 }
 
@@ -160,6 +171,7 @@ export function layoutOf(report: Report): Layout {
       entry instanceof Expense ? rowOf(entry, index + 1, labels) : perDiemRowOf(entry, index + 1),
     ),
     total: totalOf(expenses, report.claimedPerDiems),
+    policyDocuments: policy.documents,
     sections,
   }
 }
@@ -354,12 +366,12 @@ function stampedExpenseOf(expense: Expense, number: number): StampedExpense {
 }
 
 /**
- * A text as a stamp keeps it, on one line: its line breaks as spaces, then its first 30
+ * A text as a stamp keeps it, on one line: its line breaks and tabs as spaces, then its first 30
  * characters, an ellipsis when it is longer.
  */
 function cut(text: string): string {
   const oneLine = text
-    .split('\n')
+    .split(/\r\n|[\n\r\t]/)
     .map((line) => line.trim())
     .join(' ')
   const characters = [...oneLine]
@@ -376,7 +388,7 @@ function attachedInformationOf(kind: Kind, sections: readonly Section[]): Attach
 function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
   const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
     label: labels.get(document) ?? '',
-    name: document.name,
+    name: document.kind.coverName,
     document,
   }))
   return {
@@ -451,7 +463,7 @@ export function mealsNotClaimedOf(perDiem: PerDiem): string {
 export function totalOf(
   expenses: readonly Expense[],
   perDiems: readonly PerDiem[],
-): readonly string[] {
+): readonly TotalLine[] {
   const claimed = expenses.flatMap((expense) => expense.claimedAmount ?? [])
   const foreign = new Map<Currency, Amount[]>()
   const addForeign = (currency: Currency, amount: Amount) =>
@@ -473,8 +485,12 @@ export function totalOf(
   }
   const sum = (amounts: readonly Amount[]) => amounts.reduce((total, amount) => total.plus(amount))
   const currencies = [...foreign.keys()].sort((one, other) => one.code.localeCompare(other.code))
+  const lineOf = (currencyCode: string, amount: Amount): TotalLine => ({
+    currencyCode,
+    amount: amount.grouped,
+  })
   return [
-    ...(claimed.length > 0 ? [sum(claimed).toString()] : []),
-    ...currencies.map((currency) => sum(foreign.get(currency) ?? []).inCurrency(currency)),
+    ...(claimed.length > 0 ? [lineOf('CAD', sum(claimed))] : []),
+    ...currencies.map((currency) => lineOf(currency.code, sum(foreign.get(currency) ?? []))),
   ]
 }

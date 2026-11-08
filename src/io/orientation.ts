@@ -37,6 +37,38 @@ export function orientationOf(content: Uint8Array): Orientation {
   }
 }
 
+/**
+ * A JPEG encoded from another, saying the orientation of the other, for a viewer to show it upright:
+ * an Exif segment holding that one value, and nothing else of the original. The bytes given when
+ * there is no orientation to say, or for an image that is not a JPEG.
+ */
+export function withOrientationOf(original: Uint8Array, jpeg: Uint8Array): Uint8Array {
+  const orientation = exifOrientationIn(original)
+  if (orientation === undefined || orientation === 1 || jpeg[0] !== 0xff || jpeg[1] !== 0xd8) {
+    return jpeg
+  }
+  const exif = [0x45, 0x78, 0x69, 0x66, 0, 0]
+  const tiff = [0x4d, 0x4d, 0, 42, 0, 0, 0, 8]
+  const directory = [0, 1, orientationTag >> 8, orientationTag & 0xff, 0, 3, 0, 0, 0, 1]
+  const value = [0, orientation, 0, 0, 0, 0, 0, 0]
+  const body = [...exif, ...tiff, ...directory, ...value]
+  const segment = [0xff, 0xe1, 0, body.length + 2, ...body]
+  const shown = new Uint8Array(jpeg.length + segment.length)
+  shown.set(jpeg.subarray(0, 2))
+  shown.set(segment, 2)
+  shown.set(jpeg.subarray(2), 2 + segment.length)
+  return shown
+}
+
+/** The Exif orientation of a JPEG, or nothing when it has none or its header is cut short. */
+function exifOrientationIn(content: Uint8Array): number | undefined {
+  try {
+    return exifOrientationOf(new DataView(content.buffer, content.byteOffset, content.byteLength))
+  } catch {
+    return undefined
+  }
+}
+
 /** The Exif orientation of a JPEG, from the APP1 segment before its image data. */
 function exifOrientationOf(data: DataView): number | undefined {
   if (data.getUint16(0) !== 0xffd8) return undefined

@@ -1,19 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { DocumentSizes, documentSizes, isWorthReducing, sizeText } from './document-sizes.ts'
 
-const sizes = { heavyDocumentMegabytes: 2, reducedImageMegabytes: 1 }
+const sizes = { heavyDocumentMegabytes: 2 }
 
 describe('DocumentSizes', () => {
   it('calls a document heavy above the size configured, not at it', () => {
     const configured = DocumentSizes.from(sizes)
     expect(configured.isHeavy(2_000_000)).toBe(false)
     expect(configured.isHeavy(2_000_001)).toBe(true)
-  })
-
-  it('reduces an image above the size configured, not at it', () => {
-    const configured = DocumentSizes.from(sizes)
-    expect(configured.isImageToReduce(1_000_000)).toBe(false)
-    expect(configured.isImageToReduce(1_000_001)).toBe(true)
   })
 
   it('takes a size of less than a megabyte', () => {
@@ -24,7 +18,7 @@ describe('DocumentSizes', () => {
   it.each([
     ['nothing', undefined],
     ['a text', 'big'],
-    ['a size missing', { heavyDocumentMegabytes: 2 }],
+    ['the size missing', {}],
     ['a size too many', { ...sizes, other: 3 }],
     ['a size of the wrong type', { ...sizes, heavyDocumentMegabytes: '2' }],
   ])('refuses a configuration holding %s', (_what, configuration) => {
@@ -32,14 +26,12 @@ describe('DocumentSizes', () => {
   })
 
   it.each([0, -1, Number.NaN])('refuses a size of %s', (size) => {
-    expect(() => DocumentSizes.from({ ...sizes, reducedImageMegabytes: size })).toThrow(RangeError)
+    expect(() => DocumentSizes.from({ heavyDocumentMegabytes: size })).toThrow(RangeError)
   })
 
   it('reads the sizes of the system from its configuration', () => {
     expect(documentSizes.isHeavy(2_000_001)).toBe(true)
     expect(documentSizes.isHeavy(2_000_000)).toBe(false)
-    expect(documentSizes.isImageToReduce(1_000_001)).toBe(true)
-    expect(documentSizes.isImageToReduce(1_000_000)).toBe(false)
   })
 })
 

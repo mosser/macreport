@@ -65,6 +65,11 @@ grep -lE 'createImageBitmap|getContext\(|\.toBlob\(' $business | grep -v '^src/i
 [ -f config/document-sizes.json ] || fail "config/document-sizes.json must exist"
 grep -q 'checkDocumentSizes()' vite.config.ts || fail "vite.config.ts must check config/document-sizes.json"
 
+# ADR 0012: the addresses of the policy in one place.
+[ -f config/policy.json ] || fail "config/policy.json must exist"
+grep -q 'checkPolicy()' vite.config.ts || fail "vite.config.ts must check config/policy.json"
+grep -nE 'https?://' $business && fail "an address in business code: it belongs in config/policy.json"
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures ADR check(s) failed" >&2
   exit 1
