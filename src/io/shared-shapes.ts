@@ -104,6 +104,8 @@ class ShapeFinder {
   private path: PathInProgress | undefined
   /** Whether the path being built holds something unread: what paints it paints that too. */
   private isPathUnreadable = false
+  /** Whether a text object is open: a form cannot be drawn inside one. */
+  private isInTextObject = false
   private readonly shapes: Shape[] = []
 
   constructor(content: Uint8Array) {
@@ -155,7 +157,9 @@ class ShapeFinder {
   }
 
   private changeState(operator: string): void {
-    if (operator === 'q') {
+    if (operator === 'BT' || operator === 'ET') {
+      this.isInTextObject = operator === 'BT'
+    } else if (operator === 'q') {
       this.saved.push(this.state)
     } else if (operator === 'Q') {
       this.state = this.saved.pop() ?? this.state
@@ -192,7 +196,9 @@ class ShapeFinder {
 
   private fill(operator: string, end: number): void {
     const { path, state } = this
-    if (path === undefined || state.isFilledWithPattern || isEnlarging(state.transform)) return
+    const isUnsafe =
+      this.isInTextObject || state.isFilledWithPattern || isEnlarging(state.transform)
+    if (path === undefined || isUnsafe) return
     const paint = operator === 'f*' ? 'f*' : 'f'
     this.shapes.push({
       start: path.start,
@@ -359,7 +365,8 @@ function contentWithForms(
  * Keeps once each shape a PDF fills more than once, as a form drawn from each place it was, within
  * 0.01 point of it. What it cannot rewrite safely stays as it is: a page holding an inline image,
  * a page its unit enlarges, a shape under a transform that enlarges, a shape filled with a pattern,
- * a shape in a path another operator interrupts, and whatever is not a shape, its text among it.
+ * a shape in a path another operator interrupts, a shape in a text object, and whatever is not a
+ * shape, its text among it.
  */
 export function shareShapes(pdf: PDFDocument): void {
   const pages = scannedPagesOf(pdf)

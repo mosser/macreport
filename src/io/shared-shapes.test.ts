@@ -278,6 +278,18 @@ describe('shareShapes', () => {
     expect(contentOf(pdf, 0)).toBe(content)
   })
 
+  it('leaves a shape in a text object on its page, and shares those after it', async () => {
+    const inText = `BT /F1 12 Tf ${outline(10, 20)} (a) Tj ET BT ${outline(30, 40)} ET`
+    const pdf = await pdfDrawing(`${inText} ${outline(50, 60)} ${outline(70, 80)}`)
+    shareShapes(pdf)
+    const content = contentOf(pdf, 0)
+    expect(content.startsWith(inText)).toBe(true)
+    expect(drawingsOf(content).map(({ x, y }) => [x, y])).toEqual([
+      [50, 60],
+      [70, 80],
+    ])
+  })
+
   it('shares the shapes again once a path interrupted is painted', async () => {
     const content = `10 10 m 1 0 0 rg ${outline(50, 50)} ${outline(100, 100)} ${outline(200, 200)}`
     const pdf = await pdfDrawing(content)

@@ -132,7 +132,8 @@ Options considered for what makes a document heavy:
     from there, its coordinates at 0.01 point. What it cannot rewrite safely it
     leaves as it is: a page holding an inline image, a page its `UserUnit`
     enlarges, a shape under a transform that enlarges, a shape filled with a
-    pattern, a shape in a path another operator interrupts.
+    pattern, a shape in a path another operator interrupts, a shape in a text
+    object.
 - **A bank statement's shapes are not shared.** A shape kept apart from its page
   is out of reach of a reader's redaction tool that only rewrites the page, which
   could seem to redact an account number while leaving it in the file. Its images
