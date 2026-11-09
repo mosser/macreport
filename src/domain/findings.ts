@@ -120,6 +120,11 @@ export function refusedAsAlreadyInReportWording(fileName: string, document: Docu
   return `${fileName} is refused: it is already in the report, as ${document.kind.name} ${document.name}.`
 }
 
+/** What is said of a file that had to be unlocked to be read: a password protected it. */
+export function unlockedWording(document: Document): string {
+  return `${document.fileName} was protected by a password, and has been unlocked: the report document holds it without that protection.`
+}
+
 /** A file refused when it is added: its message says so, with the reason. */
 export class RefusedFile extends Error {
   constructor(fileName: string, reason: RefusalReason) {

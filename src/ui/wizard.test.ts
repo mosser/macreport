@@ -22,6 +22,8 @@ let reading: Promise<void>
 let readings: Map<string, Promise<void>>
 /** How many times the Review step let the browser forget its links. */
 let forgotten: number
+/** The files that have to be unlocked to be read, by their names. */
+let unlocking: Set<string>
 /** Why reading a file fails, by its name, when it does. */
 let failures: Map<string, Error>
 /** How long working out the sizes takes. */
@@ -47,7 +49,10 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
       await (readings.get(file.name) ?? reading)
       const failure = failures.get(file.name)
       if (failure !== undefined) throw failure
-      return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
+      return {
+        document: new Document(kind, file.name, new Uint8Array(await file.arrayBuffer())),
+        wasUnlocked: unlocking.has(file.name),
+      }
     },
     links: {
       urlOf: (document) => `blob:${document.fileName}${document.isReduced ? '#reduced' : ''}`,
@@ -184,6 +189,7 @@ beforeEach(() => {
   reading = Promise.resolve()
   readings = new Map()
   failures = new Map()
+  unlocking = new Set()
   forgotten = 0
   weighing = Promise.resolve()
   weigh = () => ({ reportDocumentSize: undefined, weights: new Map() })
@@ -1199,6 +1205,70 @@ describe('the Expenses step', () => {
     tick('paidInAnotherCurrency', false)
     expect(kept.at(-1)?.expenses[0]?.foreignAmount).toBeUndefined()
     expect(continueButton()?.disabled).toBe(true)
+  })
+})
+
+describe('a file unlocked', () => {
+  const said =
+    'visa.pdf was protected by a password, and has been unlocked: the report document holds it without that protection.'
+  const notices = () =>
+    [...root.querySelectorAll('[role="status"].notice')].map((n) => n.textContent)
+  const onExpense = async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    unlocking.add('visa.pdf')
+    await add('bankStatements', 'visa.pdf')
+  }
+
+  it('is said under its field, and added', async () => {
+    await onExpense()
+    expect(notices()).toEqual([said])
+    expect(root.querySelector('[data-field="bankStatements"] .notice')?.textContent).toBe(said)
+    expect(kept.at(-1)?.expenses[0]?.hasBankStatement).toBe(true)
+  })
+
+  it('says nothing of a file that did not have to be', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    await add('bankStatements', 'plain.pdf')
+    expect(notices()).toEqual([])
+  })
+
+  it('stays said once the document is named otherwise, and while another file is added', async () => {
+    await onExpense()
+    await add('receipts', 'taxi.pdf')
+    type('documentName', 'Visa, October')
+    button('[data-remove="receipts"]')?.click()
+    expect(notices()).toEqual([said])
+  })
+
+  it('is no longer said once the document is taken out', async () => {
+    await onExpense()
+    button('[data-remove="bankStatements"]')?.click()
+    expect(notices()).toEqual([])
+  })
+
+  it('is no longer said once the fields of the expense close', async () => {
+    await onExpense()
+    button('[data-action="done"]')?.click()
+    button('[data-change]')?.click()
+    expect(notices()).toEqual([])
+  })
+
+  it('is said of each additional document, and forgotten when the step is left', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    proceed()
+    unlocking.add('visa.pdf')
+    give('additionalDocuments', ['visa.pdf'], ['plain.pdf'])
+    await vi.waitFor(() => expect(root.textContent).toContain('plain.pdf'))
+    expect(notices()).toEqual([said])
+    button('[data-action="back"]')?.click()
+    proceed()
+    expect(notices()).toEqual([])
   })
 })
 

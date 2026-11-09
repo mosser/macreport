@@ -200,6 +200,11 @@ once, dropped or chosen together, handles each on its own, in the order
 given; where a field takes one document, the first is added, and a document
 there already is replaced only once it is removed.
 
+A PDF that opens without a password, though one restricts printing or copying it, is
+unlocked and added. Under its field, for as long as the step shows it, the step says so:
+*<file name> was protected by a password, and has been unlocked: the report document
+holds it without that protection.*
+
 What is said of a file refused stands under its field, until a file is given to that
 field again or the step is left.
 

@@ -51,6 +51,7 @@ document.
 | Missing receipt authorization | McMaster's Missing Receipt Authorization Form, written by the system for one expense with a missing receipt, filled in with what the report knows, and left for the Claimant to sign. It is not a file the Claimant adds. |
 | Label | The name of a document in the report document: the letter of its kind and its rank within its section, as in R3. |
 | Add | The Claimant hands a file to the system, which reads it in the browser, on their computer. Nothing is sent over a network. |
+| Unlock | What the system does of a PDF that opens without a password, though one restricts printing or copying it: it reads it, says so, and the report document holds it without that restriction. |
 | Refuse | The system does not take a file the Claimant adds, and says why: of another format, damaged, a PDF without pages, a PDF that needs a password to open, or already a document it cannot choose. |
 | Remove | The Claimant takes an expense, a document or a document's use by an expense out of the report. A receipt or a bank statement no expense refers to any more leaves the report. |
 | Heavy | What a document is above the size configured in `config/document-sizes.json`, today 2 MB: by the size it is written at: that of the file added, a JPEG without its Exif data, or of its reduced file once reduced. |

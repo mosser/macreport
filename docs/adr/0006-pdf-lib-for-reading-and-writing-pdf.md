@@ -61,7 +61,8 @@ Options considered for the fonts:
   the empty password and counts its pages. A PDF that opens without a password is
   read, though a password restricts printing or copying it, as with many bank
   statements: a Claimant cannot be asked to unlock their own statement, and must be
-  able to redact the report document. A PDF that needs a password to open is
+  able to redact the report document. The step says that it was unlocked, since the
+  report document no longer holds that restriction. A PDF that needs a password to open is
   refused when added, with its reason
   (`docs/specs/prepare-an-expense-report.md`): the system asks for no password.
 - **Reading** an image checks its format from its first bytes (JPEG or PNG),

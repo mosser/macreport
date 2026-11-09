@@ -4,7 +4,7 @@ import favicon from './assets/mcscert-stack-col.png?inline'
 import { CalendarDate } from './domain/calendar-date.ts'
 import { layoutOf } from './domain/layout.ts'
 import type { Report } from './domain/report.ts'
-import { documentOf } from './io/add-file.ts'
+import { addedFileOf } from './io/add-file.ts'
 import { canvasImageEncoder } from './io/canvas-image-encoder.ts'
 import { documentLinks } from './io/document-links.ts'
 import { DocumentsAsWritten } from './io/documents-as-written.ts'
@@ -57,7 +57,7 @@ mountWizard(root, {
   discard: () => drafts.discard(),
   version: __VERSION__,
   logo,
-  readFile: documentOf,
+  readFile: addedFileOf,
   saveReport,
   weighReport: (report) => documentsAsWritten.weightsOf(report, () => written(report)),
   links: documentLinks((added) => documentsAsWritten.contentShown(added)),

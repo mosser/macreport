@@ -1,4 +1,4 @@
-import type { Document } from '../domain/document.ts'
+import type { AddedFile, Document } from '../domain/document.ts'
 import {
   alreadyInReportWording,
   type Field,
@@ -7,6 +7,7 @@ import {
   RefusedFile,
   refusalWording,
   refusedAsAlreadyInReportWording,
+  unlockedWording,
 } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
@@ -16,18 +17,20 @@ import { cross, pen, trashCan } from './icons.ts'
 import type { Context } from './step.ts'
 
 /**
- * Reads a file the Claimant adds into a document of a kind. Rejects with a RefusedFile, with the
- * reason, when the file cannot be added.
+ * Reads a file the Claimant adds into a document of a kind, saying whether it had to be unlocked.
+ * Rejects with a RefusedFile, with the reason, when the file cannot be added.
  */
-export type ReadFile = (file: File, kind: Kind) => Promise<Document>
+export type ReadFile = (file: File, kind: Kind) => Promise<AddedFile>
 
 /**
  * What a step says under its document fields, while it shows them: the document chosen again for a
- * file added again, and the files refused, each with its reason, since a file was last given.
+ * file added again, the files refused, each with its reason, since a file was last given, and the
+ * documents unlocked, while the field holds them.
  */
 export class FieldNotes {
   private readonly chosenAgain = new Map<Field, Document>()
   private readonly refusals = new Map<Field, readonly string[]>()
+  private readonly unlocked = new Map<Field, readonly Document[]>()
 
   /** The document chosen again for the field. */
   chosenAgainFor(field: Field): Document | undefined {
@@ -37,6 +40,18 @@ export class FieldNotes {
   /** What is said of the files refused for the field. */
   refusalsFor(field: Field): readonly string[] {
     return this.refusals.get(field) ?? []
+  }
+
+  /** The documents among those given that were unlocked, whatever they were named since. */
+  unlockedAmong(field: Field, documents: readonly Document[]): readonly Document[] {
+    const unlocked = this.unlocked.get(field) ?? []
+    return documents.filter((document) =>
+      unlocked.some((other) => other.hasSameContentAs(document)),
+    )
+  }
+
+  wasUnlocked(field: Field, document: Document): void {
+    this.unlocked.set(field, [...(this.unlocked.get(field) ?? []), document])
   }
 
   choseAgain(field: Field, document: Document): void {
@@ -55,6 +70,7 @@ export class FieldNotes {
   forget(): void {
     this.chosenAgain.clear()
     this.refusals.clear()
+    this.unlocked.clear()
   }
 }
 
@@ -171,8 +187,8 @@ function offerOf(field: DocumentField): Markup {
  * The documents added to a field, each named, then a zone a file is dropped on, or clicked to
  * choose one, the documents already in the report it may choose, and what it may state instead; a
  * field that holds one document at most shows none of these once it has it. What is stated takes
- * the place of the field. Under a document chosen again for a file added again, the step says so, and under a
- * field, why each file given to it was refused.
+ * the place of the field. Under a document chosen again for a file added again, the step says so; under a field,
+ * that a document it holds was unlocked, and why each file given to it was refused.
  */
 export function documentFieldOf(field: DocumentField, report: Report, notes: FieldNotes): Markup {
   const name = field.field
@@ -205,6 +221,9 @@ export function documentFieldOf(field: DocumentField, report: Report, notes: Fie
     ${fieldName(name)}
     ${list}
     ${status}
+    ${notes
+      .unlockedAmong(name, documents)
+      .map((document) => html`<p class="notice" role="status">${unlockedWording(document)}</p>`)}
     ${notes.refusalsFor(name).map((wording) => html`<p class="error" role="alert">${wording}</p>`)}
     ${zone}
   </div>`
@@ -256,7 +275,7 @@ export function listenToDocumentFields(
    * Adds a document read from a file to a field: the document already there when the field can
    * choose it, refused when it is already another document, named otherwise.
    */
-  const addRead = (field: DocumentField, document: Document) => {
+  const addRead = (field: DocumentField, { document, wasUnlocked }: AddedFile) => {
     const report = context.report
     const chosen = field.choicesIn === undefined ? undefined : report.documentLike(document)
     const other = chosen ?? report.documentOfSameContentAs(document)
@@ -267,6 +286,7 @@ export function listenToDocumentFields(
       notes.refused(field.field, refusedAsAlreadyInReportWording(document.fileName, other))
     } else {
       const named = document.afterNaming(report.freeNameLike(document.name))
+      if (wasUnlocked) notes.wasUnlocked(field.field, named)
       context.change(field.afterAdding(report, named))
     }
   }
@@ -286,12 +306,12 @@ export function listenToDocumentFields(
     const last = lastAdded.get(context)
     const before = last?.session === session ? last.addition : Promise.resolve()
     const addition = before.then(async () => {
-      const document = await reading.catch((error: unknown) => refusalOf(file, error))
+      const added = await reading.catch((error: unknown) => refusalOf(file, error))
       if (context.session !== session) return
-      if (typeof document === 'string') {
-        notes.refused(field.field, document)
+      if (typeof added === 'string') {
+        notes.refused(field.field, added)
       } else if (!field.holdsOneDocument || field.documentsIn(context.report).length === 0) {
-        addRead(field, document)
+        addRead(field, added)
       }
       context.refresh()
     })

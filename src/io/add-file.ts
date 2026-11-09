@@ -1,21 +1,26 @@
 import { PDFDocument } from '@cantoo/pdf-lib'
-import { Document } from '../domain/document.ts'
+import { type AddedFile, Document } from '../domain/document.ts'
 import { type RefusalReason, RefusedFile } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import { recognizedFormatOf } from './format.ts'
-import { loadedPdf } from './load-pdf.ts'
+import { isUnlockedOnReading, PdfWithoutPages } from './load-pdf.ts'
 
 /** What the message of the PDF library says of a PDF that needs a password to open. */
 const needsPassword = /password/i
 
-/** Why a PDF cannot be added, read as the report document reads it; nothing when it can. */
-async function refusalOfPdf(content: Uint8Array): Promise<RefusalReason | undefined> {
+/** Whether a PDF had to be unlocked; refused when it cannot be added, read as the report reads it. */
+async function isPdfUnlocked(content: Uint8Array, fileName: string): Promise<boolean> {
   try {
-    const pdf = await loadedPdf(content)
-    return pdf.getPageCount() === 0 ? 'without pages' : undefined
+    return await isUnlockedOnReading(content)
   } catch (error) {
-    return error instanceof Error && needsPassword.test(error.message) ? 'password' : 'damaged'
+    throw new RefusedFile(fileName, reasonOf(error))
   }
+}
+
+/** Why a PDF could not be read. */
+function reasonOf(error: unknown): RefusalReason {
+  if (error instanceof PdfWithoutPages) return 'without pages'
+  return error instanceof Error && needsPassword.test(error.message) ? 'password' : 'damaged'
 }
 
 /** Why an image cannot be added, embedded as the report document embeds it; nothing when it can. */
@@ -32,21 +37,21 @@ async function refusalOfImage(
   }
 }
 
-/** Why a file of these bytes cannot be added, whatever its name says; nothing when it can. */
-async function refusalOf(content: Uint8Array): Promise<RefusalReason | undefined> {
-  const format = recognizedFormatOf(content)
-  if (format === undefined) return 'format'
-  return format === 'pdf' ? refusalOfPdf(content) : refusalOfImage(content, format)
-}
-
 /**
- * The document of a kind a file the Claimant adds becomes, read in the browser. Throws a
- * RefusedFile, with the reason, when it is of another format than a PDF, a JPEG image or a PNG
- * image, damaged, a PDF without pages, or a PDF that needs a password to open.
+ * The file the Claimant adds, read in the browser, into a document of a kind: whether it had to be
+ * unlocked says a password restricted it, though it opens without one. Goes by what the file is,
+ * whatever its name says. Throws a RefusedFile, with the reason, when it is of another format than
+ * a PDF, a JPEG image or a PNG image, damaged, a PDF without pages, or a PDF that needs a password
+ * to open.
  */
-export async function documentOf(file: File, kind: Kind): Promise<Document> {
+export async function addedFileOf(file: File, kind: Kind): Promise<AddedFile> {
   const content = new Uint8Array(await file.arrayBuffer())
-  const reason = await refusalOf(content)
-  if (reason !== undefined) throw new RefusedFile(file.name, reason)
-  return new Document(kind, file.name, content)
+  const format = recognizedFormatOf(content)
+  if (format === undefined) throw new RefusedFile(file.name, 'format')
+  if (format !== 'pdf') {
+    const reason = await refusalOfImage(content, format)
+    if (reason !== undefined) throw new RefusedFile(file.name, reason)
+  }
+  const wasUnlocked = format === 'pdf' && (await isPdfUnlocked(content, file.name))
+  return { document: new Document(kind, file.name, content), wasUnlocked }
 }

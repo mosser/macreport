@@ -21,6 +21,7 @@ import {
   refusalWording,
   refusedAsAlreadyInReportWording,
   requiredWording,
+  unlockedWording,
 } from './findings.ts'
 import { Kind } from './kind.ts'
 import { Meal } from './meal.ts'
@@ -399,6 +400,14 @@ describe('findings of the Additional documents step', () => {
     const refused = new RefusedFile('a.pdf', 'damaged')
     expect(refused.message).toBe('a.pdf is refused: it is damaged.')
     expect(refused.name).toBe('RefusedFile')
+  })
+
+  it('says that a file protected by a password has been unlocked', () => {
+    expect(
+      unlockedWording(new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1]), 'October')),
+    ).toBe(
+      'visa.pdf was protected by a password, and has been unlocked: the report document holds it without that protection.',
+    )
   })
 
   it('tells the Claimant what follows from a missing receipt', () => {

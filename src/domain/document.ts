@@ -4,6 +4,13 @@ import { textOrAbsent } from './text.ts'
 /** An extension ending a file name: a dot, then letters and digits starting with a letter. */
 const extension = /(?<=.)\.\p{L}[\p{L}\p{N}]*$/u
 
+/** A file the Claimant added: its document, and whether it had to be unlocked to be read. */
+export interface AddedFile {
+  readonly document: Document
+  /** Whether a password restricted it, though it opens without one. */
+  readonly wasUnlocked: boolean
+}
+
 /**
  * A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a
  * name. Its content is bytes the domain never interprets.
