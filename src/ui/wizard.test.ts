@@ -2345,13 +2345,15 @@ describe('Back, on the Expenses step', () => {
     expect(back()?.hidden).toBe(false)
   })
 
-  it('stays offered while the per diems are open', () => {
+  it('is not offered while the per diems are open, then is once they are Done', () => {
     button('[data-action="done"]')?.click()
     button('[data-step="0"]')?.click()
     travel()
     proceed()
     button('[data-action="manage-per-diems"]')?.click()
     expect(root.querySelector('h2')?.textContent).toBe('Per diems')
+    expect(back()?.hidden).toBe(true)
+    button('[data-action="done"]')?.click()
     expect(back()?.hidden).toBe(false)
   })
 })

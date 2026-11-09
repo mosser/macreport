@@ -720,7 +720,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     },
 
     offersBack(): boolean {
-      return opened === undefined
+      return opened === undefined && perDiemsOpenIn === undefined
     },
 
     holdsSteps(): boolean {

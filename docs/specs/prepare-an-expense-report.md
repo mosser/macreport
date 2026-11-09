@@ -155,8 +155,8 @@ per day, from its first day to its last, each under its day of the week and
 its date: domestic, international or per meal, then its three meals, each
 a toggle pressed when claimed, then the reasons of its meals not claimed.
 **Per meal** shows domestic or international under each of its meals; a
-card whose meals differ has Per meal chosen. As with an expense's fields, Continue is
-not offered while they are open, and **Done** closes them.
+card whose meals differ has Per meal chosen. As with an expense's fields, neither Back nor
+Continue is offered while they are open, and **Done** closes them.
 
 | Field | Rule |
 |---|---|
