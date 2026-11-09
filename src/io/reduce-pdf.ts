@@ -1,7 +1,7 @@
 import {
   PDFArray,
   type PDFContext,
-  PDFDocument,
+  type PDFDocument,
   PDFName,
   PDFNumber,
   PDFRawStream,
@@ -9,6 +9,7 @@ import {
 } from '@cantoo/pdf-lib'
 import { type ImageEncoder, longestSide } from './image-encoder.ts'
 import { sizeOfJpeg, withoutColourProfile } from './jpeg.ts'
+import { loadedPdf } from './load-pdf.ts'
 import { shareShapes } from './shared-shapes.ts'
 import { dropUnreachable, isJpeg, leaveOutWhatNoReaderShows } from './unseen-data.ts'
 
@@ -101,14 +102,14 @@ async function reduceImages(pdf: PDFDocument, encoder: ImageEncoder): Promise<vo
  * fields stay as they are; what no reader shows is left out, its plain JPEG images are encoded
  * again, and, when asked, the shapes it fills more than once are each kept once. A bank statement's
  * are not: a shape kept apart from its page is out of reach of a reader's redaction tool that only
- * rewrites the page. It rejects a PDF that cannot be read, or is protected.
+ * rewrites the page. It rejects a PDF that cannot be read, or needs a password to open.
  */
 export async function reducedPdf(
   content: Uint8Array,
   encoder: ImageEncoder,
   sharesShapes: boolean,
 ): Promise<Uint8Array> {
-  const pdf = await PDFDocument.load(content, { updateMetadata: false })
+  const pdf = await loadedPdf(content, { updateMetadata: false })
   leaveOutWhatNoReaderShows(pdf)
   await reduceImages(pdf, encoder)
   if (sharesShapes) {

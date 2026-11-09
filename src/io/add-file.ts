@@ -3,17 +3,18 @@ import { Document } from '../domain/document.ts'
 import { type RefusalReason, RefusedFile } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import { recognizedFormatOf } from './format.ts'
+import { loadedPdf } from './load-pdf.ts'
 
-/** What the message of the PDF library says of a PDF protected by a password. */
-const encrypted = /encrypted/i
+/** What the message of the PDF library says of a PDF that needs a password to open. */
+const needsPassword = /password/i
 
 /** Why a PDF cannot be added, read as the report document reads it; nothing when it can. */
 async function refusalOfPdf(content: Uint8Array): Promise<RefusalReason | undefined> {
   try {
-    const pdf = await PDFDocument.load(content)
+    const pdf = await loadedPdf(content)
     return pdf.getPageCount() === 0 ? 'without pages' : undefined
   } catch (error) {
-    return error instanceof Error && encrypted.test(error.message) ? 'password' : 'damaged'
+    return error instanceof Error && needsPassword.test(error.message) ? 'password' : 'damaged'
   }
 }
 
@@ -41,7 +42,7 @@ async function refusalOf(content: Uint8Array): Promise<RefusalReason | undefined
 /**
  * The document of a kind a file the Claimant adds becomes, read in the browser. Throws a
  * RefusedFile, with the reason, when it is of another format than a PDF, a JPEG image or a PNG
- * image, damaged, a PDF without pages, or a PDF protected by a password.
+ * image, damaged, a PDF without pages, or a PDF that needs a password to open.
  */
 export async function documentOf(file: File, kind: Kind): Promise<Document> {
   const content = new Uint8Array(await file.arrayBuffer())

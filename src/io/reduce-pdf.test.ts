@@ -53,6 +53,19 @@ function imagesOf(pdf: PDFDocument): PDFRawStream[] {
 const scan = jpegOf(3000, 4000, 200_000)
 
 describe('reducedPdf', () => {
+  it('reduces a PDF that opens without a password, reading its images, into one that no password restricts', async () => {
+    const image = jpegOf(4400, 2200, 5000)
+    const pdf = await PDFDocument.load(await pdfWithImage(image))
+    pdf.encrypt({ userPassword: '', ownerPassword: 'owner' })
+    const restricted = await pdf.save()
+    await expect(PDFDocument.load(restricted)).rejects.toThrow(/encrypted/)
+    const { encoder, jpeg } = encoderOf()
+    const reduced = await PDFDocument.load(await reducedPdf(restricted, encoder, false))
+    expect(reduced.getPageCount()).toBe(1)
+    expect(jpeg.mock.calls[0]?.[0]).toEqual(image)
+    expect(imagesOf(reduced)[0]?.contents.length).toBe(60)
+  })
+
   it('encodes a JPEG too large, and says its new size and format', async () => {
     const { encoder } = encoderOf()
     const reduced = await PDFDocument.load(

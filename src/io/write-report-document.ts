@@ -39,6 +39,7 @@ import type { DocumentsAsWritten } from './documents-as-written.ts'
 import { formatOf } from './format.ts'
 import { colourOf, letterPortrait, margin, wrap } from './generated-page.ts'
 import { bytesOf } from './inlined.ts'
+import { loadedPdf } from './load-pdf.ts'
 import { type FormPage, formPagesOf } from './missing-receipt-form.ts'
 import type { Orientation } from './orientation.ts'
 import { type Box, fitOf, type PageView, portraitRotationOf, viewOf } from './page-view.ts'
@@ -251,7 +252,7 @@ async function sourceOf(
     const image = format === 'png' ? await pdf.embedPng(content) : await pdf.embedJpg(content)
     return { image, orientation, pageCount: 1 }
   }
-  const source = await PDFDocument.load(await documents.pdfOf(document))
+  const source = await loadedPdf(await documents.pdfOf(document))
   leaveOutWhatNoReaderShows(source)
   const pages = await pdf.copyPages(source, source.getPageIndices())
   return { pages, pageCount: pages.length }

@@ -136,7 +136,8 @@ first.
 - `@cantoo/pdf-lib` (with `@cantoo/fontkit`) is the only PDF library,
   imported only under `src/io/`. The report document embeds Noto Sans Regular
   and Bold from `src/assets/fonts/`, subset, and no other font.
-  Password-protected PDFs are refused.
+  A PDF that needs a password to open is refused; one that opens without it is
+  read through `src/io/load-pdf.ts`, though a password restricts it.
 - The report document writer draws, copies, paginates, stamps and links; it
   never orders, numbers, labels or totals: the layout comes from the domain.
   Text wraps, never clipped; a generated part longer than a page continues.

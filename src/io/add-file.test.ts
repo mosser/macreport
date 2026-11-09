@@ -59,12 +59,22 @@ describe('documentOf', () => {
     )
   })
 
-  it('refuses a PDF protected by a password', async () => {
+  it('takes a PDF that opens without a password, though one restricts it', async () => {
+    const pdf = await PDFDocument.create()
+    pdf.addPage()
+    pdf.encrypt({ userPassword: '', ownerPassword: 'owner' })
+    const restricted = await pdf.save()
+    const document = await documentOf(fileOf(restricted, 'visa.pdf'), Kind.bankStatement)
+    expect(document.fileName).toBe('visa.pdf')
+    expect(document.content).toEqual(restricted)
+  })
+
+  it('refuses a PDF that needs a password to open', async () => {
     const pdf = await PDFDocument.create()
     pdf.addPage()
     pdf.encrypt({ userPassword: 'secret', ownerPassword: 'secret' })
     await expect(documentOf(fileOf(await pdf.save(), 'a.pdf'), Kind.receipt)).rejects.toThrow(
-      'a.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
+      'a.pdf is refused: it needs a password to open.',
     )
   })
 

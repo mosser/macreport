@@ -187,7 +187,7 @@ PDF, a JPEG image or a PNG image, whatever its name says. It is refused, with th
 
 - of another format;
 - damaged, or a PDF without pages;
-- a PDF protected by a password.
+- a PDF that needs a password to open.
 
 A file already in the report, with the same content, is not added twice. Added
 from an expense as a receipt or a bank statement when it is already a
@@ -278,7 +278,7 @@ report. What it says holds for the report
 as saved: once the report changes, it is no longer said.
 
 When the report document cannot be written, the step says so, and that a
-receipt or a bank statement may be damaged or protected by a password. The
+receipt or a bank statement may be damaged or need a password to open. The
 report stays as it is, to be corrected and saved again.
 
 Saving does not discard the draft: the Claimant may change the report and

@@ -9,8 +9,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - A file is checked when it is added. A file of another format, a damaged one, a PDF
-  without pages or one protected by a password is refused at once, by its name and with
-  the reason, instead of failing when the report is saved.
+  without pages or one that needs a password to open is refused at once, by its name and
+  with the reason, instead of failing when the report is saved.
+- A PDF that opens without a password, though one restricts printing or copying it, as
+  with many bank statements, is now accepted. The report document holds it without
+  that restriction.
 - A file already in the report is no longer added twice: it is refused, naming the
   document it already is, unless it can simply be chosen again as the same receipt or
   bank statement.

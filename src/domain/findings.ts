@@ -104,7 +104,7 @@ const refusalWordings: Readonly<Record<RefusalReason, string>> = {
   format: 'it is not a PDF, a JPEG image or a PNG image',
   damaged: 'it is damaged',
   'without pages': 'it is a PDF without pages',
-  password: 'it is protected in some way by a password, and cannot be used as is',
+  password: 'it needs a password to open',
 }
 
 /** What is said of a file refused when it is added, with the reason. */

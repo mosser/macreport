@@ -499,7 +499,7 @@ describe('the wizard', () => {
     button('[data-action="save"]')?.click()
     await vi.waitFor(() => expect(root.querySelector('.status.is-failure')).not.toBeNull())
     expect(root.querySelector('.status')?.textContent).toContain(
-      'The report document could not be written: a receipt or a bank statement may be damaged, or protected by a password.',
+      'The report document could not be written: a receipt or a bank statement may be damaged, or need a password to open.',
     )
     isSaved = true
     button('[data-action="save"]')?.click()
@@ -1250,12 +1250,10 @@ describe('a file refused', () => {
     failures.set('b.txt', new RefusedFile('b.txt', 'format'))
     failures.set('d.pdf', new RefusedFile('d.pdf', 'password'))
     give('additionalDocuments', ['a.pdf'], ['b.txt'], ['c.pdf'], ['d.pdf'])
-    await refused(
-      'd.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
-    )
+    await refused('d.pdf is refused: it needs a password to open.')
     expect(errors()).toEqual([
       'b.txt is refused: it is not a PDF, a JPEG image or a PNG image.',
-      'd.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
+      'd.pdf is refused: it needs a password to open.',
     ])
     expect(documentsOfStep()).toEqual(['a', 'c'])
   })
