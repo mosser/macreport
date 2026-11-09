@@ -43,6 +43,20 @@ function segmentsOf(content: Uint8Array): Segment[] {
   return segments
 }
 
+/**
+ * Whether a JPEG holds its image to its end: its scan starts, and the end of its image comes after
+ * that. A file cut short has none, though its header can be read. An end before its scan, as of a
+ * thumbnail, is not the end of its image; bytes may follow the end, as some cameras write.
+ */
+export function isWholeJpeg(content: Uint8Array): boolean {
+  const scan = afterFillBytes(content, segmentsOf(content).at(-1)?.end ?? 2)
+  if (content[scan] !== 0xff || content[scan + 1] !== startOfScan) return false
+  for (let index = content.length - 2; index > scan + 1; index -= 1) {
+    if (content[index] === 0xff && content[index + 1] === endOfImage) return true
+  }
+  return false
+}
+
 /** Whether a segment holds a part of the colour profile. */
 function isColourProfile(content: Uint8Array, segment: Segment): boolean {
   if (segment.marker !== iccApplicationSegment) return false

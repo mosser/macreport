@@ -1,7 +1,7 @@
 # ADR 0006: `@cantoo/pdf-lib` reads the documents and writes the report document
 
 - **Status:** Accepted
-- **Date:** 2026-11-08
+- **Date:** 2026-11-09
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -57,12 +57,18 @@ Options considered for the fonts:
 - **`@cantoo/pdf-lib`**, exact-pinned, is the only PDF library, with
   **`@cantoo/fontkit`**, exact-pinned, to embed fonts. Both are used in
   `src/io/` only: `src/domain/` and `src/ui/` never import them.
-- **Reading** a PDF document checks that it opens, that it is not protected by
-  a password, and counts its pages. A protected PDF is refused when added, with
-  its reason (`docs/specs/prepare-an-expense-report.md`), since its pages
-  cannot be copied faithfully.
+- **Reading** a PDF document, always through `src/io/load-pdf.ts`, opens it with
+  the empty password and counts its pages. A PDF that opens without a password is
+  read, though a password restricts printing or copying it, as with many bank
+  statements: a Claimant cannot be asked to unlock their own statement, and must be
+  able to redact the report document. The step says that it was unlocked, since the
+  report document no longer holds that restriction. A PDF that needs a password to open is
+  refused when added, with its reason
+  (`docs/specs/prepare-an-expense-report.md`): the system asks for no password.
 - **Reading** an image checks its format from its first bytes (JPEG or PNG),
-  whatever its file name says, and that the library can embed it.
+  whatever its file name says, that the library can embed it, and that a JPEG holds
+  its image to its end, its scan started and its end after that. A JPEG is not
+  decoded when added: a file cut short is found, damage within its scan is not.
 - **Writing** the report document is one function of `src/io/` that takes the
   report's layout from the domain (ADR 0007) and returns the bytes of the PDF.
   It draws, copies, paginates, stamps and links; it never orders, numbers,
@@ -96,8 +102,9 @@ Options considered for the fonts:
 **Negative / accepted trade-offs**
 
 - The library and the two fonts are the largest part of the single file.
-- A PDF protected by a password is refused: the Claimant prints it to a new PDF
-  first.
+- A PDF that needs a password to open is refused: the Claimant unlocks it first.
+- The report document does not keep the restrictions of a PDF that opens without
+  a password.
 - Chinese, Japanese and emoji cannot be written; they are findings (ADR 0010).
 - The fork is maintained by a company, not by pdf-lib's author; moving back to
   pdf-lib or to another fork is a dependency change confined to `src/io/`.

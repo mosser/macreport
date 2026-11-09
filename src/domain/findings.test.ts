@@ -17,7 +17,11 @@ import {
   lacksOf,
   missingFieldsOf,
   missingReceiptNotice,
+  RefusedFile,
+  refusalWording,
+  refusedAsAlreadyInReportWording,
   requiredWording,
+  unlockedWording,
 } from './findings.ts'
 import { Kind } from './kind.ts'
 import { Meal } from './meal.ts'
@@ -374,6 +378,36 @@ describe('findings of the Additional documents step', () => {
     expect(isRequired('jobTitle')).toBe(true)
     expect(isRequired('phoneExtension')).toBe(false)
     expect(fieldRules.jobTitle).toBe('E.g., Associate Prof, Research Engineer, PhD Student.')
+  })
+
+  it('says why a file is refused', () => {
+    expect(refusalWording('a.txt', 'format')).toBe(
+      'a.txt is refused: it is not a PDF, a JPEG image or a PNG image.',
+    )
+    expect(refusalWording('a.pdf', 'damaged')).toBe('a.pdf is refused: it is damaged.')
+    expect(refusalWording('a.pdf', 'without pages')).toBe(
+      'a.pdf is refused: it is a PDF without pages.',
+    )
+    expect(refusalWording('a.pdf', 'password')).toBe(
+      'a.pdf is refused: it needs a password to open.',
+    )
+    expect(
+      refusedAsAlreadyInReportWording(
+        'visa.pdf',
+        new Document(Kind.bankStatement, 'october.pdf', new Uint8Array([1]), 'Visa, October'),
+      ),
+    ).toBe('visa.pdf is refused: it is already in the report, as Bank statement Visa, October.')
+    const refused = new RefusedFile('a.pdf', 'damaged')
+    expect(refused.message).toBe('a.pdf is refused: it is damaged.')
+    expect(refused.name).toBe('RefusedFile')
+  })
+
+  it('says that a file protected by a password has been unlocked', () => {
+    expect(
+      unlockedWording(new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1]), 'October')),
+    ).toBe(
+      'visa.pdf was protected by a password, and has been unlocked: the report document holds it without that protection.',
+    )
   })
 
   it('tells the Claimant what follows from a missing receipt', () => {

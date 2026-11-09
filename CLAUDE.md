@@ -26,8 +26,7 @@ paid in cash, stated and taken back, the first written as a missing receipt auth
 the locations and per diems of a business travel (meals per day, domestic or international);
 travel justifications and additional documents, every document named, saved as the report
 document (cover with Entered boxes, per diem rows and a total by currency, sections, stamps);
-a heavy document reduced on request (ADR 0011). Not yet built: the number of pages on the
-Additional documents step, and refusing a file.
+a heavy document reduced on request (ADR 0011); a file refused when added, with the reason.
 The
 specification and the ADRs describe the full system; code follows them.
 
@@ -137,7 +136,8 @@ first.
 - `@cantoo/pdf-lib` (with `@cantoo/fontkit`) is the only PDF library,
   imported only under `src/io/`. The report document embeds Noto Sans Regular
   and Bold from `src/assets/fonts/`, subset, and no other font.
-  Password-protected PDFs are refused.
+  A PDF that needs a password to open is refused; one that opens without it is
+  read through `src/io/load-pdf.ts`, though a password restricts it.
 - The report document writer draws, copies, paginates, stamps and links; it
   never orders, numbers, labels or totals: the layout comes from the domain.
   Text wraps, never clipped; a generated part longer than a page continues.
@@ -202,7 +202,7 @@ first.
   sentence that introduces a screen or a section, restates its heading or
   explains how to read it. Text is content, a heading or label, a status, a
   finding, or a notice a decision asks for (the draft notice of ADR 0008, the
-  privacy statement of ADR 0005, the notice of a missing receipt of ADR 0010).
+  privacy statement of ADR 0005, the notice of a missing receipt of ADR 0010, the notice of a file unlocked of ADR 0006).
 - Words are the glossary's, in the interface as in the code.
 
 ## Git

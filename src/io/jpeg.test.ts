@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sizeOfJpeg, withoutColourProfile, withoutExif } from './jpeg.ts'
+import { isWholeJpeg, sizeOfJpeg, withoutColourProfile, withoutExif } from './jpeg.ts'
 
 const segment = (marker: number, ...data: number[]) => [
   0xff,
@@ -78,5 +78,30 @@ describe('sizeOfJpeg', () => {
   it('says nothing of bytes without a frame', () => {
     expect(sizeOfJpeg(jpegOf(jfif))).toBeUndefined()
     expect(sizeOfJpeg(new Uint8Array([1, 2, 3]))).toBeUndefined()
+  })
+})
+
+describe('isWholeJpeg', () => {
+  const start = [0xff, 0xd8]
+  const scan = [0xff, 0xda, 0, 3, 1, 9, 9]
+  const end = [0xff, 0xd9]
+  const whole = (...bytes: number[]) => isWholeJpeg(new Uint8Array(bytes))
+
+  it('is true of a JPEG whose scan starts and whose image ends', () => {
+    expect(whole(...start, ...frame, ...scan, ...end)).toBe(true)
+    expect(whole(...start, ...exif, ...frame, ...scan, ...end, 7, 7)).toBe(true)
+    expect(whole(...start, ...scan, ...end)).toBe(true)
+  })
+
+  it('is false of a JPEG cut short, whatever came before', () => {
+    expect(whole(...start, ...frame)).toBe(false)
+    expect(whole(...start, ...frame, ...scan)).toBe(false)
+    expect(whole(...start, ...frame, ...end)).toBe(false)
+    expect(whole(...start)).toBe(false)
+  })
+
+  it('does not take the end of a thumbnail before its scan for the end of its image', () => {
+    const thumbnail = segment(0xe1, ...ascii('Exif'), 0, 0xff, 0xd9)
+    expect(whole(...start, ...thumbnail, ...frame, ...scan)).toBe(false)
   })
 })

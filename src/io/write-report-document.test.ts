@@ -1012,6 +1012,33 @@ describe('writeReportDocument', () => {
   })
 })
 
+describe('a PDF that opens without a password, though one restricts it', () => {
+  it('is written as any other, its text kept, and restricted no more', async () => {
+    const pdf = await PDFDocument.load(await pdfOf([[612, 792]], 'Visa, October'))
+    pdf.encrypt({ userPassword: '', ownerPassword: 'owner' })
+    const restricted = await pdf.save()
+    const statement = new Document(Kind.bankStatement, 'visa.pdf', restricted)
+    const report = new Report({
+      claimantName: 'Zoë Łukasiewicz',
+      position: 'Faculty',
+      email: 'zoe@mcmaster.ca',
+      purpose: 'ICSE 2026',
+      accountName: '20-123-456',
+    }).afterAdding(
+      new Expense({
+        date: new CalendarDate(2026, 10, 3),
+        description: 'Taxi',
+        claimedAmount: new Amount(5500),
+        bankStatements: [statement],
+        missingReceipt: new MissingReceipt({ reason: 'Lost', paidTo: 'Taxi', jobTitle: 'Staff' }),
+      }),
+    )
+    const saved = await written(report)
+    const pages = saved.getPages()
+    expect(textsOf(saved, pages.at(-1) as PDFPage)).toContain('Visa, October')
+  })
+})
+
 describe('a missing receipt authorization', () => {
   const stated = (
     fields: Partial<ConstructorParameters<typeof MissingReceipt>[0]> = {},

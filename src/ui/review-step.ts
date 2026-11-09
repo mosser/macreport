@@ -275,7 +275,7 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
     return html``
   }
   if ('isFailed' in outcome) {
-    return html`<p class="status is-failure" role="alert">The report document could not be written: a receipt or a bank statement may be damaged, or protected by a password. Replace it, and save the report again.</p>`
+    return html`<p class="status is-failure" role="alert">The report document could not be written: a receipt or a bank statement may be damaged, or need a password to open. Replace it, and save the report again.</p>`
   }
   const draft = isDraftKept
     ? html`<p class="status">The draft, bank statements included, stays in this browser until New report.</p>`

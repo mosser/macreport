@@ -5,6 +5,7 @@ import type { Report } from '../domain/report.ts'
 import {
   type DocumentField,
   documentFieldOf,
+  FieldNotes,
   listenToDocumentFields,
   type ReadFile,
 } from './document-field.ts'
@@ -35,6 +36,8 @@ const additionalDocuments: DocumentField = {
 
 /** Step 3: the travel justifications of a business travel, then the additional documents. */
 export function additionalDocumentsStep(readFile: ReadFile): Step {
+  /** What is said under the documents, while the step shows them. */
+  const notes = new FieldNotes()
   return {
     title: 'Additional documents',
 
@@ -44,8 +47,12 @@ export function additionalDocumentsStep(readFile: ReadFile): Step {
         ? [travelJustifications, additionalDocuments]
         : [additionalDocuments]
       panel.innerHTML = html`<h2>Additional documents</h2>
-        ${fields.map((field) => documentFieldOf(field, report))}`.text
-      listenToDocumentFields(panel, context, readFile, fields)
+        ${fields.map((field) => documentFieldOf(field, report, notes))}`.text
+      listenToDocumentFields(panel, context, readFile, fields, notes)
+    },
+
+    leave(): void {
+      notes.forget()
     },
 
     canContinue(report: Report): boolean {
