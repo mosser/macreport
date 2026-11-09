@@ -362,6 +362,24 @@ describe('a preset, read from its configuration', () => {
     ])
   })
 
+  it('takes a parameter called as what every object inherits, for what it is', () => {
+    const preset = ExpensePreset.from({
+      ...simple,
+      parameters: [
+        { id: 'constructor', label: 'Date', type: 'date' },
+        { id: 'toString', label: 'Text', type: 'text' },
+      ],
+      expenses: [{ date: 'constructor', description: '{toString}' }],
+    })
+    const given = values({
+      dates: new Map([['constructor', date('2026-05-02')]]),
+      texts: new Map([['toString', 'Overleaf']]),
+    })
+    expect(summary(preset.expensesFor(given, otherReport, today))).toEqual([
+      ['2026-05-02', 'Overleaf'],
+    ])
+  })
+
   it('refuses anything but an object of known words', () => {
     for (const broken of [
       undefined,

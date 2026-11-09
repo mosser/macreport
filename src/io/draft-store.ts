@@ -396,7 +396,7 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       bankStatements,
       isPaidInCash: expense.isPaidInCash === true && bankStatements.length === 0,
       missingReceipt: receipts.length === 0 ? missingReceiptOf(expense.missingReceipt) : undefined,
-      presetName: text(expense.presetName),
+      presetName: typeof expense.presetName === 'string' ? expense.presetName : undefined,
     })
   })
   const isBusinessTravel = fields.isBusinessTravel === true

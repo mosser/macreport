@@ -459,20 +459,20 @@ function writtenExpense(
   repetition: CalendarDate | undefined,
 ): Expense {
   const foreign = values.foreignAmounts.get(expense.foreignAmount ?? '')
-  const namedDates: Readonly<Record<string, CalendarDate | undefined>> = {
-    firstDay: report.firstDay,
-    lastDay: report.lastDay,
-    repetition,
-  }
-  const words: Readonly<Record<string, string | undefined>> = {
-    month: month?.name,
-    year: month?.year.toString(),
-  }
+  const namedDates = new Map([
+    ['firstDay', report.firstDay],
+    ['lastDay', report.lastDay],
+    ['repetition', repetition],
+  ])
+  const words = new Map([
+    ['month', month?.name],
+    ['year', month?.year.toString()],
+  ])
   return new Expense({
-    date: namedDates[expense.date ?? ''] ?? values.dates.get(expense.date ?? ''),
+    date: namedDates.get(expense.date ?? '') ?? values.dates.get(expense.date ?? ''),
     description: expense.description.replaceAll(
       placeholder,
-      (_, word: string) => words[word] ?? values.texts.get(word) ?? '',
+      (_, word: string) => words.get(word) ?? values.texts.get(word) ?? '',
     ),
     claimedAmount: values.amounts.get(expense.claimedAmount ?? ''),
     isPaidInAnotherCurrency: foreign !== undefined,

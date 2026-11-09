@@ -90,6 +90,25 @@ describe('the draft store', () => {
     ])
   })
 
+  it('keeps the name of a preset exactly as the preset says it', async () => {
+    const factory = new IDBFactory()
+    const names = ['With a space ', 'De\u0301compose\u0301']
+    const added = names.reduce(
+      (each, presetName) => each.afterAdding(new Expense({ presetName })),
+      new Report(),
+    )
+    expect(await (await openDraftStore(factory)).keep(added)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.presetName)).toEqual(names)
+  })
+
+  it('restores no preset name that is not a text, from a damaged draft', async () => {
+    const factory = new IDBFactory()
+    await written(factory, { expenses: [{ presetName: 3 }] }, {})
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.presetName).toBeUndefined()
+  })
+
   it('keeps an expense paid in cash', async () => {
     const factory = new IDBFactory()
     const paid = report.afterAdding(new Expense({ description: 'Taxi', isPaidInCash: true }))
