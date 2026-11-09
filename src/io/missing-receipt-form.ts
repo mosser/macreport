@@ -87,7 +87,7 @@ function wrapAfterName(
   width: number,
 ): readonly string[] {
   const [head = '', ...others] = text.split('\n')
-  const words = head.trim().split(/\s+/).join(' ')
+  const words = head.trim().replaceAll(/\s+/g, ' ')
   const [first = ''] = wrap(words, font, textSize, firstWidth)
   const remainder = words.slice(first.length).trim()
   const rest = remainder === '' ? others : [remainder, ...others]
@@ -99,27 +99,36 @@ function atLeast(lines: readonly string[], count: number): readonly string[] {
   return [...lines, ...Array.from({ length: Math.max(0, count - lines.length) }, () => '')]
 }
 
+/** A line with one more word, kept with the word before it when they are of the same font. */
+function addWord(line: Run[], word: Run): void {
+  const last = line.at(-1)
+  if (last?.font === word.font) {
+    line[line.length - 1] = { text: `${last.text} ${word.text}`, font: word.font }
+  } else {
+    line.push(word)
+  }
+}
+
 /** The lines a paragraph of runs wraps into, each its runs, the words of a font kept together. */
 function wrapRuns(runs: readonly Run[], width: number): readonly (readonly Run[])[] {
+  const words = runs.flatMap(({ text, font }) =>
+    text
+      .split(' ')
+      .filter((word) => word !== '')
+      .map((word): Run => ({ text: word, font })),
+  )
   const lines: Run[][] = [[]]
   let used = 0
-  for (const { text, font } of runs) {
-    for (const word of text.split(' ').filter((each) => each !== '')) {
-      const line = lines.at(-1) ?? []
-      const wordWidth = font.widthOfTextAtSize(word, textSize)
-      const space = line.length === 0 ? 0 : font.widthOfTextAtSize(' ', textSize)
-      if (line.length > 0 && used + space + wordWidth > width) {
-        lines.push([{ text: word, font }])
-        used = wordWidth
-      } else {
-        const last = line.at(-1)
-        if (last?.font === font) {
-          line[line.length - 1] = { text: `${last.text} ${word}`, font }
-        } else {
-          line.push({ text: word, font })
-        }
-        used += space + wordWidth
-      }
+  for (const word of words) {
+    const line = lines.at(-1) ?? []
+    const wordWidth = word.font.widthOfTextAtSize(word.text, textSize)
+    const space = line.length === 0 ? 0 : word.font.widthOfTextAtSize(' ', textSize)
+    if (line.length > 0 && used + space + wordWidth > width) {
+      lines.push([word])
+      used = wordWidth
+    } else {
+      addWord(line, word)
+      used += space + wordWidth
     }
   }
   return lines
