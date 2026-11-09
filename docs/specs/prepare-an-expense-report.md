@@ -206,7 +206,9 @@ unlocked and added. Under its field, for as long as the step shows it, the step 
 holds it without that protection.*
 
 What is said of a file refused stands under its field, until a file is given to that
-field again or the step is left.
+field again or the step is left. A file still being read when another is given, or when
+the step is left, is said of once it is read, there or on coming back: a file refused
+never goes unsaid.
 
 Files are read in the browser, which may take a while for a large one. While
 a file is being added, Continue and the steps ahead are not offered: the

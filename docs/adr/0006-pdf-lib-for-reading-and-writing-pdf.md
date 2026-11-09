@@ -66,7 +66,9 @@ Options considered for the fonts:
   refused when added, with its reason
   (`docs/specs/prepare-an-expense-report.md`): the system asks for no password.
 - **Reading** an image checks its format from its first bytes (JPEG or PNG),
-  whatever its file name says, and that the library can embed it.
+  whatever its file name says, that the library can embed it, and that a JPEG holds
+  its image to its end, its scan started and its end after that. A JPEG is not
+  decoded when added: a file cut short is found, damage within its scan is not.
 - **Writing** the report document is one function of `src/io/` that takes the
   report's layout from the domain (ADR 0007) and returns the bytes of the PDF.
   It draws, copies, paginates, stamps and links; it never orders, numbers,

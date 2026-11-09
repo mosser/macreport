@@ -281,6 +281,7 @@ export function listenToDocumentFields(
     const other = chosen ?? report.documentOfSameContentAs(document)
     if (chosen !== undefined) {
       notes.choseAgain(field.field, chosen)
+      if (wasUnlocked) notes.wasUnlocked(field.field, chosen)
       context.change(field.afterAdding(report, chosen))
     } else if (other !== undefined) {
       notes.refused(field.field, refusedAsAlreadyInReportWording(document.fileName, other))
@@ -302,11 +303,12 @@ export function listenToDocumentFields(
    */
   const addOne = (field: DocumentField, file: File) => {
     const session = context.session
-    const reading = readFile(file, field.kind)
+    // Handled from the start: a file may be refused while the file given before it is being read.
+    const reading = readFile(file, field.kind).catch((error: unknown) => refusalOf(file, error))
     const last = lastAdded.get(context)
     const before = last?.session === session ? last.addition : Promise.resolve()
     const addition = before.then(async () => {
-      const added = await reading.catch((error: unknown) => refusalOf(file, error))
+      const added = await reading
       if (context.session !== session) return
       if (typeof added === 'string') {
         notes.refused(field.field, added)

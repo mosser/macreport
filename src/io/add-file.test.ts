@@ -14,10 +14,12 @@ async function pdfOf(pageCount: number): Promise<Uint8Array> {
   return pdf.save({ addDefaultPage: false })
 }
 
-/** A JPEG holding only its header, as much as the report document reads of one. */
-const jpeg = new Uint8Array([
-  0xff, 0xd8, 0xff, 0xc0, 0, 11, 8, 0, 10, 0, 10, 1, 1, 0x11, 0, 0xff, 0xd9,
-])
+/** The start of a JPEG, up to its frame: what the report document reads of one. */
+const jpegHeader = [0xff, 0xd8, 0xff, 0xc0, 0, 11, 8, 0, 10, 0, 10, 1, 1, 0x11, 0]
+/** The start of its scan, with a little of what it holds. */
+const jpegScan = [0xff, 0xda, 0, 8, 1, 1, 0, 0, 63, 0, 1, 2, 3]
+const jpegEnd = [0xff, 0xd9]
+const jpeg = new Uint8Array([...jpegHeader, ...jpegScan, ...jpegEnd])
 
 const fileOf = (content: Uint8Array | string, name: string) => new File([content as BlobPart], name)
 
@@ -103,6 +105,21 @@ describe('addedFileOf', () => {
     const jpegStart = new Uint8Array([0xff, 0xd8, 0xff, 0xd9])
     await expect(addedFileOf(fileOf(jpegStart, 'a.jpeg'), Kind.receipt)).rejects.toThrow(
       'a.jpeg is refused: it is damaged.',
+    )
+  })
+
+  it('refuses a JPEG cut short: without its image, or before the end of it', async () => {
+    for (const cut of [jpegHeader, [...jpegHeader, ...jpegScan], [...jpegHeader, ...jpegEnd]]) {
+      await expect(
+        addedFileOf(fileOf(new Uint8Array(cut), 'a.jpeg'), Kind.receipt),
+      ).rejects.toThrow('a.jpeg is refused: it is damaged.')
+    }
+  })
+
+  it('takes a JPEG with bytes after its end, as some cameras write', async () => {
+    const trailing = new Uint8Array([...jpeg, 1, 2, 3])
+    expect((await addedFileOf(fileOf(trailing, 'a.jpeg'), Kind.receipt)).document.fileName).toBe(
+      'a.jpeg',
     )
   })
 

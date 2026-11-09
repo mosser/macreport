@@ -3,6 +3,7 @@ import { type AddedFile, Document } from '../domain/document.ts'
 import { type RefusalReason, RefusedFile } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import { recognizedFormatOf } from './format.ts'
+import { isWholeJpeg } from './jpeg.ts'
 import { isUnlockedOnReading, PdfWithoutPages } from './load-pdf.ts'
 
 /** What the message of the PDF library says of a PDF that needs a password to open. */
@@ -28,6 +29,7 @@ async function refusalOfImage(
   content: Uint8Array,
   format: 'jpeg' | 'png',
 ): Promise<RefusalReason | undefined> {
+  if (format === 'jpeg' && !isWholeJpeg(content)) return 'damaged'
   try {
     const pdf = await PDFDocument.create()
     await (format === 'png' ? pdf.embedPng(content) : pdf.embedJpg(content))

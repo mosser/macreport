@@ -104,6 +104,7 @@ function give(name: string, ...files: readonly (readonly [string, (string | unde
     value: files.map(
       ([fileName, content = `%PDF-1.7 ${fileName}`]) => new File([content], fileName),
     ),
+    configurable: true,
   })
   input.dispatchEvent(new Event('change'))
 }
@@ -1257,6 +1258,17 @@ describe('a file unlocked', () => {
     expect(notices()).toEqual([])
   })
 
+  it('is said when the document is chosen again on another expense', async () => {
+    await onExpense()
+    button('[data-action="done"]')?.click()
+    openExpense()
+    give('bankStatements', ['visa.pdf'])
+    await vi.waitFor(() =>
+      expect(root.textContent).toContain('Already in the report, as visa: chosen.'),
+    )
+    expect(notices()).toEqual([said])
+  })
+
   it('is said of each additional document, and forgotten when the step is left', async () => {
     fillReport()
     proceed()
@@ -1342,6 +1354,71 @@ describe('a file refused', () => {
     failures.set('b.txt', new RefusedFile('b.txt', 'format'))
     give('additionalDocuments', ['b.txt'])
     await refused('b.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+    button('[data-action="back"]')?.click()
+    proceed()
+    expect(errors()).toEqual([])
+  })
+
+  /** Gives a file that is refused only once the function it returns is called. */
+  function slowlyRefused(fileName: string): () => void {
+    let finish = () => {}
+    readings.set(
+      fileName,
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    failures.set(fileName, new RefusedFile(fileName, 'damaged'))
+    give('additionalDocuments', [fileName])
+    return finish
+  }
+
+  it('leaves no rejection unhandled when it is read before the slower file given before it', async () => {
+    await onAdditionalDocuments()
+    const unhandled: unknown[] = []
+    const noted = (reason: unknown) => unhandled.push(reason)
+    process.on('unhandledRejection', noted)
+    try {
+      let finish = () => {}
+      readings.set(
+        'slow.pdf',
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+      )
+      failures.set('b.txt', new RefusedFile('b.txt', 'format'))
+      give('additionalDocuments', ['slow.pdf'], ['b.txt'])
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      finish()
+      await refused('b.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+      expect(documentsOfStep()).toEqual(['slow'])
+      expect(unhandled).toEqual([])
+    } finally {
+      process.off('unhandledRejection', noted)
+    }
+  })
+
+  it('is said once read, though another file was given to its field meanwhile: it does not go unsaid', async () => {
+    await onAdditionalDocuments()
+    const finish = slowlyRefused('slow.pdf')
+    give('additionalDocuments', ['c.pdf'])
+    finish()
+    await refused('slow.pdf is refused: it is damaged.')
+    expect(documentsOfStep()).toEqual(['c'])
+    await add('additionalDocuments', 'd.pdf')
+    expect(errors()).toEqual([])
+  })
+
+  it('is said once read, though the step was left meanwhile, and forgotten when it is left again', async () => {
+    await onAdditionalDocuments()
+    const finish = slowlyRefused('slow.pdf')
+    button('[data-action="back"]')?.click()
+    expect(errors()).toEqual([])
+    finish()
+    await vi.waitFor(() => expect(button('[data-action="back"]')?.disabled).toBe(false))
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    proceed()
+    expect(errors()).toEqual(['slow.pdf is refused: it is damaged.'])
     button('[data-action="back"]')?.click()
     proceed()
     expect(errors()).toEqual([])
