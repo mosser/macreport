@@ -1954,6 +1954,12 @@ describe('expense presets', () => {
     typeInDialog('parameter-end', end)
   }
 
+  it('leaves Manage per diems at the right, in the style', () => {
+    expect(readFileSync('src/style.css', 'utf8')).toMatch(
+      /\.expense-buttons \[data-action="manage-per-diems"\] \{\s*margin-left: auto;/,
+    )
+  })
+
   it('is offered next to Add an expense, then Manage per diems', () => {
     fillReport()
     travel()

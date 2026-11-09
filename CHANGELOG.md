@@ -6,6 +6,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Manage per diems** now stands at the right of the Expenses step, apart from the buttons
+  that add an expense.
+
 ### Added
 
 - **Add from a preset**, next to Add an expense, adds several expenses at once. A dialog

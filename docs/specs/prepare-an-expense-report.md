@@ -74,7 +74,7 @@ receipt or *Missing receipt*, its bank statement or *Paid in cash*, and, in red,
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
 **Remove**, a trash can. **Add an expense** stands above them; next to it,
-**Add from a preset**, when an expense preset is offered to the report, then, for a
+**Add from a preset**, when an expense preset is offered to the report; at the right, for a
 business travel whose dates are valid, **Manage per diems**.
 When a meal is claimed, the per diems stand under the expenses, under the
 heading *Per diems*: each of those days, by its day of the week in full, on a

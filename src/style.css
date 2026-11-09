@@ -481,6 +481,11 @@ td.size-action button {
   margin-bottom: 0;
 }
 
+/* Manage per diems stands apart from what adds an expense, at the right. */
+.expense-buttons [data-action="manage-per-diems"] {
+  margin-left: auto;
+}
+
 /* The per diems claimed, on one line above the expenses. */
 /* A day of the per diems: its day and date beside domestic or international, then its meals. */
 .per-diem-day {
