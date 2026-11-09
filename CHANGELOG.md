@@ -6,6 +6,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- A file is checked when it is added. A file of another format, a damaged one, a PDF
+  without pages or one protected by a password is refused at once, by its name and with
+  the reason, instead of failing when the report is saved.
+- A file already in the report is no longer added twice: it is refused, naming the
+  document it already is, unless it can simply be chosen again as the same receipt or
+  bank statement.
+
 ### Added
 
 - **Paid in cash**, offered under an empty Bank statement, replaces the need for one.

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
 import type { DocumentWeight, ReportWeights } from '../domain/document-sizes.ts'
+import { RefusedFile } from '../domain/findings.ts'
 import { Kind } from '../domain/kind.ts'
 import { policy } from '../domain/policy.ts'
 import { Report } from '../domain/report.ts'
@@ -21,6 +22,8 @@ let reading: Promise<void>
 let readings: Map<string, Promise<void>>
 /** How many times the Review step let the browser forget its links. */
 let forgotten: number
+/** Why reading a file fails, by its name, when it does. */
+let failures: Map<string, Error>
 /** How long working out the sizes takes. */
 let weighing: Promise<void>
 /** The sizes worked out for a report. */
@@ -42,6 +45,8 @@ function options(draft = new Report(), isDraftKept = true): WizardOptions {
     logo: 'logo.png',
     readFile: async (file: File, kind: Kind) => {
       await (readings.get(file.name) ?? reading)
+      const failure = failures.get(file.name)
+      if (failure !== undefined) throw failure
       return new Document(kind, file.name, new Uint8Array(await file.arrayBuffer()))
     },
     links: {
@@ -86,11 +91,20 @@ function choose(name: string, value: string): void {
   select.dispatchEvent(new Event('change'))
 }
 
-async function add(name: string, fileName: string): Promise<void> {
+/** Gives files to a file input, each of its content, or one of its name's. */
+function give(name: string, ...files: readonly (readonly [string, (string | undefined)?])[]): void {
   const input = root.querySelector<HTMLInputElement>(`input[name="${name}"]`)
   if (input === null) throw new TypeError(`No file input ${name}`)
-  Object.defineProperty(input, 'files', { value: [new File([`%PDF-1.7 ${fileName}`], fileName)] })
+  Object.defineProperty(input, 'files', {
+    value: files.map(
+      ([fileName, content = `%PDF-1.7 ${fileName}`]) => new File([content], fileName),
+    ),
+  })
   input.dispatchEvent(new Event('change'))
+}
+
+async function add(name: string, fileName: string, content?: string): Promise<void> {
+  give(name, [fileName, content])
   await vi.waitFor(() => expect(root.textContent).toContain(fileName))
 }
 
@@ -169,6 +183,7 @@ beforeEach(() => {
   isSaved = true
   reading = Promise.resolve()
   readings = new Map()
+  failures = new Map()
   forgotten = 0
   weighing = Promise.resolve()
   weigh = () => ({ reportDocumentSize: undefined, weights: new Map() })
@@ -660,7 +675,7 @@ describe('the wizard', () => {
     proceed()
     await fillExpense()
     proceed()
-    await add('additionalDocuments', 'statement.pdf')
+    await add('additionalDocuments', 'statement.pdf', '%PDF-1.7 another statement')
     expect(kept.at(-1)?.additionalDocuments.map((document) => document.name)).toEqual([
       'statement (2)',
     ])
@@ -1184,6 +1199,164 @@ describe('the Expenses step', () => {
     tick('paidInAnotherCurrency', false)
     expect(kept.at(-1)?.expenses[0]?.foreignAmount).toBeUndefined()
     expect(continueButton()?.disabled).toBe(true)
+  })
+})
+
+describe('a file refused', () => {
+  const errors = () =>
+    [...root.querySelectorAll('[role="alert"].error')]
+      .filter((error) => !error.hasAttribute('hidden'))
+      .map((error) => error.textContent)
+  const documentsOfStep = () =>
+    kept.at(-1)?.additionalDocuments.map((document) => document.name) ?? []
+
+  async function onAdditionalDocuments(): Promise<void> {
+    fillReport()
+    proceed()
+    await fillExpense()
+    proceed()
+  }
+
+  const refused = async (wording: string) => vi.waitFor(() => expect(errors()).toContain(wording))
+
+  it('says so under its field, with the reason, and is not added', async () => {
+    await onAdditionalDocuments()
+    failures.set('notes.txt', new RefusedFile('notes.txt', 'format'))
+    give('additionalDocuments', ['notes.txt'])
+    await refused('notes.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+    expect(documentsOfStep()).toEqual([])
+    expect(
+      root.querySelector('[data-field="additionalDocuments"] [role="alert"]')?.textContent,
+    ).toContain('notes.txt')
+  })
+
+  it('says a file that cannot be read is damaged', async () => {
+    await onAdditionalDocuments()
+    failures.set('moved.pdf', new Error('The file could not be read'))
+    give('additionalDocuments', ['moved.pdf'])
+    await refused('moved.pdf is refused: it is damaged.')
+  })
+
+  it('writes the name of a file as text', async () => {
+    await onAdditionalDocuments()
+    failures.set('<b>a</b>.txt', new RefusedFile('<b>a</b>.txt', 'format'))
+    give('additionalDocuments', ['<b>a</b>.txt'])
+    await refused('<b>a</b>.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+    expect(root.querySelector('[role="alert"] b')).toBeNull()
+  })
+
+  it('handles each of several files on its own, in the order given', async () => {
+    await onAdditionalDocuments()
+    failures.set('b.txt', new RefusedFile('b.txt', 'format'))
+    failures.set('d.pdf', new RefusedFile('d.pdf', 'password'))
+    give('additionalDocuments', ['a.pdf'], ['b.txt'], ['c.pdf'], ['d.pdf'])
+    await refused('d.pdf is refused: it is protected by a password.')
+    expect(errors()).toEqual([
+      'b.txt is refused: it is not a PDF, a JPEG image or a PNG image.',
+      'd.pdf is refused: it is protected by a password.',
+    ])
+    expect(documentsOfStep()).toEqual(['a', 'c'])
+  })
+
+  it('stands until a file is given to that field again', async () => {
+    await onAdditionalDocuments()
+    failures.set('b.txt', new RefusedFile('b.txt', 'format'))
+    give('additionalDocuments', ['b.txt'])
+    await refused('b.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+    await add('additionalDocuments', 'c.pdf')
+    expect(errors()).toEqual([])
+  })
+
+  it('is forgotten when the step is left', async () => {
+    await onAdditionalDocuments()
+    failures.set('b.txt', new RefusedFile('b.txt', 'format'))
+    give('additionalDocuments', ['b.txt'])
+    await refused('b.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+    button('[data-action="back"]')?.click()
+    proceed()
+    expect(errors()).toEqual([])
+  })
+
+  it('is forgotten when the fields of the expense close', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    failures.set('b.txt', new RefusedFile('b.txt', 'format'))
+    give('receipts', ['b.txt'])
+    await refused('b.txt is refused: it is not a PDF, a JPEG image or a PNG image.')
+    expect(root.querySelector('input[name="receipts"]')).not.toBeNull()
+    expect(kept.at(-1)?.expenses[0]?.hasReceipt).toBe(false)
+    button('[data-action="done"]')?.click()
+    button('[data-change]')?.click()
+    expect(errors()).toEqual([])
+  })
+
+  it('is what becomes of a file already another kind of document, naming that document', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    await add('receipts', 'air-canada.pdf')
+    give('bankStatements', ['air-canada.pdf'])
+    await refused('air-canada.pdf is refused: it is already in the report, as Receipt air-canada.')
+    expect(kept.at(-1)?.expenses[0]?.hasBankStatement).toBe(false)
+  })
+
+  it('is what becomes of a file added again as an additional document', async () => {
+    await onAdditionalDocuments()
+    await add('additionalDocuments', 'poster.pdf')
+    give('additionalDocuments', ['poster.pdf'])
+    await refused(
+      'poster.pdf is refused: it is already in the report, as Additional document poster.',
+    )
+    expect(documentsOfStep()).toEqual(['poster'])
+    give('additionalDocuments', ['air-canada.pdf'])
+    await refused('air-canada.pdf is refused: it is already in the report, as Receipt air-canada.')
+  })
+
+  it('is what becomes of a travel justification added again as an additional document', async () => {
+    fillReport()
+    travel()
+    proceed()
+    await fillExpense()
+    proceed()
+    await add('travelJustifications', 'invitation.pdf')
+    give('additionalDocuments', ['invitation.pdf'])
+    await refused(
+      'invitation.pdf is refused: it is already in the report, as Additional document invitation.',
+    )
+    expect(documentsOfStep()).toEqual([])
+  })
+
+  it('is not what becomes of a receipt added again on another expense: it is chosen', async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+    button('[data-action="done"]')?.click()
+    openExpense()
+    give('receipts', ['air-canada.pdf'])
+    await vi.waitFor(() =>
+      expect(root.textContent).toContain('Already in the report, as air-canada: chosen.'),
+    )
+    expect(errors()).toEqual([])
+  })
+
+  it('says nothing of a file that finishes after New report', async () => {
+    await onAdditionalDocuments()
+    let fail = (_error: Error) => {}
+    readings.set(
+      'slow.txt',
+      new Promise((_resolve, reject) => {
+        fail = reject
+      }),
+    )
+    give('additionalDocuments', ['slow.txt'])
+    button('[data-action="new-report"]')?.click()
+    await answer('confirm')
+    fail(new RefusedFile('slow.txt', 'format'))
+    await vi.waitFor(() => expect(discarded).toBe(1))
+    await Promise.resolve()
+    await onAdditionalDocuments()
+    expect(errors()).toEqual([])
   })
 })
 

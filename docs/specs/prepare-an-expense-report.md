@@ -200,6 +200,9 @@ once, dropped or chosen together, handles each on its own, in the order
 given; where a field takes one document, the first is added, and a document
 there already is replaced only once it is removed.
 
+What is said of a file refused stands under its field, until a file is given to that
+field again or the step is left.
+
 Files are read in the browser, which may take a while for a large one. While
 a file is being added, Continue and the steps ahead are not offered: the
 report is not reviewed, nor saved, without it. Nor are Done, Discard and

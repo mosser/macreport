@@ -4,6 +4,9 @@ import {
   type Field,
   fieldNames,
   nameTakenWording,
+  RefusedFile,
+  refusalWording,
+  refusedAsAlreadyInReportWording,
 } from '../domain/findings.ts'
 import type { Kind } from '../domain/kind.ts'
 import type { Report } from '../domain/report.ts'
@@ -12,8 +15,48 @@ import { html, type Markup } from './html.ts'
 import { cross, pen, trashCan } from './icons.ts'
 import type { Context } from './step.ts'
 
-/** Reads a file the Claimant adds into a document of a kind. */
+/**
+ * Reads a file the Claimant adds into a document of a kind. Rejects with a RefusedFile, with the
+ * reason, when the file cannot be added.
+ */
 export type ReadFile = (file: File, kind: Kind) => Promise<Document>
+
+/**
+ * What a step says under its document fields, while it shows them: the document chosen again for a
+ * file added again, and the files refused, each with its reason, since a file was last given.
+ */
+export class FieldNotes {
+  private readonly chosenAgain = new Map<Field, Document>()
+  private readonly refusals = new Map<Field, readonly string[]>()
+
+  /** The document chosen again for the field. */
+  chosenAgainFor(field: Field): Document | undefined {
+    return this.chosenAgain.get(field)
+  }
+
+  /** What is said of the files refused for the field. */
+  refusalsFor(field: Field): readonly string[] {
+    return this.refusals.get(field) ?? []
+  }
+
+  choseAgain(field: Field, document: Document): void {
+    this.chosenAgain.set(field, document)
+  }
+
+  refused(field: Field, wording: string): void {
+    this.refusals.set(field, [...this.refusalsFor(field), wording])
+  }
+
+  /** Files are given to the field: what was said of those given before goes. */
+  givenFilesTo(field: Field): void {
+    this.refusals.delete(field)
+  }
+
+  forget(): void {
+    this.chosenAgain.clear()
+    this.refusals.clear()
+  }
+}
 
 /**
  * What the Claimant may state of a field that holds no document, which then takes its place: Paid
@@ -128,13 +171,10 @@ function offerOf(field: DocumentField): Markup {
  * The documents added to a field, each named, then a zone a file is dropped on, or clicked to
  * choose one, the documents already in the report it may choose, and what it may state instead; a
  * field that holds one document at most shows none of these once it has it. What is stated takes
- * the place of the field. Under a document chosen again for a file added again, the step says so.
+ * the place of the field. Under a document chosen again for a file added again, the step says so, and under a
+ * field, why each file given to it was refused.
  */
-export function documentFieldOf(
-  field: DocumentField,
-  report: Report,
-  chosenAgain?: Document,
-): Markup {
+export function documentFieldOf(field: DocumentField, report: Report, notes: FieldNotes): Markup {
   const name = field.field
   if (field.statedInstead?.isStatedIn(report)) {
     return statedOf(field, field.statedInstead)
@@ -144,6 +184,7 @@ export function documentFieldOf(
     documents.length > 0
       ? html`<ul class="documents">${documents.map((document, index) => documentItem(field, report, document, index))}</ul>`
       : ''
+  const chosenAgain = notes.chosenAgainFor(name)
   const status =
     chosenAgain !== undefined && documents.includes(chosenAgain)
       ? html`<p class="status" role="status">${alreadyInReportWording(chosenAgain)}</p>`
@@ -164,6 +205,7 @@ export function documentFieldOf(
     ${fieldName(name)}
     ${list}
     ${status}
+    ${notes.refusalsFor(name).map((wording) => html`<p class="error" role="alert">${wording}</p>`)}
     ${zone}
   </div>`
 }
@@ -181,8 +223,9 @@ const lastAdded = new WeakMap<
 /**
  * Listens to the document fields of a panel: a file chosen or dropped is added, a document
  * already in the report chosen, a name typed names its document, and Remove takes a document out
- * of its field. A field that offers the documents already in the report chooses the one already
- * there for a file added again, and says so through `isChosenAgain`. What a field states instead
+ * of its field. A field that offers the documents already in the report chooses the one of its kind
+ * already there for a file added again, and says so through its notes. A file that cannot be added,
+ * or that is already a document it cannot choose, is refused, the notes saying why. What a field states instead
  * is stated, or taken back, the focus going on to the control that takes its place.
  */
 export function listenToDocumentFields(
@@ -190,7 +233,7 @@ export function listenToDocumentFields(
   context: Context,
   readFile: ReadFile,
   fields: readonly DocumentField[],
-  isChosenAgain: (field: DocumentField, document: Document) => void = () => undefined,
+  notes: FieldNotes,
 ): void {
   const fieldNamed = (name: string | undefined) => fields.find((field) => field.field === name)
   const documentOf = (element: HTMLElement) =>
@@ -210,8 +253,32 @@ export function listenToDocumentFields(
   }
 
   /**
+   * Adds a document read from a file to a field: the document already there when the field can
+   * choose it, refused when it is already another document, named otherwise.
+   */
+  const addRead = (field: DocumentField, document: Document) => {
+    const report = context.report
+    const chosen = field.choicesIn === undefined ? undefined : report.documentLike(document)
+    const other = chosen ?? report.documentOfSameContentAs(document)
+    if (chosen !== undefined) {
+      notes.choseAgain(field.field, chosen)
+      context.change(field.afterAdding(report, chosen))
+    } else if (other !== undefined) {
+      notes.refused(field.field, refusedAsAlreadyInReportWording(document.fileName, other))
+    } else {
+      const named = document.afterNaming(report.freeNameLike(document.name))
+      context.change(field.afterAdding(report, named))
+    }
+  }
+
+  /** What is said of a file that could not be read into a document. */
+  const refusalOf = (file: File, error: unknown) =>
+    error instanceof RefusedFile ? error.message : refusalWording(file.name, 'damaged')
+
+  /**
    * A file is read at once, and added once the file given before it is: to a report that has not
-   * changed for another, and to a field of one document that does not have it yet.
+   * changed for another, and to a field of one document that does not have it yet. A file that
+   * cannot be read is refused.
    */
   const addOne = (field: DocumentField, file: File) => {
     const session = context.session
@@ -219,17 +286,12 @@ export function listenToDocumentFields(
     const last = lastAdded.get(context)
     const before = last?.session === session ? last.addition : Promise.resolve()
     const addition = before.then(async () => {
-      const document = await reading
+      const document = await reading.catch((error: unknown) => refusalOf(file, error))
       if (context.session !== session) return
-      if (field.holdsOneDocument && field.documentsIn(context.report).length > 0) return
-      const already =
-        field.choicesIn === undefined ? undefined : context.report.documentLike(document)
-      if (already !== undefined) {
-        isChosenAgain(field, already)
-        context.change(field.afterAdding(context.report, already))
-      } else {
-        const named = document.afterNaming(context.report.freeNameLike(document.name))
-        context.change(field.afterAdding(context.report, named))
+      if (typeof document === 'string') {
+        notes.refused(field.field, document)
+      } else if (!field.holdsOneDocument || field.documentsIn(context.report).length === 0) {
+        addRead(field, document)
       }
       context.refresh()
     })
@@ -242,6 +304,10 @@ export function listenToDocumentFields(
     const field = fieldNamed(name)
     if (field === undefined) return
     const given = Array.from(files ?? [])
+    if (given.length > 0 && notes.refusalsFor(field.field).length > 0) {
+      notes.givenFilesTo(field.field)
+      context.refresh()
+    }
     for (const file of field.holdsOneDocument ? given.slice(0, 1) : given) {
       addOne(field, file)
     }

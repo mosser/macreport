@@ -127,6 +127,16 @@ describe('Report', () => {
     expect(removed.afterRemovingExpense(second).documents).toEqual([])
   })
 
+  it('finds the document of the same content as a file added again, whatever its kind', () => {
+    const receipt = new Document(Kind.receipt, 'a.pdf', new Uint8Array([1]))
+    const report = new Report().afterAdding(new Expense({ receipts: [receipt] }))
+    const again = new Document(Kind.bankStatement, 'b.pdf', new Uint8Array([1]))
+    expect(report.documentOfSameContentAs(again)).toBe(receipt)
+    expect(
+      report.documentOfSameContentAs(new Document(Kind.receipt, 'c.pdf', new Uint8Array([2]))),
+    ).toBeUndefined()
+  })
+
   it('finds the document of the same kind and content as a file added again', () => {
     const visa = new Document(Kind.bankStatement, 'visa.pdf', new Uint8Array([1, 2]))
     const report = new Report().afterAdding(new Expense({ bankStatements: [visa] }))

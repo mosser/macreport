@@ -341,6 +341,11 @@ export class Report {
     return this.documentsOf(document.kind).find((other) => other.hasSameContentAs(document))
   }
 
+  /** The document of the report of the same content as the one given, whatever its kind. */
+  documentOfSameContentAs(document: Document): Document | undefined {
+    return this.documents.find((other) => other.hasSameContentAs(document))
+  }
+
   /** The same report, with a document named otherwise wherever it is. */
   afterRenaming(document: Document, name: string): Report {
     return this.afterReplacingDocument(document, [document.afterNaming(name)])

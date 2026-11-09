@@ -97,6 +97,37 @@ export const missingReceiptNotice = {
   stressed: 'Accounts Payable may not accept it, and may return the report.',
 } as const
 
+/** Why a file is refused when it is added. */
+export type RefusalReason = 'format' | 'damaged' | 'without pages' | 'password'
+
+const refusalWordings: Readonly<Record<RefusalReason, string>> = {
+  format: 'it is not a PDF, a JPEG image or a PNG image',
+  damaged: 'it is damaged',
+  'without pages': 'it is a PDF without pages',
+  password: 'it is protected by a password',
+}
+
+/** What is said of a file refused when it is added, with the reason. */
+export function refusalWording(fileName: string, reason: RefusalReason): string {
+  return `${fileName} is refused: ${refusalWordings[reason]}.`
+}
+
+/**
+ * What is said of a file refused for being a document of the report already, by its kind and its
+ * name: a document has one kind, and is in the report once.
+ */
+export function refusedAsAlreadyInReportWording(fileName: string, document: Document): string {
+  return `${fileName} is refused: it is already in the report, as ${document.kind.name} ${document.name}.`
+}
+
+/** A file refused when it is added: its message says so, with the reason. */
+export class RefusedFile extends Error {
+  constructor(fileName: string, reason: RefusalReason) {
+    super(refusalWording(fileName, reason))
+    this.name = 'RefusedFile'
+  }
+}
+
 /** What is said under the name of a document that a document before it already has. */
 export const nameTakenWording = 'Another document already has this name.'
 

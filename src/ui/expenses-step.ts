@@ -23,6 +23,7 @@ import { confirmed } from './confirmation.ts'
 import {
   type DocumentField,
   documentFieldOf,
+  FieldNotes,
   listenToDocumentFields,
   type ReadFile,
   type StatedInstead,
@@ -192,7 +193,7 @@ function formOf(
   report: Report,
   expense: Expense,
   fields: readonly DocumentField[],
-  chosenAgain: ReadonlyMap<Field, Document>,
+  notes: FieldNotes,
   broken: ReadonlyMap<Field, string>,
 ): Markup {
   const shown = (field: Field, kept: string | undefined) => broken.get(field) ?? kept ?? ''
@@ -229,7 +230,7 @@ function formOf(
       ${fieldName('paidInAnotherCurrency')}
     </label>
     ${foreign}
-    ${fields.map((field) => documentFieldOf(field, report, chosenAgain.get(field.field)))}
+    ${fields.map((field) => documentFieldOf(field, report, notes))}
     <div class="expense-buttons">
       <button type="button" class="primary" data-action="done" data-held>Done</button>
       <button type="button" data-action="discard" data-held-while-adding>Discard</button>
@@ -479,8 +480,8 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     reasonsAskedFor.clear()
     perMealShownFor.clear()
   }
-  /** The document chosen again for a file added again, by its field, while the expense is open. */
-  const chosenAgain = new Map<Field, Document>()
+  /** What is said under the documents of the expense, while it is open. */
+  const notes = new FieldNotes()
   /**
    * A value typed that breaks its rule, by its field, while the expense is open: the expense does
    * not keep it, so the step holds the others until it follows its rule or is cleared.
@@ -488,7 +489,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
   const broken = new Map<Field, string>()
 
   const forget = () => {
-    chosenAgain.clear()
+    notes.forget()
     broken.clear()
   }
 
@@ -501,7 +502,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
 
   const renderForm = (panel: HTMLElement, context: Context, index: number, expense: Expense) => {
     const fields = documentFieldsOf(index)
-    panel.innerHTML = formOf(context.report, expense, fields, chosenAgain, broken).text
+    panel.innerHTML = formOf(context.report, expense, fields, notes, broken).text
     for (const field of broken.keys()) {
       panel.querySelector(`[data-rule-of="${field}"]`)?.classList.add('is-broken')
     }
@@ -548,9 +549,7 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       }
       open(context, undefined)
     })
-    listenToDocumentFields(panel, context, readFile, fields, (field, document) => {
-      chosenAgain.set(field.field, document)
-    })
+    listenToDocumentFields(panel, context, readFile, fields, notes)
   }
 
   const renderPerDiems = (panel: HTMLElement, context: Context) => {
