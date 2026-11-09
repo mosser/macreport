@@ -133,6 +133,8 @@ Options considered for where a repetition ends:
 **Negative / accepted trade-offs**
 
 - A preset the vocabulary cannot say needs a new word, so code and a test.
+- A travel by car has no preset: it asks for mileage, which the object model does not hold,
+  nor the rules of AP-01 on it.
 - An expense remembers its preset by name: a preset renamed in a release is offered again to
   a draft holding its expenses.
 - Changing the dates of a report does not move expenses already added from a preset.

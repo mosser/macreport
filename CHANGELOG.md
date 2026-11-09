@@ -23,7 +23,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   the first expense and an end month, one expense per month, described as
   *title - January 2026*, none of them after today. An amount, a currency and a foreign amount can be given for every
   month, or left to fill in month by month.
-- **Conference planning**, **Travel to conference (Air)** and **Travel to conference
+- **Travel planning**, **Travel (Air)** and **Travel
   (Train)**, offered for a business travel once its dates are valid. The first adds a
   registration, a transport and an accommodation, without dates; the others, the transports
   to and from the airport or the train station on its first and last days. Each is offered

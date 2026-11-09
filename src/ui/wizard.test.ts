@@ -2217,18 +2217,14 @@ describe('expense presets', () => {
       proceed()
     }
 
-    it('starts on Conference planning, among the presets of a business travel', async () => {
+    it('starts on Travel planning, among the presets of a business travel', async () => {
       ready()
       await openDialog()
       expect(
         [...(dialog()?.querySelectorAll('[name="preset"] option') ?? [])].map(
           (option) => option.textContent,
         ),
-      ).toEqual([
-        'Conference planning',
-        'Travel to conference (Air)',
-        'Travel to conference (Train)',
-      ])
+      ).toEqual(['Travel planning', 'Travel (Air)', 'Travel (Train)'])
       expect(dialog()?.querySelector('[data-parameters]')?.children).toHaveLength(0)
       expect(add()?.textContent).toBe('Add 3 expenses')
       await answerDialog(add)
@@ -2273,13 +2269,10 @@ describe('expense presets', () => {
       await openDialog()
       await answerDialog(add)
       await openDialog()
-      expect(presetsOffered()).toEqual([
-        'Travel to conference (Air)',
-        'Travel to conference (Train)',
-      ])
+      expect(presetsOffered()).toEqual(['Travel (Air)', 'Travel (Train)'])
       await answerDialog(add)
       await openDialog()
-      expect(presetsOffered()).toEqual(['Travel to conference (Train)'])
+      expect(presetsOffered()).toEqual(['Travel (Train)'])
       await answerDialog(add)
       expect(offer()).toBeNull()
       for (const description of ['Registration', 'Transport', 'Accommodation']) {
@@ -2289,7 +2282,7 @@ describe('expense presets', () => {
         expect(offer() === null).toBe(description !== 'Accommodation')
       }
       await openDialog()
-      expect(presetsOffered()).toEqual(['Conference planning'])
+      expect(presetsOffered()).toEqual(['Travel planning'])
     })
 
     it('leaves out an expense unticked', async () => {

@@ -80,18 +80,18 @@ describe('the presets of config/expense-presets.json', () => {
     ])
   })
 
-  it('offers the conference presets to a business travel whose dates are valid', () => {
+  it('offers the travel presets to a business travel whose dates are valid', () => {
     expect(expensePresets.offeredTo(businessTravel).map((preset) => preset.name)).toEqual([
-      'Conference planning',
-      'Travel to conference (Air)',
-      'Travel to conference (Train)',
+      'Travel planning',
+      'Travel (Air)',
+      'Travel (Train)',
     ])
     const undated = new Report({ isBusinessTravel: true })
     expect(expensePresets.offeredTo(undated)).toEqual([])
   })
 
-  it('adds the expenses of Conference planning, without dates', () => {
-    const preset = presetNamed('Conference planning')
+  it('adds the expenses of Travel planning, without dates', () => {
+    const preset = presetNamed('Travel planning')
     expect(preset.parameters).toEqual([])
     expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       [undefined, 'Registration'],
@@ -100,8 +100,8 @@ describe('the presets of config/expense-presets.json', () => {
     ])
   })
 
-  it('adds the expenses of Travel to conference (Air), without asking for anything', () => {
-    const preset = presetNamed('Travel to conference (Air)')
+  it('adds the expenses of Travel (Air), without asking for anything', () => {
+    const preset = presetNamed('Travel (Air)')
     expect(preset.parameters).toEqual([])
     expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'Transport: home to airport'],
@@ -111,8 +111,8 @@ describe('the presets of config/expense-presets.json', () => {
     ])
   })
 
-  it('adds the expenses of Travel to conference (Train), without asking for anything', () => {
-    const preset = presetNamed('Travel to conference (Train)')
+  it('adds the expenses of Travel (Train), without asking for anything', () => {
+    const preset = presetNamed('Travel (Train)')
     expect(preset.parameters).toEqual([])
     expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'Transport: home to train station'],
@@ -122,19 +122,19 @@ describe('the presets of config/expense-presets.json', () => {
     ])
   })
 
-  it('is once per report for the conference presets, not for Monthly subscription', () => {
+  it('is once per report for the travel presets, not for Monthly subscription', () => {
     expect(
       expensePresets.all.filter((preset) => preset.isOncePerReport).map((preset) => preset.name),
-    ).toEqual(['Conference planning', 'Travel to conference (Air)', 'Travel to conference (Train)'])
+    ).toEqual(['Travel planning', 'Travel (Air)', 'Travel (Train)'])
   })
 
   it('does not offer a preset once per report while the report holds an expense of it', () => {
     const offered = (report: Report) => expensePresets.offeredTo(report).map((each) => each.name)
-    const preset = presetNamed('Travel to conference (Air)')
+    const preset = presetNamed('Travel (Air)')
     const [one, other] = preset.expensesFor(values(), businessTravel, today) ?? []
     if (one === undefined || other === undefined) throw new TypeError('Two expenses at least')
     const holding = businessTravel.afterAdding(one).afterAdding(other)
-    expect(offered(holding)).toEqual(['Conference planning', 'Travel to conference (Train)'])
+    expect(offered(holding)).toEqual(['Travel planning', 'Travel (Train)'])
     const changed = holding.afterReplacing(one, one.afterChanging({ description: 'Taxi' }))
     expect(offered(changed)).not.toContain(preset.name)
     const left = holding.afterRemovingExpense(one)

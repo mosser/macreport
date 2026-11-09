@@ -43,7 +43,7 @@
       ]
     },
     {
-      "name": "Conference planning",
+      "name": "Travel planning",
       "offeredFor": "businessTravel",
       "isOncePerReport": true,
       "expenses": [
@@ -53,7 +53,7 @@
       ]
     },
     {
-      "name": "Travel to conference (Air)",
+      "name": "Travel (Air)",
       "offeredFor": "businessTravel",
       "isOncePerReport": true,
       "expenses": [
@@ -64,7 +64,7 @@
       ]
     },
     {
-      "name": "Travel to conference (Train)",
+      "name": "Travel (Train)",
       "offeredFor": "businessTravel",
       "isOncePerReport": true,
       "expenses": [
