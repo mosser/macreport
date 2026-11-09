@@ -1,6 +1,6 @@
 # ADR 0013: Expense presets are configured, and add ordinary expenses
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
@@ -82,14 +82,15 @@ Options considered for where a repetition ends:
   |---|---|
   | `name` | The name of the preset, not empty, and unique. |
   | `offeredFor` | `businessTravel` or `otherReport`. |
-  | `parameters` | Each with an `id`, a `label` and a `type`: `text`, `date`, `month`, `amount` or `foreignAmount`. Only `amount` and `foreignAmount` may have `isOptional`. A `month` names the date it starts from in `startingFrom`, and its list's length in `atMost`. |
+  | `parameters` | Each with an `id`, a `label` and a `type`: `text`, `date`, `month`, `amount` or `foreignAmount`. Only `amount` and `foreignAmount` may have `isOptional`, and a `foreignAmount`, which stands behind a tick box, has it. A `month` names the date it starts from in `startingFrom`, and its list's length in `atMost`. |
   | `expenses` | At least one. Each has a `description`; and may have a `date`, a `claimedAmount` naming an `amount` parameter, and a `foreignAmount` naming a `foreignAmount` parameter. |
   | `date` | A `date` parameter; `firstDay` or `lastDay`, of a preset for a business travel only; or `repetition`, of a repeating expense only. Left out, the expense has no date. |
   | `repeat` | `every`, today only `month`; `from`, a `date` parameter; `until`, a `month` parameter starting from it. |
   | `{…}` in a description | A `text` parameter; or `{month}` and `{year}`, of a repeating expense only. |
 
   The fixed words of a description are ones the report document can write. A parameter is
-  used by an expense, and its `id` is none of the words above.
+  used by an expense, and its `id` is none of `firstDay`, `lastDay`, `repetition`, `month`
+  and `year`. An unknown word in the file is refused.
 - **One button, Add from a preset, opens a dialog**, built entirely from the file: the
   preset, its parameters, then the expenses it would add, each with a tick box. Only what
   is ticked is added. The dialog holds what it is given until then, as the missing receipt's

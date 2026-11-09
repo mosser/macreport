@@ -70,6 +70,11 @@ grep -q 'checkDocumentSizes()' vite.config.ts || fail "vite.config.ts must check
 grep -q 'checkPolicy()' vite.config.ts || fail "vite.config.ts must check config/policy.json"
 grep -nE 'https?://' $business && fail "an address in business code: it belongs in config/policy.json"
 
+# ADR 0013: the presets in one file, unknown to the object model and the draft.
+[ -f config/expense-presets.json ] || fail "config/expense-presets.json must exist"
+grep -q 'checkExpensePresets()' vite.config.ts || fail "vite.config.ts must check config/expense-presets.json"
+grep -niE 'preset' src/domain/report.ts src/domain/expense.ts src/io/draft-store.ts && fail "the object model or the draft names a preset"
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures ADR check(s) failed" >&2
   exit 1

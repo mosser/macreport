@@ -183,8 +183,8 @@ unless the table of presets says optional:
 | Amount | In Canadian dollars, more than zero, at most two decimals. |
 | Foreign amount | **Paid in another currency**, ticked or not. When ticked, **Currency**, required, a three-letter ISO 4217 code other than CAD, its name shown under it, and **Foreign amount**, optional, more than zero, at most two decimals. |
 
-Once every required parameter follows its rule, the expenses the preset would add
-stand under them, in order, each with its date, its description, its foreign amount
+Once every required parameter is given and none breaks its rule, the expenses the
+preset would add stand under them, in order, each with its date, its description, its foreign amount
 and its claimed amount, as far as it has them, and a tick box, ticked. A box
 unticked stays so while the parameters change, by its place among the expenses.
 
@@ -204,7 +204,7 @@ the last day of a shorter month: from January 31, February 28, then March 31.
 | Preset | Offered to | Preset parameters | Expenses |
 |---|---|---|---|
 | Monthly subscription | Another report | Title (text); First expense (date); End month (month, from First expense, 36 months); Monthly amount (CAD) (amount, optional); Paid in another currency (foreign amount, optional) | Repeating from First expense to End month: *<title> - <month> <year>*, with the amount and the foreign amount given. |
-| Conference air travel | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. Without a date: *Hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
+| Travel to conference (Air) | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. Without a date: *Hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
 
 Continue is offered once there is at least one expense or a meal claimed,
 and every expense follows the rules above.

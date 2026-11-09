@@ -18,15 +18,15 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** v0.4.0, plus an expense paid in cash and a missing receipt, on top of
-the list of expenses and per diems: one report, its expenses listed by date, each added,
+**Current state:** v0.5.0, plus expense presets, on top of the list of expenses and per diems: one report, its expenses listed by date, each added,
 changed or removed, with one receipt and one bank statement, chosen again among those
 already in the report, and a foreign amount and currency; a missing receipt and an expense
 paid in cash, stated and taken back, the first written as a missing receipt authorization;
 the locations and per diems of a business travel (meals per day, domestic or international);
 travel justifications and additional documents, every document named, saved as the report
 document (cover with Entered boxes, per diem rows and a total by currency, sections, stamps);
-a heavy document reduced on request (ADR 0011); a file refused when added, with the reason.
+a heavy document reduced on request (ADR 0011); a file refused when added, with the reason;
+several expenses added at once from an expense preset (ADR 0013).
 The
 specification and the ADRs describe the full system; code follows them.
 
@@ -62,8 +62,8 @@ src/assets/   McSCert logos, as supplied; the McMaster logo, cut and scaled;
               fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 config/       per-diems.json: the per diem rates; document-sizes.json: when a
-              document is heavy; policy.json: the documents of the policy; inlined
-              at build time
+              document is heavy; policy.json: the documents of the policy;
+              expense-presets.json: the expense presets; inlined at build time
 src/style.css McMaster palette tokens and all styling
 scripts/      check-adr.sh: the scriptable ADR checks; release.sh and
               release-notes.sh: cutting a release (ADR 0003)
@@ -195,6 +195,15 @@ first.
   each one's name and https address, and is the only place an address appears; the
   build refuses a file without a valid one. The report document has a Policy section
   beside the attached information; the footer of the interface links to them, in a new tab.
+
+### ADR 0013: expense presets
+
+- `config/expense-presets.json` holds the presets, in a closed vocabulary of which nothing
+  is evaluated; the build refuses a file that breaks it, and an unknown word. A change to a
+  preset changes the table of presets in `prepare-an-expense-report.md` in the same commit.
+- A preset adds ordinary expenses and keeps no trace of them: `Report`, `Expense` and the
+  draft store name no preset. It gives a date, a description and amounts, never a document,
+  a missing receipt or a payment in cash.
 
 ## Writing
 

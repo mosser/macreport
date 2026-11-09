@@ -32,6 +32,7 @@ export const fieldNames = {
   locations: 'Location(s)',
   accountName: 'Account name',
   accountCode: 'Account code',
+  preset: 'Preset',
   date: 'Date',
   description: 'Description',
   claimedAmount: 'Claimed amount (CAD)',

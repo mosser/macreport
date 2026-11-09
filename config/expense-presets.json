@@ -1,0 +1,51 @@
+{
+  "presets": [
+    {
+      "name": "Monthly subscription",
+      "offeredFor": "otherReport",
+      "parameters": [
+        { "id": "title", "label": "Title", "type": "text" },
+        { "id": "first", "label": "First expense", "type": "date" },
+        {
+          "id": "end",
+          "label": "End month",
+          "type": "month",
+          "startingFrom": "first",
+          "atMost": 36
+        },
+        {
+          "id": "amount",
+          "label": "Monthly amount (CAD)",
+          "type": "amount",
+          "isOptional": true
+        },
+        {
+          "id": "foreign",
+          "label": "Paid in another currency",
+          "type": "foreignAmount",
+          "isOptional": true
+        }
+      ],
+      "expenses": [
+        {
+          "repeat": { "every": "month", "from": "first", "until": "end" },
+          "date": "repetition",
+          "description": "{title} - {month} {year}",
+          "claimedAmount": "amount",
+          "foreignAmount": "foreign"
+        }
+      ]
+    },
+    {
+      "name": "Travel to conference (Air)",
+      "offeredFor": "businessTravel",
+      "expenses": [
+        { "date": "firstDay", "description": "Transport: home to airport" },
+        { "date": "firstDay", "description": "Transport: airport to hotel" },
+        { "description": "Hotel" },
+        { "date": "lastDay", "description": "Transport: hotel to airport" },
+        { "date": "lastDay", "description": "Transport: airport to home" }
+      ]
+    }
+  ]
+}
