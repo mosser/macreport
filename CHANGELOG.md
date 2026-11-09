@@ -8,6 +8,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Back** is no longer offered while an expense is being entered or changed: **Done** or
+  **Discard** closes it first.
 - **Manage per diems** now stands at the right of the Expenses step, apart from the buttons
   that add an expense.
 

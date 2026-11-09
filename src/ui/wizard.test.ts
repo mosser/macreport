@@ -737,7 +737,7 @@ describe('the wizard', () => {
     ])
   })
 
-  it('holds Done, Back and the other steps while a value typed breaks its rule, and keeps it shown', async () => {
+  it('holds Done and the other steps while a value typed breaks its rule, and keeps it shown', async () => {
     fillReport()
     proceed()
     await fillExpense()
@@ -746,25 +746,22 @@ describe('the wizard', () => {
     type('currency', 'EUR')
     type('claimedAmount', '87.123')
     const held = () =>
-      [
-        button('[data-action="done"]'),
-        button('[data-action="back"]'),
-        button('[data-step="0"]'),
-        button('[data-step="2"]'),
-      ].map((each) => each?.disabled)
-    expect(held()).toEqual([true, true, true, true])
+      [button('[data-action="done"]'), button('[data-step="0"]'), button('[data-step="2"]')].map(
+        (each) => each?.disabled,
+      )
+    expect(held()).toEqual([true, true, true])
     expect(kept.at(-1)?.expenses[0]?.claimedAmount).toBeUndefined()
     button('[data-remove="receipts"][data-index="0"]')?.click()
     expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('87.123')
     expect(
       root.querySelector('[data-rule-of="claimedAmount"]')?.classList.contains('is-broken'),
     ).toBe(true)
-    expect(held()).toEqual([true, true, true, true])
+    expect(held()).toEqual([true, true, true])
     type('currency', 'EURO')
     tick('paidInAnotherCurrency', false)
-    expect(held()).toEqual([true, true, true, true])
+    expect(held()).toEqual([true, true, true])
     type('claimedAmount', '')
-    expect(held()).toEqual([false, false, false, true])
+    expect(held()).toEqual([false, false, true])
     type('claimedAmount', '87.12')
     expect(kept.at(-1)?.expenses[0]?.claimedAmount?.cents).toBe(8712)
   })
@@ -1088,7 +1085,7 @@ describe('the Expenses step', () => {
     expect(root.querySelector<HTMLTextAreaElement>('[name="description"]')?.value).toBe('Taxi')
     type('claimedAmount', '87.10')
     expect(kept.at(-1)?.expenses[1]?.claimedAmount?.cents).toBe(8710)
-    button('[data-action="back"]')?.click()
+    button('[data-step="0"]')?.click()
     proceed()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
   })
@@ -2313,6 +2310,49 @@ describe('expense presets', () => {
       const expense = lastReport()?.expenses[0]
       expect(expense?.date?.toString()).toBe('2026-10-03')
     })
+  })
+})
+
+describe('Back, on the Expenses step', () => {
+  const back = () => button('[data-action="back"]')
+
+  beforeEach(async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+  })
+
+  it('is not offered while an expense is being entered, then is once it is Done', () => {
+    expect(back()?.hidden).toBe(true)
+    button('[data-action="done"]')?.click()
+    expect(back()?.hidden).toBe(false)
+  })
+
+  it('is not offered while an expense is being changed, then is once it is discarded', () => {
+    button('[data-action="done"]')?.click()
+    button('[data-change="0"]')?.click()
+    expect(back()?.hidden).toBe(true)
+    type('description', 'Taxi')
+    expect(back()?.hidden).toBe(true)
+    button('[data-action="discard"]')?.click()
+    expect(back()?.hidden).toBe(false)
+  })
+
+  it('is offered again on coming back by the stepper', () => {
+    button('[data-step="0"]')?.click()
+    expect(back()?.hidden).toBe(true)
+    proceed()
+    expect(back()?.hidden).toBe(false)
+  })
+
+  it('stays offered while the per diems are open', () => {
+    button('[data-action="done"]')?.click()
+    button('[data-step="0"]')?.click()
+    travel()
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(root.querySelector('h2')?.textContent).toBe('Per diems')
+    expect(back()?.hidden).toBe(false)
   })
 })
 

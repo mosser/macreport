@@ -84,14 +84,14 @@ meals not claimed and their reasons, without their amounts.
 
 **Add an expense** adds an empty expense to the report and opens its fields;
 **Change** opens the fields of an expense, filled in. Every change is kept as
-it is typed, as on any step. While they are open, Continue is not offered:
+it is typed, as on any step. While they are open, neither Back nor Continue is offered:
 **Done** closes them and shows the expenses. Leaving the step closes them
 too. **Discard** closes them and undoes every change made since they
 opened: an expense just added leaves the report, an expense changed is as it
 was, its documents and their names included; nothing else of the report
 changes, a file added meanwhile on another step included. A value typed that breaks its
 rule, which the expense does not keep, stays shown with its rule, and holds
-Done, Back and the other steps until it follows the rule or is cleared, or
+Done and the other steps until it follows the rule or is cleared, or
 the expense is discarded.
 
 | Field | Rule |

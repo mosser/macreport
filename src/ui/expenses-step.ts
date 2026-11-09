@@ -719,6 +719,10 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       return opened === undefined && perDiemsOpenIn === undefined
     },
 
+    offersBack(): boolean {
+      return opened === undefined
+    },
+
     holdsSteps(): boolean {
       return broken.size > 0
     },
