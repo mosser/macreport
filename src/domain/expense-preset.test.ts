@@ -122,6 +122,34 @@ describe('the presets of config/expense-presets.json', () => {
     ])
   })
 
+  it('is once per report for the conference presets, not for Monthly subscription', () => {
+    expect(
+      expensePresets.all.filter((preset) => preset.isOncePerReport).map((preset) => preset.name),
+    ).toEqual(['Conference planning', 'Travel to conference (Air)', 'Travel to conference (Train)'])
+  })
+
+  it('does not offer a preset once per report while the report holds an expense of it', () => {
+    const offered = (report: Report) => expensePresets.offeredTo(report).map((each) => each.name)
+    const preset = presetNamed('Travel to conference (Air)')
+    const [one, other] = preset.expensesFor(values(), businessTravel, today) ?? []
+    if (one === undefined || other === undefined) throw new TypeError('Two expenses at least')
+    const holding = businessTravel.afterAdding(one).afterAdding(other)
+    expect(offered(holding)).toEqual(['Conference planning', 'Travel to conference (Train)'])
+    const changed = holding.afterReplacing(one, one.afterChanging({ description: 'Taxi' }))
+    expect(offered(changed)).not.toContain(preset.name)
+    const left = holding.afterRemovingExpense(one)
+    expect(offered(left)).not.toContain(preset.name)
+    expect(offered(left.afterRemovingExpense(other))).toContain(preset.name)
+  })
+
+  it('offers Monthly subscription to a report holding its expenses', () => {
+    const preset = presetNamed('Monthly subscription')
+    const [expense] = preset.expensesFor(subscription(), otherReport, today) ?? []
+    if (expense === undefined) throw new TypeError('One expense at least')
+    expect(expense.presetName).toBe('Monthly subscription')
+    expect(preset.isOfferedTo(otherReport.afterAdding(expense))).toBe(true)
+  })
+
   it('adds one expense per month of Monthly subscription, both ends included', () => {
     const preset = presetNamed('Monthly subscription')
     expect(summary(preset.expensesFor(subscription(), otherReport, today))).toEqual([
@@ -370,6 +398,12 @@ describe('a preset, read from its configuration', () => {
 
   it('is offered for a business travel or for another report, and nothing else', () => {
     expect(() => ExpensePreset.from({ ...simple, offeredFor: 'everyone' })).toThrow(RangeError)
+  })
+
+  it('says isOncePerReport with a boolean', () => {
+    expect(ExpensePreset.from(simple).isOncePerReport).toBe(false)
+    expect(ExpensePreset.from({ ...simple, isOncePerReport: true }).isOncePerReport).toBe(true)
+    expect(() => ExpensePreset.from({ ...simple, isOncePerReport: 'yes' })).toThrow(TypeError)
   })
 
   it('holds a list of parameters and at least one expense', () => {

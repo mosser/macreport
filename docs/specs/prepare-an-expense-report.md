@@ -166,7 +166,10 @@ not offered while they are open, and **Done** closes them.
 
 **Add from a preset** opens a dialog over the step, under the heading *Add from a
 preset*. A preset for a business travel is offered once the dates of the travel are
-valid; a preset for another report, when the report is not a business travel.
+valid; a preset for another report, when the report is not a business travel. A preset
+once per report is not offered while the report holds an expense added from it, changed
+or not; once they have all been removed, it is offered again. **Add from a preset** stands
+only while a preset is offered.
 
 | Field | Rule |
 |---|---|
@@ -191,8 +194,8 @@ unticked stays so while the parameters change, by its place among the expenses.
 **Add 4 expenses**, by the number ticked, or **Add 1 expense**, is offered once one is ticked. It closes
 the dialog and adds the expenses ticked, each with what is shown and nothing else:
 each then lacks, in red, what any expense lacks, and is changed or removed like any
-other. What the report already holds stays as it is, and adding the same preset
-again adds its expenses again. Changing the dates of the report later leaves the
+other. What the report already holds stays as it is, and adding a preset that is not
+once per report again adds its expenses again. Changing the dates of the report later leaves the
 dates of those expenses as they are. **Cancel**, or Escape, leaves the report as it
 was: what the dialog holds is kept when it is added, not as it is typed.
 
@@ -204,9 +207,9 @@ the last day of a shorter month: from January 31, February 28, then March 31.
 | Preset | Offered to | Preset parameters | Expenses |
 |---|---|---|---|
 | Monthly subscription | Another report | Title (text); First expense (date, not after today); End month (month, from First expense, 36 months, not after today); Monthly amount (CAD) (amount, optional); Paid in another currency (foreign amount, optional) | Repeating from First expense to End month: *<title> - <month> <year>*, with the amount and the foreign amount given. |
-| Conference planning | A business travel | None | Without a date: *Registration*, *Transport*, *Accommodation*. |
-| Travel to conference (Air) | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
-| Travel to conference (Train) | A business travel | None | On the first day: *Transport: home to train station*, *Transport: train station to hotel*. On the last day: *Transport: hotel to train station*, *Transport: train station to home*. |
+| Conference planning | A business travel, once per report | None | Without a date: *Registration*, *Transport*, *Accommodation*. |
+| Travel to conference (Air) | A business travel, once per report | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
+| Travel to conference (Train) | A business travel, once per report | None | On the first day: *Transport: home to train station*, *Transport: train station to hotel*. On the last day: *Transport: hotel to train station*, *Transport: train station to home*. |
 
 Continue is offered once there is at least one expense or a meal claimed,
 and every expense follows the rules above.

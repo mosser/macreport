@@ -17,6 +17,7 @@ export interface ExpenseFields {
   readonly bankStatements?: readonly Document[] | undefined
   readonly isPaidInCash?: boolean | undefined
   readonly missingReceipt?: MissingReceipt | undefined
+  readonly presetName?: string | undefined
 }
 
 /**
@@ -43,6 +44,8 @@ export class Expense {
   readonly isPaidInCash: boolean
   /** What is stated when the Claimant has no receipt: the expense then has none. */
   readonly missingReceipt: MissingReceipt | undefined
+  /** The name of the expense preset it was added from, if any; nothing else depends on it. */
+  readonly presetName: string | undefined
 
   /**
    * Throws a TypeError when a receipt or a bank statement is a document of another kind, when an
@@ -74,6 +77,7 @@ export class Expense {
     this.bankStatements = bankStatements
     this.isPaidInCash = fields.isPaidInCash ?? false
     this.missingReceipt = fields.missingReceipt
+    this.presetName = fields.presetName
   }
 
   /** Whether the expense has at least one receipt. */
@@ -130,6 +134,7 @@ export class Expense {
       bankStatements: this.bankStatements,
       isPaidInCash: this.isPaidInCash,
       missingReceipt: this.missingReceipt,
+      presetName: this.presetName,
     }
   }
 }

@@ -2261,6 +2261,34 @@ describe('expense presets', () => {
       ])
     })
 
+    it('offers a preset once per report while it holds its expenses, then again', async () => {
+      const presetsOffered = () =>
+        [...(dialog()?.querySelectorAll('[name="preset"] option') ?? [])].map(
+          (option) => option.textContent,
+        )
+      ready()
+      await openDialog()
+      await answerDialog(add)
+      await openDialog()
+      expect(presetsOffered()).toEqual([
+        'Travel to conference (Air)',
+        'Travel to conference (Train)',
+      ])
+      await answerDialog(add)
+      await openDialog()
+      expect(presetsOffered()).toEqual(['Travel to conference (Train)'])
+      await answerDialog(add)
+      expect(offer()).toBeNull()
+      for (const description of ['Registration', 'Transport', 'Accommodation']) {
+        const place = lastReport()?.expenses.findIndex((each) => each.description === description)
+        button(`[data-remove-expense="${place}"]`)?.click()
+        await answer('confirm')
+        expect(offer() === null).toBe(description !== 'Accommodation')
+      }
+      await openDialog()
+      expect(presetsOffered()).toEqual(['Conference planning'])
+    })
+
     it('leaves out an expense unticked', async () => {
       ready()
       await openDialog()

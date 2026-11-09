@@ -19,7 +19,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **Conference planning**, **Travel to conference (Air)** and **Travel to conference
   (Train)**, offered for a business travel once its dates are valid. The first adds a
   registration, a transport and an accommodation, without dates; the others, the transports
-  to and from the airport or the train station on its first and last days.
+  to and from the airport or the train station on its first and last days. Each is offered
+  once per report, and again once the expenses it added have all been removed.
 
 ## [0.5.0] - 2026-11-08
 

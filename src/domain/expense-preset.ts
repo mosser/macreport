@@ -306,17 +306,21 @@ function isDateAllowed(
 export class ExpensePreset {
   readonly name: string
   readonly isForBusinessTravel: boolean
+  /** Whether it is not offered to a report holding an expense added from it. */
+  readonly isOncePerReport: boolean
   readonly parameters: readonly PresetParameter[]
   private readonly expenses: readonly PresetExpense[]
 
   private constructor(
     name: string,
     isForBusinessTravel: boolean,
+    isOncePerReport: boolean,
     parameters: readonly PresetParameter[],
     expenses: readonly PresetExpense[],
   ) {
     this.name = name
     this.isForBusinessTravel = isForBusinessTravel
+    this.isOncePerReport = isOncePerReport
     this.parameters = parameters
     this.expenses = expenses
   }
@@ -326,15 +330,18 @@ export class ExpensePreset {
    * the file; a RangeError when a word breaks its rule, or a parameter is used by no expense.
    */
   static from(configuration: unknown): ExpensePreset {
-    const { name, offeredFor, parameters, expenses } = fieldsOf(
+    const { name, offeredFor, isOncePerReport, parameters, expenses } = fieldsOf(
       configuration,
       'An expense preset',
-      ['name', 'offeredFor', 'parameters', 'expenses'],
+      ['name', 'offeredFor', 'isOncePerReport', 'parameters', 'expenses'],
     )
     const presetName = textOf(name, 'The name of an expense preset')
     const subject = `Expense preset ${presetName}`
     if (offeredFor !== 'businessTravel' && offeredFor !== 'otherReport') {
       throw new RangeError(`${subject} is offered for neither businessTravel nor otherReport`)
+    }
+    if (isOncePerReport !== undefined && typeof isOncePerReport !== 'boolean') {
+      throw new TypeError(`${subject} says isOncePerReport with something else than a boolean`)
     }
     if (parameters !== undefined && !Array.isArray(parameters)) {
       throw new TypeError(`The parameters of ${subject} are not a list`)
@@ -352,15 +359,27 @@ export class ExpensePreset {
         throw new RangeError(`${subject} uses its parameter ${parameter.id} in no expense`)
       }
     }
-    return new ExpensePreset(presetName, isForBusinessTravel, presetParameters, presetExpenses)
+    return new ExpensePreset(
+      presetName,
+      isForBusinessTravel,
+      isOncePerReport === true,
+      presetParameters,
+      presetExpenses,
+    )
   }
 
   /**
    * Whether the preset is offered to a report: a preset for a business travel once the dates of the
-   * travel are valid, a preset for another report when the report is not a business travel.
+   * travel are valid, a preset for another report when the report is not a business travel. A
+   * preset once per report is not offered while the report holds an expense added from it.
    */
   isOfferedTo(report: Report): boolean {
-    return this.isForBusinessTravel ? report.asksForPerDiems : !report.isBusinessTravel
+    const isOfItsKind = this.isForBusinessTravel ? report.asksForPerDiems : !report.isBusinessTravel
+    return isOfItsKind && !(this.isOncePerReport && this.isHeldBy(report))
+  }
+
+  private isHeldBy(report: Report): boolean {
+    return report.expenses.some((expense) => expense.presetName === this.name)
   }
 
   /**
@@ -383,7 +402,7 @@ export class ExpensePreset {
 
   /**
    * The expenses the preset adds to a report, in order, each with what the preset says of it and
-   * nothing else; none to work out until every required parameter is given, a date is not after
+   * the name of the preset, and nothing else; none to work out until every required parameter is given, a date is not after
    * today when it cannot be, and a month chosen is one the list offers. A repeating expense stands for one expense per month, from the month of
    * its date to the month chosen, both included, on the day of the month of its date, or on the
    * last day of a shorter month.
@@ -400,7 +419,9 @@ export class ExpensePreset {
         this.isMonthOffered(parameter, values, today),
     )
     if (!isComplete) return undefined
-    return this.expenses.flatMap((expense) => expensesOf(expense, values, report))
+    return this.expenses
+      .flatMap((expense) => expensesOf(expense, values, report))
+      .map((expense) => expense.afterChanging({ presetName: this.name }))
   }
 
   private isMonthOffered(

@@ -45,6 +45,7 @@
     {
       "name": "Conference planning",
       "offeredFor": "businessTravel",
+      "isOncePerReport": true,
       "expenses": [
         { "description": "Registration" },
         { "description": "Transport" },
@@ -54,6 +55,7 @@
     {
       "name": "Travel to conference (Air)",
       "offeredFor": "businessTravel",
+      "isOncePerReport": true,
       "expenses": [
         { "date": "firstDay", "description": "Transport: home to airport" },
         { "date": "firstDay", "description": "Transport: airport to hotel" },
@@ -64,6 +66,7 @@
     {
       "name": "Travel to conference (Train)",
       "offeredFor": "businessTravel",
+      "isOncePerReport": true,
       "expenses": [
         { "date": "firstDay", "description": "Transport: home to train station" },
         { "date": "firstDay", "description": "Transport: train station to hotel" },

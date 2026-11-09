@@ -40,8 +40,23 @@ Options considered for what a preset leaves in the report:
   the report change. They follow those changes, at the cost of a second kind of expense
   in the object model, the draft and every step, and of deciding what happens to an
   expense the Claimant has changed.
-- **Ordinary expenses.** Nothing else in the system changes. They do not follow later
+- **Ordinary expenses that keep no trace.** Nothing else in the system changes, but nothing
+  can tell whether a report already holds a preset's expenses. They do not follow later
   changes to the report.
+- **Ordinary expenses that remember the name of their preset.** The same, with one field on
+  an expense, kept by the draft and read only to decide what is offered. They do not follow
+  later changes to the report.
+
+Options considered for adding a preset that a report already holds:
+
+- **Always offered.** A set of expenses that makes sense once, such as a conference's
+  transports, can then be added twice by mistake, and is removed one expense at a time.
+- **Never again once added.** A mistake is then corrected by hand, or by New report, which
+  discards everything.
+- **Not offered while the report holds an expense added from it.** Added twice by mistake
+  cannot happen, and removing its expenses is enough to add it again.
+- **For every preset, or as each preset says.** A subscription is added once per subscription:
+  a rule for every preset forbids two in one report, so the file says it of each.
 
 Options considered for where the interface offers them:
 
@@ -72,16 +87,19 @@ Options considered for where a repetition ends:
 
 - **`config/expense-presets.json` holds the presets**, read when the system is built. The
   build refuses a file that breaks a rule below.
-- **A preset adds ordinary expenses and keeps no trace of them.** The object model, the
-  draft and the report document do not know presets. A preset gives a date, a description,
-  an amount and a foreign amount, as far as it has them, and never a document, a missing
-  receipt or a payment in cash.
+- **A preset adds ordinary expenses, each remembering the name of its preset.** The rules of
+  an expense, the Review step and the report document do not depend on it; `Report` does not
+  know presets. A preset gives a date, a description, an amount and a foreign amount, as far
+  as it has them, and never a document, a missing receipt or a payment in cash.
+- **A preset can be once per report**: not offered while the report holds an expense
+  remembering its name, changed or not, and offered again once they have all been removed.
 - **The file uses a closed vocabulary**, and nothing in it is evaluated:
 
   | Word | What it is |
   |---|---|
   | `name` | The name of the preset, not empty, and unique. |
   | `offeredFor` | `businessTravel` or `otherReport`. |
+  | `isOncePerReport` | `true` for a preset once per report. Left out, it can be added again. |
   | `parameters` | Each with an `id`, a `label` and a `type`: `text`, `date`, `month`, `amount` or `foreignAmount`. Only `amount` and `foreignAmount` may have `isOptional`, and a `foreignAmount`, which stands behind a tick box, has it. A `month` names the date it starts from in `startingFrom`, and its list's length in `atMost`. A `date` or a `month` may have `isNotAfterToday`: the date cannot fall after today, nor can the expense of a month chosen. |
   | `expenses` | At least one. Each has a `description`; and may have a `date`, a `claimedAmount` naming an `amount` parameter, and a `foreignAmount` naming a `foreignAmount` parameter. |
   | `date` | A `date` parameter; `firstDay` or `lastDay`, of a preset for a business travel only; or `repetition`, of a repeating expense only. Left out, the expense has no date. |
@@ -108,13 +126,15 @@ Options considered for where a repetition ends:
 - A new preset is one entry in one file and a row in the specification, as long as the
   vocabulary can say it.
 - A mistake in the file stops the build, rather than reaching a Claimant.
-- The draft, the Review step, the findings and the report document stay as they are. What
+- The Review step, the findings and the report document stay as they are. What
   an expense lacks, or a character the report document cannot write, is found as for any
   other expense.
 
 **Negative / accepted trade-offs**
 
 - A preset the vocabulary cannot say needs a new word, so code and a test.
+- An expense remembers its preset by name: a preset renamed in a release is offered again to
+  a draft holding its expenses.
 - Changing the dates of a report does not move expenses already added from a preset.
 - Changing or adding a preset needs a release, and a Claimant cannot make their own.
 - Expenses added by mistake are removed one by one; the dialog's tick boxes are what
@@ -128,5 +148,6 @@ A change is compliant with this ADR when:
 - `config/expense-presets.json` is the only source of the presets, read through
   `src/domain/expense-preset.ts`, which the build refuses unless it holds valid ones;
 - no word in the file is evaluated as code;
-- `src/domain/report.ts`, `src/domain/expense.ts` and `src/io/draft-store.ts` name no preset;
+- `src/domain/report.ts`, `src/domain/layout.ts` and `src/io/write-report-document.ts` name no
+  preset, and an expense holds only its preset's name;
 - every preset in the file is worked out by a test, and every rule of its vocabulary has one.

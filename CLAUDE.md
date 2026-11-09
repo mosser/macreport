@@ -201,9 +201,10 @@ first.
 - `config/expense-presets.json` holds the presets, in a closed vocabulary of which nothing
   is evaluated; the build refuses a file that breaks it, and an unknown word. A change to a
   preset changes the table of presets in `prepare-an-expense-report.md` in the same commit.
-- A preset adds ordinary expenses and keeps no trace of them: `Report`, `Expense` and the
-  draft store name no preset. It gives a date, a description and amounts, never a document,
-  a missing receipt or a payment in cash.
+- A preset adds ordinary expenses, each remembering only its preset's name: `Report`, the
+  layout and the report document name no preset. It gives a date, a description and amounts,
+  never a document, a missing receipt or a payment in cash. A preset once per report is not
+  offered while the report holds an expense added from it.
 
 ## Writing
 

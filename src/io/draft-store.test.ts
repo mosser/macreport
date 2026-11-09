@@ -77,6 +77,19 @@ describe('the draft store', () => {
     expect(expense?.bankStatements[0]?.kind).toBe(Kind.bankStatement)
   })
 
+  it('keeps the preset an expense was added from', async () => {
+    const factory = new IDBFactory()
+    const added = new Report()
+      .afterAdding(new Expense({ description: 'Hotel', presetName: 'Conference planning' }))
+      .afterAdding(new Expense({ description: 'Taxi' }))
+    expect(await (await openDraftStore(factory)).keep(added)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.presetName)).toEqual([
+      'Conference planning',
+      undefined,
+    ])
+  })
+
   it('keeps an expense paid in cash', async () => {
     const factory = new IDBFactory()
     const paid = report.afterAdding(new Expense({ description: 'Taxi', isPaidInCash: true }))
