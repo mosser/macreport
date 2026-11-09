@@ -73,8 +73,9 @@ its date, on one line, its description, its foreign amount, its claimed amount, 
 receipt or *Missing receipt*, its bank statement or *Paid in cash*, and, in red, what it still lacks: a required field, or a
 document whose name a document before it already has. A document's name opens the
 document in a new tab of the browser. Each has **Change**, a pen, and
-**Remove**, a trash can. **Add an expense** stands above them, and, for a
-business travel whose dates are valid, **Manage per diems**, next to it.
+**Remove**, a trash can. **Add an expense** stands above them; next to it,
+**Add from a preset**, when an expense preset is offered to the report, then, for a
+business travel whose dates are valid, **Manage per diems**.
 When a meal is claimed, the per diems stand under the expenses, under the
 heading *Per diems*: each of those days, by its day of the week in full, on a
 line of its own, and its date, in a column as wide as the dates of the expenses,
@@ -162,6 +163,48 @@ not offered while they are open, and **Done** closes them.
 | Domestic, international | One of them, for each meal. A meal starts domestic. Chosen for a day, it is for its three meals; while they differ, the day shows Per meal. **All domestic** and **All international**, above the days, set every meal at once, and every day to Domestic or International, a day on Per meal included. |
 | Breakfast, lunch, dinner | Each ticked when claimed, at its rate, as `config/per-diems.json` sets it: in Canadian dollars for a domestic meal, in US dollars for an international one. A per diem starts with no meal claimed. The rates and the amounts are not shown here: the Review step and the report document give them. |
 | Reason | Optional, for a meal not claimed of a day with a meal claimed: why it is not, as *provided by the conference*. **Add a reason for not claiming lunch (optional)**, under the meals, opens the field of that meal, *Reason for not claiming lunch (optional)*; a reason given stays shown in it. The trash can next to the field takes the reason out, and Add a reason back. A day without a meal claimed asks for none: the report document leaves it out. Ticking the meal takes its reason out. |
+
+**Add from a preset** opens a dialog over the step, under the heading *Add from a
+preset*. A preset for a business travel is offered once the dates of the travel are
+valid; a preset for another report, when the report is not a business travel.
+
+| Field | Rule |
+|---|---|
+| Preset | Required, one of the presets offered, in the order `config/expense-presets.json` gives them. The first starts chosen. Choosing another empties the fields of the one before. |
+
+Then the preset parameters of the preset chosen, by their labels, each required
+unless the table of presets says optional:
+
+| Parameter | Rule |
+|---|---|
+| Text | On one line. |
+| Date | A calendar date. |
+| Month | Chosen in a list, by its month in full and its year, as *January 2026*: from the month of the date the preset names, as many months as it sets. Not offered until that date is valid. When that date changes, the month chosen stays while the list still holds it, and goes otherwise. |
+| Amount | In Canadian dollars, more than zero, at most two decimals. |
+| Foreign amount | **Paid in another currency**, ticked or not. When ticked, **Currency**, required, a three-letter ISO 4217 code other than CAD, its name shown under it, and **Foreign amount**, optional, more than zero, at most two decimals. |
+
+Once every required parameter follows its rule, the expenses the preset would add
+stand under them, in order, each with its date, its description, its foreign amount
+and its claimed amount, as far as it has them, and a tick box, ticked. A box
+unticked stays so while the parameters change, by its place among the expenses.
+
+**Add 4 expenses**, by the number ticked, or **Add 1 expense**, is offered once one is ticked. It closes
+the dialog and adds the expenses ticked, each with what is shown and nothing else:
+each then lacks, in red, what any expense lacks, and is changed or removed like any
+other. What the report already holds stays as it is, and adding the same preset
+again adds its expenses again. Changing the dates of the report later leaves the
+dates of those expenses as they are. **Cancel**, or Escape, leaves the report as it
+was: what the dialog holds is kept when it is added, not as it is typed.
+
+A preset that repeats adds one expense per month, from the month of its date to the
+month chosen, both included. Each falls on the day of the month of that date, or on
+the last day of a shorter month: from January 31, February 28, then March 31.
+*<month>* is the month in full, in English, and *<year>* the year.
+
+| Preset | Offered to | Preset parameters | Expenses |
+|---|---|---|---|
+| Monthly subscription | Another report | Title (text); First expense (date); End month (month, from First expense, 36 months); Monthly amount (CAD) (amount, optional); Paid in another currency (foreign amount, optional) | Repeating from First expense to End month: *<title> - <month> <year>*, with the amount and the foreign amount given. |
+| Conference air travel | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. Without a date: *Hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
 
 Continue is offered once there is at least one expense or a meal claimed,
 and every expense follows the rules above.
