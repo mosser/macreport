@@ -80,12 +80,24 @@ describe('the presets of config/expense-presets.json', () => {
     ])
   })
 
-  it('offers Travel to conference (Air) to a business travel whose dates are valid', () => {
+  it('offers the conference presets to a business travel whose dates are valid', () => {
     expect(expensePresets.offeredTo(businessTravel).map((preset) => preset.name)).toEqual([
+      'Conference planning',
       'Travel to conference (Air)',
+      'Travel to conference (Train)',
     ])
     const undated = new Report({ isBusinessTravel: true })
     expect(expensePresets.offeredTo(undated)).toEqual([])
+  })
+
+  it('adds the expenses of Conference planning, without dates', () => {
+    const preset = presetNamed('Conference planning')
+    expect(preset.parameters).toEqual([])
+    expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
+      [undefined, 'Registration'],
+      [undefined, 'Transport'],
+      [undefined, 'Accommodation'],
+    ])
   })
 
   it('adds the expenses of Travel to conference (Air), without asking for anything', () => {
@@ -94,9 +106,19 @@ describe('the presets of config/expense-presets.json', () => {
     expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'Transport: home to airport'],
       ['2026-10-03', 'Transport: airport to hotel'],
-      [undefined, 'Hotel'],
       ['2026-10-07', 'Transport: hotel to airport'],
       ['2026-10-07', 'Transport: airport to home'],
+    ])
+  })
+
+  it('adds the expenses of Travel to conference (Train), without asking for anything', () => {
+    const preset = presetNamed('Travel to conference (Train)')
+    expect(preset.parameters).toEqual([])
+    expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
+      ['2026-10-03', 'Transport: home to train station'],
+      ['2026-10-03', 'Transport: train station to hotel'],
+      ['2026-10-07', 'Transport: hotel to train station'],
+      ['2026-10-07', 'Transport: train station to home'],
     ])
   })
 

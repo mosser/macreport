@@ -43,14 +43,32 @@
       ]
     },
     {
+      "name": "Conference planning",
+      "offeredFor": "businessTravel",
+      "expenses": [
+        { "description": "Registration" },
+        { "description": "Transport" },
+        { "description": "Accommodation" }
+      ]
+    },
+    {
       "name": "Travel to conference (Air)",
       "offeredFor": "businessTravel",
       "expenses": [
         { "date": "firstDay", "description": "Transport: home to airport" },
         { "date": "firstDay", "description": "Transport: airport to hotel" },
-        { "description": "Hotel" },
         { "date": "lastDay", "description": "Transport: hotel to airport" },
         { "date": "lastDay", "description": "Transport: airport to home" }
+      ]
+    },
+    {
+      "name": "Travel to conference (Train)",
+      "offeredFor": "businessTravel",
+      "expenses": [
+        { "date": "firstDay", "description": "Transport: home to train station" },
+        { "date": "firstDay", "description": "Transport: train station to hotel" },
+        { "date": "lastDay", "description": "Transport: hotel to train station" },
+        { "date": "lastDay", "description": "Transport: train station to home" }
       ]
     }
   ]

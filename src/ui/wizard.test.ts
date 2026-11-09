@@ -2214,14 +2214,20 @@ describe('expense presets', () => {
       proceed()
     }
 
-    it('adds the expenses of Travel to conference (Air), asking for nothing', async () => {
+    it('starts on Conference planning, among the presets of a business travel', async () => {
       ready()
       await openDialog()
-      expect(dialog()?.querySelector('[name="preset"]')?.textContent).toBe(
+      expect(
+        [...(dialog()?.querySelectorAll('[name="preset"] option') ?? [])].map(
+          (option) => option.textContent,
+        ),
+      ).toEqual([
+        'Conference planning',
         'Travel to conference (Air)',
-      )
+        'Travel to conference (Train)',
+      ])
       expect(dialog()?.querySelector('[data-parameters]')?.children).toHaveLength(0)
-      expect(add()?.textContent).toBe('Add 5 expenses')
+      expect(add()?.textContent).toBe('Add 3 expenses')
       await answerDialog(add)
       expect(
         lastReport()?.expensesByDate.map((expense) => [
@@ -2229,11 +2235,29 @@ describe('expense presets', () => {
           expense.description,
         ]),
       ).toEqual([
-        ['2026-10-03', 'Transport: home to airport'],
-        ['2026-10-03', 'Transport: airport to hotel'],
-        ['2026-10-07', 'Transport: hotel to airport'],
-        ['2026-10-07', 'Transport: airport to home'],
-        [undefined, 'Hotel'],
+        [undefined, 'Registration'],
+        [undefined, 'Transport'],
+        [undefined, 'Accommodation'],
+      ])
+    })
+
+    it('adds the expenses of the preset chosen, asking for nothing', async () => {
+      ready()
+      await openDialog()
+      typeInDialog('preset', '1')
+      expect(add()?.textContent).toBe('Add 4 expenses')
+      typeInDialog('preset', '2')
+      await answerDialog(add)
+      expect(
+        lastReport()?.expensesByDate.map((expense) => [
+          expense.date?.toString(),
+          expense.description,
+        ]),
+      ).toEqual([
+        ['2026-10-03', 'Transport: home to train station'],
+        ['2026-10-03', 'Transport: train station to hotel'],
+        ['2026-10-07', 'Transport: hotel to train station'],
+        ['2026-10-07', 'Transport: train station to home'],
       ])
     })
 
@@ -2242,13 +2266,13 @@ describe('expense presets', () => {
       await openDialog()
       tickInDialog(box(2), false)
       await answerDialog(add)
-      expect(descriptions()).not.toContain('Hotel')
-      expect(descriptions()).toHaveLength(4)
+      expect(descriptions()).toEqual(['Registration', 'Transport'])
     })
 
     it('leaves the dates of the expenses as they are when the dates of the report change', async () => {
       ready()
       await openDialog()
+      typeInDialog('preset', '1')
       await answerDialog(add)
       button('[data-step="0"]')?.click()
       type('firstDay', '2026-10-01')

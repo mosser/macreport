@@ -204,7 +204,9 @@ the last day of a shorter month: from January 31, February 28, then March 31.
 | Preset | Offered to | Preset parameters | Expenses |
 |---|---|---|---|
 | Monthly subscription | Another report | Title (text); First expense (date, not after today); End month (month, from First expense, 36 months, not after today); Monthly amount (CAD) (amount, optional); Paid in another currency (foreign amount, optional) | Repeating from First expense to End month: *<title> - <month> <year>*, with the amount and the foreign amount given. |
-| Travel to conference (Air) | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. Without a date: *Hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
+| Conference planning | A business travel | None | Without a date: *Registration*, *Transport*, *Accommodation*. |
+| Travel to conference (Air) | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
+| Travel to conference (Train) | A business travel | None | On the first day: *Transport: home to train station*, *Transport: train station to hotel*. On the last day: *Transport: hotel to train station*, *Transport: train station to home*. |
 
 Continue is offered once there is at least one expense or a meal claimed,
 and every expense follows the rules above.
