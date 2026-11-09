@@ -1136,12 +1136,15 @@ describe('a missing receipt authorization', () => {
     const description = 'One\nTwo\nThree\nFour'
     const reasonOf = (lines: number) =>
       Array.from({ length: lines }, (_, index) => `Line${index}`).join('\n')
-    let lines = 5
-    let pdf = await written(stated({ reason: reasonOf(lines) }, description))
-    while (pdf.getPageCount() === 3 && lines < 60) {
-      lines += 1
-      pdf = await written(stated({ reason: reasonOf(lines) }, description))
+    const withLines = (lines: number) => written(stated({ reason: reasonOf(lines) }, description))
+    // The shortest reason that takes a second page: 5 lines fit on one, 45 do not.
+    let [fitting, tooLong] = [5, 45]
+    while (tooLong - fitting > 1) {
+      const middle = Math.floor((fitting + tooLong) / 2)
+      if ((await withLines(middle)).getPageCount() === 3) fitting = middle
+      else tooLong = middle
     }
+    const pdf = await withLines(tooLong)
     expect(pdf.getPageCount()).toBe(4)
     const yOn = (index: number, text: string) =>
       placesOf(pdf, pdf.getPage(index)).find((place) => place.text === text)?.y ?? 0
