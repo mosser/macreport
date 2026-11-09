@@ -91,6 +91,19 @@ interface ReadParameters {
   readonly lacksCurrency: boolean
 }
 
+/** Reads a date parameter: no date, when it falls after today and cannot. */
+function dateParserOf(
+  parameter: PresetParameter,
+  today: CalendarDate,
+): (text: string) => CalendarDate | undefined {
+  return (text) => {
+    const date = CalendarDate.parse(text)
+    return parameter.isNotAfterToday && date !== undefined && today.isBefore(date)
+      ? undefined
+      : date
+  }
+}
+
 /** Reads the fields of the parameters of a preset. */
 function readParameters(
   dialog: HTMLElement,
@@ -122,15 +135,9 @@ function readParameters(
       case 'text':
         keep(texts, parameter.id, textOrAbsent(typedIn(name)))
         break
-      case 'date': {
-        const date = read(name, CalendarDate.parse)
-        if (parameter.isNotAfterToday && date !== undefined && today.isBefore(date)) {
-          broken.push(name)
-        } else {
-          keep(dates, parameter.id, date)
-        }
+      case 'date':
+        keep(dates, parameter.id, read(name, dateParserOf(parameter, today)))
         break
-      }
       case 'month':
         keep(months, parameter.id, read(name, CalendarMonth.parse))
         break
