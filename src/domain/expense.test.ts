@@ -11,6 +11,12 @@ const receipt = new Document(Kind.receipt, 'receipt.pdf', new Uint8Array())
 const statement = new Document(Kind.bankStatement, 'statement.pdf', new Uint8Array())
 
 describe('Expense', () => {
+  it('remembers the preset it was added from, as it changes', () => {
+    expect(new Expense().presetName).toBeUndefined()
+    const added = new Expense({ description: 'Hotel', presetName: 'Travel planning' })
+    expect(added.afterChanging({ description: 'Inn' }).presetName).toBe('Travel planning')
+  })
+
   it('starts with nothing filled in', () => {
     const expense = new Expense()
     expect(expense.date).toBeUndefined()

@@ -1,0 +1,78 @@
+{
+  "presets": [
+    {
+      "name": "Monthly subscription",
+      "offeredFor": "otherReport",
+      "parameters": [
+        { "id": "title", "label": "Title", "type": "text" },
+        {
+          "id": "first",
+          "label": "First expense",
+          "type": "date",
+          "isNotAfterToday": true
+        },
+        {
+          "id": "end",
+          "label": "End month",
+          "type": "month",
+          "startingFrom": "first",
+          "atMost": 36,
+          "isNotAfterToday": true
+        },
+        {
+          "id": "amount",
+          "label": "Monthly amount (CAD)",
+          "type": "amount",
+          "isOptional": true
+        },
+        {
+          "id": "foreign",
+          "label": "Paid in another currency",
+          "type": "foreignAmount",
+          "isOptional": true
+        }
+      ],
+      "expenses": [
+        {
+          "repeat": { "every": "month", "from": "first", "until": "end" },
+          "date": "repetition",
+          "description": "{title} - {month} {year}",
+          "claimedAmount": "amount",
+          "foreignAmount": "foreign"
+        }
+      ]
+    },
+    {
+      "name": "Travel planning",
+      "offeredFor": "businessTravel",
+      "isOncePerReport": true,
+      "expenses": [
+        { "description": "Registration" },
+        { "description": "Transport" },
+        { "description": "Accommodation" }
+      ]
+    },
+    {
+      "name": "Travel (Air)",
+      "offeredFor": "businessTravel",
+      "isOncePerReport": true,
+      "expenses": [
+        { "date": "firstDay", "description": "Transport: home to airport" },
+        { "date": "firstDay", "description": "Transport: airport to accommodation" },
+        { "date": "lastDay", "description": "Transport: accommodation to airport" },
+        { "date": "lastDay", "description": "Transport: airport to home" }
+      ]
+    },
+    {
+      "name": "Travel (Train)",
+      "offeredFor": "businessTravel",
+      "isOncePerReport": true,
+      "expenses": [
+        { "date": "firstDay", "description": "Transport: home to train station" },
+        { "date": "firstDay", "description": "Transport: train station to accommodation" },
+        { "date": "lastDay", "description": "Transport: accommodation to train station" },
+        { "date": "lastDay", "description": "Transport: train station to home" }
+      ]
+    }
+  ]
+}

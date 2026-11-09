@@ -51,6 +51,7 @@ interface ExpenseRecord {
   readonly bankStatements: readonly string[]
   readonly isPaidInCash?: boolean
   readonly missingReceipt?: MissingReceiptRecord
+  readonly presetName?: string
 }
 
 /**
@@ -315,6 +316,7 @@ function recordOf(
     ...(expense.missingReceipt === undefined
       ? {}
       : { missingReceipt: missingReceiptRecordOf(expense.missingReceipt) }),
+    ...(expense.presetName === undefined ? {} : { presetName: expense.presetName }),
   }))
   const perDiems: PerDiemRecord[] = report.perDiems.map((perDiem) => ({
     date: perDiem.date.toString(),
@@ -394,6 +396,7 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       bankStatements,
       isPaidInCash: expense.isPaidInCash === true && bankStatements.length === 0,
       missingReceipt: receipts.length === 0 ? missingReceiptOf(expense.missingReceipt) : undefined,
+      presetName: typeof expense.presetName === 'string' ? expense.presetName : undefined,
     })
   })
   const isBusinessTravel = fields.isBusinessTravel === true

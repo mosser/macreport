@@ -481,6 +481,11 @@ td.size-action button {
   margin-bottom: 0;
 }
 
+/* Manage per diems stands apart from what adds an expense, at the right. */
+.expense-buttons [data-action="manage-per-diems"] {
+  margin-left: auto;
+}
+
 /* The per diems claimed, on one line above the expenses. */
 /* A day of the per diems: its day and date beside domestic or international, then its meals. */
 .per-diem-day {
@@ -657,9 +662,10 @@ td.expense-actions button + button {
   margin: 0.5rem 0 0;
 }
 
-/* A confirmation or a missing receipt, over the step, holding everything else until it is answered. */
+/* A confirmation, a missing receipt or a preset, over the step, holding everything else until it is answered. */
 dialog.confirmation,
-dialog.missing-receipt {
+dialog.missing-receipt,
+dialog.expense-preset {
   max-width: 32rem;
   padding: 1.25rem 1.5rem;
   border: 1px solid var(--color-accent);
@@ -680,13 +686,39 @@ dialog.missing-receipt textarea {
   min-height: 5rem;
 }
 
+/* A preset: wide enough for the expenses it would add. */
+dialog.expense-preset {
+  width: min(44rem, 100%);
+  max-width: 44rem;
+}
+
+dialog.expense-preset [data-expenses] {
+  overflow-x: auto;
+}
+
+/* The fields of a foreign amount, until it is ticked, whatever their own display. */
+dialog.expense-preset [hidden] {
+  display: none;
+}
+
+/* Cancel and Add stay in sight, however many expenses the preset would add. */
+dialog.expense-preset .actions {
+  position: sticky;
+  bottom: -1.25rem;
+  padding-block: 0.75rem 1.25rem;
+  margin-bottom: -1.25rem;
+  background: var(--color-surface);
+}
+
 dialog.confirmation::backdrop,
-dialog.missing-receipt::backdrop {
+dialog.missing-receipt::backdrop,
+dialog.expense-preset::backdrop {
   background: color-mix(in srgb, var(--mac-black) 50%, transparent);
 }
 
 dialog.confirmation .actions,
-dialog.missing-receipt .actions {
+dialog.missing-receipt .actions,
+dialog.expense-preset .actions {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1rem;

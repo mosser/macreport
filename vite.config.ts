@@ -3,6 +3,7 @@ import type { Plugin } from 'vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import { defineConfig } from 'vitest/config'
 import { DocumentSizes } from './src/domain/document-sizes.ts'
+import { ExpensePresets } from './src/domain/expense-preset.ts'
 import { PerDiemRates } from './src/domain/per-diem-rates.ts'
 import { Policy } from './src/domain/policy.ts'
 
@@ -60,6 +61,16 @@ function checkPolicy(): Plugin {
   }
 }
 
+/** Refuses to build unless `config/expense-presets.json` follows its vocabulary (ADR 0013). */
+function checkExpensePresets(): Plugin {
+  return {
+    name: 'macreport:check-expense-presets',
+    buildStart() {
+      ExpensePresets.from(JSON.parse(readFileSync('./config/expense-presets.json', 'utf8')))
+    },
+  }
+}
+
 export default defineConfig({
   base: './',
   define: { __VERSION__: JSON.stringify(version) },
@@ -67,6 +78,7 @@ export default defineConfig({
     checkPerDiemRates(),
     checkDocumentSizes(),
     checkPolicy(),
+    checkExpensePresets(),
     viteSingleFile(),
     nameAfterVersion(),
   ],

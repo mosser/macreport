@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
 import type { DocumentWeight, ReportWeights } from '../domain/document-sizes.ts'
@@ -737,7 +737,7 @@ describe('the wizard', () => {
     ])
   })
 
-  it('holds Done, Back and the other steps while a value typed breaks its rule, and keeps it shown', async () => {
+  it('holds Done and the other steps while a value typed breaks its rule, and keeps it shown', async () => {
     fillReport()
     proceed()
     await fillExpense()
@@ -746,25 +746,22 @@ describe('the wizard', () => {
     type('currency', 'EUR')
     type('claimedAmount', '87.123')
     const held = () =>
-      [
-        button('[data-action="done"]'),
-        button('[data-action="back"]'),
-        button('[data-step="0"]'),
-        button('[data-step="2"]'),
-      ].map((each) => each?.disabled)
-    expect(held()).toEqual([true, true, true, true])
+      [button('[data-action="done"]'), button('[data-step="0"]'), button('[data-step="2"]')].map(
+        (each) => each?.disabled,
+      )
+    expect(held()).toEqual([true, true, true])
     expect(kept.at(-1)?.expenses[0]?.claimedAmount).toBeUndefined()
     button('[data-remove="receipts"][data-index="0"]')?.click()
     expect(root.querySelector<HTMLInputElement>('[name="claimedAmount"]')?.value).toBe('87.123')
     expect(
       root.querySelector('[data-rule-of="claimedAmount"]')?.classList.contains('is-broken'),
     ).toBe(true)
-    expect(held()).toEqual([true, true, true, true])
+    expect(held()).toEqual([true, true, true])
     type('currency', 'EURO')
     tick('paidInAnotherCurrency', false)
-    expect(held()).toEqual([true, true, true, true])
+    expect(held()).toEqual([true, true, true])
     type('claimedAmount', '')
-    expect(held()).toEqual([false, false, false, true])
+    expect(held()).toEqual([false, false, true])
     type('claimedAmount', '87.12')
     expect(kept.at(-1)?.expenses[0]?.claimedAmount?.cents).toBe(8712)
   })
@@ -1088,7 +1085,7 @@ describe('the Expenses step', () => {
     expect(root.querySelector<HTMLTextAreaElement>('[name="description"]')?.value).toBe('Taxi')
     type('claimedAmount', '87.10')
     expect(kept.at(-1)?.expenses[1]?.claimedAmount?.cents).toBe(8710)
-    button('[data-action="back"]')?.click()
+    button('[data-step="0"]')?.click()
     proceed()
     expect(root.querySelector('h2')?.textContent).toBe('Expenses')
   })
@@ -1890,6 +1887,467 @@ describe('a missing receipt', () => {
       ),
     )
     expect(root.textContent).not.toContain('Redact the bank statements')
+  })
+})
+
+describe('expense presets', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2030, 0, 15, 12))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  const offer = () => button('[data-action="add-from-preset"]')
+  const dialog = () => document.querySelector('dialog.expense-preset')
+  const add = () => dialog()?.querySelector<HTMLButtonElement>('[data-answer="add"]')
+  const cancel = () => dialog()?.querySelector<HTMLButtonElement>('[data-answer="cancel"]')
+  const fieldOfDialog = (name: string) =>
+    dialog()?.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)
+  const parameter = (id: string) => fieldOfDialog(`parameter-${id}`)
+  const lines = () => [...(dialog()?.querySelectorAll('tbody tr') ?? [])]
+  const box = (place: number) =>
+    dialog()?.querySelector<HTMLInputElement>(`input[data-tick="${place}"]`)
+  const lastReport = () => kept.at(-1)
+  const descriptions = () => (lastReport()?.expenses ?? []).map((expense) => expense.description)
+
+  function typeInDialog(name: string, value: string): void {
+    const field = fieldOfDialog(name)
+    if (field === null || field === undefined) throw new TypeError(`No field ${name}`)
+    field.value = value
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  function tickInDialog(field: HTMLInputElement | null | undefined, isTicked: boolean): void {
+    if (field === null || field === undefined) throw new TypeError('No tick box')
+    field.checked = isTicked
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  async function openDialog(): Promise<void> {
+    offer()?.click()
+    await vi.waitFor(() => expect(dialog()).not.toBeNull())
+  }
+
+  async function answerDialog(
+    answering: () => HTMLButtonElement | null | undefined,
+  ): Promise<void> {
+    answering()?.click()
+    await vi.waitFor(() => expect(dialog()).toBeNull())
+  }
+
+  /** Fills the report in and opens the dialog on Monthly subscription. */
+  async function subscription(): Promise<void> {
+    fillReport()
+    proceed()
+    await openDialog()
+  }
+
+  function overleaf(end = '2026-03'): void {
+    typeInDialog('parameter-title', 'Overleaf')
+    typeInDialog('parameter-first', '2026-01-15')
+    typeInDialog('parameter-end', end)
+  }
+
+  it('leaves Manage per diems at the right, in the style', () => {
+    expect(readFileSync('src/style.css', 'utf8')).toMatch(
+      /\.expense-buttons \[data-action="manage-per-diems"\] \{\s*margin-left: auto;/,
+    )
+  })
+
+  it('is offered next to Add an expense, then Manage per diems', () => {
+    fillReport()
+    travel()
+    proceed()
+    expect(
+      [...root.querySelectorAll('.expense-buttons button')].map((each) => each.textContent),
+    ).toEqual(['Add an expense', 'Add from a preset', 'Manage per diems'])
+  })
+
+  it('opens under its heading, on the presets offered to the report', async () => {
+    await subscription()
+    expect(dialog()?.querySelector('h2')?.textContent).toBe('Add from a preset')
+    expect(
+      [...(dialog()?.querySelectorAll('[name="preset"] option') ?? [])].map(
+        (option) => option.textContent,
+      ),
+    ).toEqual(['Monthly subscription'])
+    expect(
+      [...(dialog()?.querySelectorAll('.field-name') ?? [])].map((name) => name.textContent),
+    ).toEqual([
+      'Preset *',
+      'Title *',
+      'First expense *',
+      'End month *',
+      'Monthly amount (CAD)',
+      'Paid in another currency',
+      'Foreign amount',
+      'Currency *',
+    ])
+  })
+
+  it('offers no end month until the first expense is given, then 36 from its month', async () => {
+    await subscription()
+    const end = () => parameter('end') as HTMLSelectElement
+    expect(end().disabled).toBe(true)
+    typeInDialog('parameter-first', '2026-01-31')
+    expect(end().disabled).toBe(false)
+    const months = [...end().options].map((option) => option.textContent)
+    expect(months).toHaveLength(37)
+    expect(months[1]).toBe('January 2026')
+    expect(months[36]).toBe('December 2028')
+  })
+
+  it('keeps the end month while the list still holds it, and drops it otherwise', async () => {
+    await subscription()
+    overleaf('2026-03')
+    const end = () => parameter('end') as HTMLSelectElement
+    typeInDialog('parameter-first', '2026-02-10')
+    expect(end().value).toBe('2026-03')
+    typeInDialog('parameter-first', '2026-04-10')
+    expect(end().value).toBe('')
+    expect(lines()).toHaveLength(0)
+    expect(add()?.disabled).toBe(true)
+  })
+
+  it('offers no end month whose expense would fall after today', async () => {
+    vi.setSystemTime(new Date(2026, 10, 8, 12))
+    await subscription()
+    typeInDialog('parameter-first', '2026-09-15')
+    expect([...(parameter('end') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
+      '',
+      'September 2026',
+      'October 2026',
+    ])
+    typeInDialog('parameter-first', '2026-09-05')
+    expect((parameter('end') as HTMLSelectElement).options).toHaveLength(4)
+  })
+
+  it('shows the rule of a first expense after today, and offers no end month', async () => {
+    vi.setSystemTime(new Date(2026, 10, 8, 12))
+    await subscription()
+    expect(parameter('first')?.getAttribute('max')).toBe('2026-11-08')
+    const rule = dialog()?.querySelector('[data-rule-of="parameter-first"]')
+    expect(rule?.textContent).toBe('Not after today.')
+    typeInDialog('parameter-title', 'Overleaf')
+    typeInDialog('parameter-first', '2026-11-09')
+    expect(rule?.classList.contains('is-broken')).toBe(true)
+    expect((parameter('end') as HTMLSelectElement).disabled).toBe(true)
+    expect(add()?.disabled).toBe(true)
+    typeInDialog('parameter-first', '2026-11-08')
+    expect(rule?.classList.contains('is-broken')).toBe(false)
+    expect((parameter('end') as HTMLSelectElement).disabled).toBe(false)
+  })
+
+  it('shows the expenses once every required parameter is given, all ticked', async () => {
+    await subscription()
+    expect(lines()).toHaveLength(0)
+    expect(add()?.disabled).toBe(true)
+    expect(add()?.textContent).toBe('Add expenses')
+    overleaf()
+    expect(lines().map((line) => line.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      '2026-01-15 Overleaf - January 2026',
+      '2026-02-15 Overleaf - February 2026',
+      '2026-03-15 Overleaf - March 2026',
+    ])
+    expect(box(0)?.checked).toBe(true)
+    expect(add()?.disabled).toBe(false)
+    expect(add()?.textContent).toBe('Add 3 expenses')
+  })
+
+  it('adds the expenses ticked, each lacking what any expense lacks', async () => {
+    await subscription()
+    overleaf()
+    tickInDialog(box(1), false)
+    expect(add()?.textContent).toBe('Add 2 expenses')
+    await answerDialog(add)
+    expect(descriptions()).toEqual(['Overleaf - January 2026', 'Overleaf - March 2026'])
+    expect(root.querySelectorAll('tr.expense')).toHaveLength(2)
+    expect(root.querySelector('.lacks')?.textContent).toContain('Claimed amount (CAD) is required.')
+    expect(root.querySelector('.lacks')?.textContent).toContain('Receipt is required.')
+    expect(root.querySelector('.lacks')?.textContent).toContain('Bank statement is required.')
+    expect(continueButton()?.disabled).toBe(true)
+  })
+
+  it('says Add 1 expense for one, and offers nothing once none is ticked', async () => {
+    await subscription()
+    overleaf('2026-01')
+    expect(add()?.textContent).toBe('Add 1 expense')
+    tickInDialog(box(0), false)
+    expect(add()?.textContent).toBe('Add expenses')
+    expect(add()?.disabled).toBe(true)
+  })
+
+  it('keeps a box unticked while the parameters change, by its place', async () => {
+    await subscription()
+    overleaf()
+    tickInDialog(box(1), false)
+    typeInDialog('parameter-title', 'GitHub')
+    expect(box(0)?.checked).toBe(true)
+    expect(box(1)?.checked).toBe(false)
+    expect(add()?.textContent).toBe('Add 2 expenses')
+  })
+
+  it('adds the amount given to each expense', async () => {
+    await subscription()
+    overleaf('2026-02')
+    typeInDialog('parameter-amount', '21')
+    await answerDialog(add)
+    expect(lastReport()?.expenses.map((expense) => expense.claimedAmount?.typed)).toEqual([
+      '21.00',
+      '21.00',
+    ])
+  })
+
+  it('shows the rule of an amount broken, and holds Add until it follows it', async () => {
+    await subscription()
+    overleaf()
+    typeInDialog('parameter-amount', '21,50')
+    const rule = dialog()?.querySelector('[data-rule-of="parameter-amount"]')
+    expect(rule?.classList.contains('is-broken')).toBe(true)
+    expect(lines()).toHaveLength(0)
+    expect(add()?.disabled).toBe(true)
+    typeInDialog('parameter-amount', '21.50')
+    expect(rule?.classList.contains('is-broken')).toBe(false)
+    expect(lines()).toHaveLength(3)
+  })
+
+  it('hides the fields of a foreign amount in the style, whatever their own display', () => {
+    expect(readFileSync('src/style.css', 'utf8')).toMatch(
+      /dialog\.expense-preset \[hidden\] \{\s*display: none;/,
+    )
+  })
+
+  it('asks for a currency once Paid in another currency is ticked', async () => {
+    await subscription()
+    overleaf('2026-01')
+    const fields = () => dialog()?.querySelector<HTMLElement>('[data-foreign-of]')
+    expect(fields()?.hidden).toBe(true)
+    tickInDialog(parameter('foreign') as HTMLInputElement, true)
+    expect(fields()?.hidden).toBe(false)
+    expect(add()?.disabled).toBe(true)
+    typeInDialog('parameter-foreign-currency', 'XX')
+    expect(
+      dialog()
+        ?.querySelector('[data-rule-of="parameter-foreign-currency"]')
+        ?.classList.contains('is-broken'),
+    ).toBe(true)
+    typeInDialog('parameter-foreign-currency', 'EUR')
+    expect(dialog()?.querySelector('[data-currency-name]')?.textContent).toBe('Euro')
+    expect(add()?.disabled).toBe(false)
+  })
+
+  it('adds the currency alone, the foreign amount then lacking on each expense', async () => {
+    await subscription()
+    overleaf('2026-01')
+    tickInDialog(parameter('foreign') as HTMLInputElement, true)
+    typeInDialog('parameter-foreign-currency', 'USD')
+    expect(lines()[0]?.textContent).toContain('USD')
+    await answerDialog(add)
+    const [expense] = lastReport()?.expenses ?? []
+    expect(expense?.isPaidInAnotherCurrency).toBe(true)
+    expect(expense?.currency?.code).toBe('USD')
+    expect(root.querySelector('.lacks')?.textContent).toContain('Foreign amount is required.')
+  })
+
+  it('adds the foreign amount given to each expense', async () => {
+    await subscription()
+    overleaf('2026-01')
+    tickInDialog(parameter('foreign') as HTMLInputElement, true)
+    typeInDialog('parameter-foreign-currency', 'EUR')
+    typeInDialog('parameter-foreign-foreign-amount', '19.50')
+    expect(lines()[0]?.textContent).toContain('EUR 19.50')
+    await answerDialog(add)
+    expect(lastReport()?.expenses[0]?.foreignAmountText).toBe('EUR 19.50')
+    expect(lastReport()?.expenses[0]?.claimedAmount).toBeUndefined()
+  })
+
+  it('gives neither a currency nor a foreign amount once unticked', async () => {
+    await subscription()
+    overleaf('2026-01')
+    tickInDialog(parameter('foreign') as HTMLInputElement, true)
+    typeInDialog('parameter-foreign-currency', 'EUR')
+    tickInDialog(parameter('foreign') as HTMLInputElement, false)
+    await answerDialog(add)
+    expect(lastReport()?.expenses[0]?.isPaidInAnotherCurrency).toBe(false)
+  })
+
+  it('leaves the report as it was on Cancel', async () => {
+    await subscription()
+    overleaf()
+    const expensesBefore = lastReport()?.expenses.length
+    await answerDialog(cancel)
+    expect(lastReport()?.expenses.length).toBe(expensesBefore)
+    expect(root.querySelectorAll('tr.expense')).toHaveLength(0)
+  })
+
+  it('leaves the report as it was on Escape', async () => {
+    await subscription()
+    overleaf()
+    ;(dialog() as HTMLDialogElement).close()
+    await vi.waitFor(() => expect(dialog()).toBeNull())
+    expect(root.querySelectorAll('tr.expense')).toHaveLength(0)
+  })
+
+  it('adds the expenses of a preset again, beside what the report holds', async () => {
+    await subscription()
+    overleaf('2026-01')
+    await answerDialog(add)
+    await openDialog()
+    overleaf('2026-01')
+    await answerDialog(add)
+    expect(descriptions()).toEqual(['Overleaf - January 2026', 'Overleaf - January 2026'])
+  })
+
+  it('escapes what the Claimant types', async () => {
+    await subscription()
+    typeInDialog('parameter-title', '<b>Overleaf</b>')
+    typeInDialog('parameter-first', '2026-01-15')
+    typeInDialog('parameter-end', '2026-01')
+    expect(lines()[0]?.querySelector('b')).toBeNull()
+    expect(lines()[0]?.textContent).toContain('<b>Overleaf</b> - January 2026')
+  })
+
+  describe('of a business travel', () => {
+    function ready(): void {
+      fillReport()
+      travel()
+      proceed()
+    }
+
+    it('starts on Travel planning, among the presets of a business travel', async () => {
+      ready()
+      await openDialog()
+      expect(
+        [...(dialog()?.querySelectorAll('[name="preset"] option') ?? [])].map(
+          (option) => option.textContent,
+        ),
+      ).toEqual(['Travel planning', 'Travel (Air)', 'Travel (Train)'])
+      expect(dialog()?.querySelector('[data-parameters]')?.children).toHaveLength(0)
+      expect(add()?.textContent).toBe('Add 3 expenses')
+      await answerDialog(add)
+      expect(
+        lastReport()?.expensesByDate.map((expense) => [
+          expense.date?.toString(),
+          expense.description,
+        ]),
+      ).toEqual([
+        [undefined, 'Registration'],
+        [undefined, 'Transport'],
+        [undefined, 'Accommodation'],
+      ])
+    })
+
+    it('adds the expenses of the preset chosen, asking for nothing', async () => {
+      ready()
+      await openDialog()
+      typeInDialog('preset', '1')
+      expect(add()?.textContent).toBe('Add 4 expenses')
+      typeInDialog('preset', '2')
+      await answerDialog(add)
+      expect(
+        lastReport()?.expensesByDate.map((expense) => [
+          expense.date?.toString(),
+          expense.description,
+        ]),
+      ).toEqual([
+        ['2026-10-03', 'Transport: home to train station'],
+        ['2026-10-03', 'Transport: train station to accommodation'],
+        ['2026-10-07', 'Transport: accommodation to train station'],
+        ['2026-10-07', 'Transport: train station to home'],
+      ])
+    })
+
+    it('offers a preset once per report while it holds its expenses, then again', async () => {
+      const presetsOffered = () =>
+        [...(dialog()?.querySelectorAll('[name="preset"] option') ?? [])].map(
+          (option) => option.textContent,
+        )
+      ready()
+      await openDialog()
+      await answerDialog(add)
+      await openDialog()
+      expect(presetsOffered()).toEqual(['Travel (Air)', 'Travel (Train)'])
+      await answerDialog(add)
+      await openDialog()
+      expect(presetsOffered()).toEqual(['Travel (Train)'])
+      await answerDialog(add)
+      expect(offer()).toBeNull()
+      for (const description of ['Registration', 'Transport', 'Accommodation']) {
+        const place = lastReport()?.expenses.findIndex((each) => each.description === description)
+        button(`[data-remove-expense="${place}"]`)?.click()
+        await answer('confirm')
+        expect(offer() === null).toBe(description !== 'Accommodation')
+      }
+      await openDialog()
+      expect(presetsOffered()).toEqual(['Travel planning'])
+    })
+
+    it('leaves out an expense unticked', async () => {
+      ready()
+      await openDialog()
+      tickInDialog(box(2), false)
+      await answerDialog(add)
+      expect(descriptions()).toEqual(['Registration', 'Transport'])
+    })
+
+    it('leaves the dates of the expenses as they are when the dates of the report change', async () => {
+      ready()
+      await openDialog()
+      typeInDialog('preset', '1')
+      await answerDialog(add)
+      button('[data-step="0"]')?.click()
+      type('firstDay', '2026-10-01')
+      const expense = lastReport()?.expenses[0]
+      expect(expense?.date?.toString()).toBe('2026-10-03')
+    })
+  })
+})
+
+describe('Back, on the Expenses step', () => {
+  const back = () => button('[data-action="back"]')
+
+  beforeEach(async () => {
+    fillReport()
+    proceed()
+    await fillExpense()
+  })
+
+  it('is not offered while an expense is being entered, then is once it is Done', () => {
+    expect(back()?.hidden).toBe(true)
+    button('[data-action="done"]')?.click()
+    expect(back()?.hidden).toBe(false)
+  })
+
+  it('is not offered while an expense is being changed, then is once it is discarded', () => {
+    button('[data-action="done"]')?.click()
+    button('[data-change="0"]')?.click()
+    expect(back()?.hidden).toBe(true)
+    type('description', 'Taxi')
+    expect(back()?.hidden).toBe(true)
+    button('[data-action="discard"]')?.click()
+    expect(back()?.hidden).toBe(false)
+  })
+
+  it('is offered again on coming back by the stepper', () => {
+    button('[data-step="0"]')?.click()
+    expect(back()?.hidden).toBe(true)
+    proceed()
+    expect(back()?.hidden).toBe(false)
+  })
+
+  it('is not offered while the per diems are open, then is once they are Done', () => {
+    button('[data-action="done"]')?.click()
+    button('[data-step="0"]')?.click()
+    travel()
+    proceed()
+    button('[data-action="manage-per-diems"]')?.click()
+    expect(root.querySelector('h2')?.textContent).toBe('Per diems')
+    expect(back()?.hidden).toBe(true)
+    button('[data-action="done"]')?.click()
+    expect(back()?.hidden).toBe(false)
   })
 })
 

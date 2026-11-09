@@ -3,6 +3,7 @@ import { CalendarDate } from '../domain/calendar-date.ts'
 import { Currency } from '../domain/currency.ts'
 import type { Document } from '../domain/document.ts'
 import { Expense, type ExpenseFields } from '../domain/expense.ts'
+import { expensePresets } from '../domain/expense-preset.ts'
 import {
   claimedAmountInAnotherCurrencyRule,
   expenseWording,
@@ -29,7 +30,8 @@ import {
   type StatedInstead,
 } from './document-field.ts'
 import { type DocumentLinks, type LinkOf, linksAnew, supportOf } from './document-link.ts'
-import { fieldName, fieldRule, latestDate } from './field.ts'
+import { addFromPreset, expensesFromPreset } from './expense-preset-dialog.ts'
+import { currencies, currencyNameOf, fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
 import { statedMissingReceipt } from './missing-receipt-dialog.ts'
@@ -175,16 +177,6 @@ function input(
   </label>`
 }
 
-/** The currencies offered as the Claimant types one, each by its code and its name. */
-const currencies = html`<datalist id="currencies">${Currency.all.map(
-  (currency) => html`<option value="${currency.code}">${currency.name}</option>`,
-)}</datalist>`
-
-/** The name of a currency, under its code; nothing until the code is one. */
-function currencyNameOf(currency: Currency | undefined): string {
-  return currency === undefined || currency.name === currency.code ? '' : currency.name
-}
-
 /**
  * The fields of an expense, filled in, a value typed that breaks its rule as it was typed, its
  * receipt and bank statement, and Done.
@@ -240,8 +232,8 @@ function formOf(
 /**
  * The expenses, sorted by date, each with its fields, its documents, each a link that opens it in
  * a new tab, and what it still lacks,
- * Change, a pen, and Remove, a trash can, under Itemized expenses; Add an expense above them, the
- * per diems under them.
+ * Change, a pen, and Remove, a trash can, under Itemized expenses; Add an expense above them, next
+ * to Add from a preset when one is offered to the report; the per diems under them.
  */
 function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
@@ -276,9 +268,14 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
   const managePerDiems = report.asksForPerDiems
     ? html`<button type="button" class="add-expense" data-action="manage-per-diems">Manage per diems</button>`
     : ''
+  const fromPreset =
+    expensePresets.offeredTo(report).length > 0
+      ? html`<button type="button" class="add-expense" data-action="add-from-preset">${addFromPreset}</button>`
+      : ''
   return html`<h2>Expenses</h2>
     <div class="expense-buttons">
       <button type="button" class="add-expense" data-action="add-expense">Add an expense</button>
+      ${fromPreset}
       ${managePerDiems}
     </div>
     ${table}
@@ -463,7 +460,8 @@ function removalOf(report: Report, expense: Expense) {
 }
 
 /**
- * Step 2: the expenses, each changed or removed, Add an expense and Manage per diems; or the
+ * Step 2: the expenses, each changed or removed, Add an expense, Add from a preset and Manage per
+ * diems; or the
  * fields of the expense added or changed, until Done, or Discard, which undoes every change made
  * since they opened; or the per diems, until Done.
  */
@@ -662,6 +660,20 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
       context.change(context.report.afterAdding(new Expense()))
       open(context, context.report.expenses.length - 1, true)
     })
+    panel.querySelector('[data-action="add-from-preset"]')?.addEventListener('click', async () => {
+      const report = context.report
+      const added = await expensesFromPreset(
+        panel.ownerDocument,
+        expensePresets.offeredTo(report),
+        report,
+      )
+      if (added.length > 0) {
+        context.change(
+          added.reduce((changed, expense) => changed.afterAdding(expense), context.report),
+        )
+        context.refresh()
+      }
+    })
     for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-change]')) {
       button.addEventListener('click', () => open(context, Number(button.dataset.change)))
     }
@@ -704,6 +716,10 @@ export function expensesStep(readFile: ReadFile, links: DocumentLinks): Step {
     },
 
     offersContinue(): boolean {
+      return opened === undefined && perDiemsOpenIn === undefined
+    },
+
+    offersBack(): boolean {
       return opened === undefined && perDiemsOpenIn === undefined
     },
 

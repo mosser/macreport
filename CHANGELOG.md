@@ -6,6 +6,29 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Back** is no longer offered while an expense is being entered or changed, or while the
+  per diems are open: **Done** closes them first, or **Discard** an expense.
+- **Manage per diems** now stands at the right of the Expenses step, apart from the buttons
+  that add an expense.
+
+### Added
+
+- **Add from a preset**, next to Add an expense, adds several expenses at once. A dialog
+  asks for what the preset needs and shows the expenses it would add, each with a tick
+  box: only those ticked are added. Each added expense is then like any other, and still
+  asks for its receipt and bank statement.
+- **Monthly subscription**, offered when the report is not a business travel: from a title,
+  the first expense and an end month, one expense per month, described as
+  *title - January 2026*, none of them after today. An amount, a currency and a foreign amount can be given for every
+  month, or left to fill in month by month.
+- **Travel planning**, **Travel (Air)** and **Travel
+  (Train)**, offered for a business travel once its dates are valid. The first adds a
+  registration, a transport and an accommodation, without dates; the others, the transports
+  to and from the airport or the train station on its first and last days. Each is offered
+  once per report, and again once the expenses it added have all been removed.
+
 ## [0.5.0] - 2026-11-08
 
 ### Changed

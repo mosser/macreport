@@ -140,7 +140,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
         <ol class="stepper">${stepper}</ol>
         <section class="panel"></section>
         <div class="actions">
-          <button data-action="back" ${current === 0 ? html`hidden` : ''}>Back</button>
+          <button data-action="back">Back</button>
           <button class="primary" data-action="continue">Continue</button>
         </div>
       </main>
@@ -190,6 +190,7 @@ export function mountWizard(root: HTMLElement, options: WizardOptions): void {
     const backButton = root.querySelector<HTMLButtonElement>('[data-action="back"]')
     if (backButton !== null) {
       backButton.disabled = isHeld
+      backButton.hidden = current === 0 || !(step.offersBack?.() ?? true)
     }
     for (const button of root.querySelectorAll<HTMLButtonElement>('[data-step]')) {
       const index = Number(button.dataset.step)

@@ -39,6 +39,12 @@ export class CalendarDate {
     }
   }
 
+  /** The date it is today, on the Claimant's computer. */
+  static today(): CalendarDate {
+    const now = new Date()
+    return new CalendarDate(now.getFullYear(), now.getMonth() + 1, now.getDate())
+  }
+
   /** The day of the week this date falls on, in English: Saturday. */
   get dayOfWeek(): string {
     return dayOfWeek.format(new Date(Date.UTC(this.year, this.month - 1, this.day)))

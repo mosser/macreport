@@ -29,6 +29,9 @@ document.
 | Foreign amount | The amount and currency of an expense paid in another currency than the Canadian dollar, as on its receipt: more than zero, to the cent. The system converts nothing and asks for no exchange rate. |
 | Currency | A currency other than the Canadian dollar, by its three-letter ISO 4217 code and its name in English: EUR, Euro. |
 | Itemized expenses | The expenses of a report apart from its per diems, as the Expenses and Review steps title them. |
+| Expense preset | Expenses the system adds to a report together, named and configured in `config/expense-presets.json`, offered to a business travel or to another report. An expense added from a preset is like any other, and remembers only the name of its preset. A preset gives no document, and says nothing of how an expense was paid. |
+| Once per report | What the table of expense presets says of a preset that is not offered to a report while it holds an expense added from it: the travel presets are; a monthly subscription, added once per subscription, is not. |
+| Preset parameter | What an expense preset asks of the Claimant before adding its expenses: a text, a date, a month, an amount or a foreign amount. |
 | Per diem | What a business travel claims for the meals of one of its days, at their rates rather than on receipts: each meal domestic or international, the meals claimed, and, for a meal not claimed, the reason when the Claimant gives one. A business travel has one per day, from its first day to its last. |
 | Meal | Breakfast, lunch or dinner, the three meals of a per diem. |
 | Domestic, international | What the Claimant says a meal of a per diem is. It decides the currency of its rate: the Canadian dollar for a domestic meal, the US dollar for an international one. The meals of a day, and of a business travel, are most often all one or all the other. |

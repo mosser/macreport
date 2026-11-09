@@ -1,3 +1,4 @@
+import { Currency } from '../domain/currency.ts'
 import { type Field, fieldNames, fieldRules, isRequired } from '../domain/findings.ts'
 import { html, type Markup } from './html.ts'
 
@@ -7,10 +8,24 @@ import { html, type Markup } from './html.ts'
  */
 export const latestDate = '9999-12-31'
 
+/** The asterisk next to the name of a required field; nothing next to another. */
+export function requiredMark(isFieldRequired: boolean): Markup {
+  return isFieldRequired ? html` <abbr class="required" title="required">*</abbr>` : html``
+}
+
 /** The name of a field, with an asterisk when it is required. */
 export function fieldName(field: Field, isFieldRequired = isRequired(field)): Markup {
-  const asterisk = isFieldRequired ? html` <abbr class="required" title="required">*</abbr>` : ''
-  return html`<span class="field-name" id="name-of-${field}">${fieldNames[field]}${asterisk}</span>`
+  return html`<span class="field-name" id="name-of-${field}">${fieldNames[field]}${requiredMark(isFieldRequired)}</span>`
+}
+
+/** The currencies offered as the Claimant types one, each by its code and its name. */
+export const currencies = html`<datalist id="currencies">${Currency.all.map(
+  (currency) => html`<option value="${currency.code}">${currency.name}</option>`,
+)}</datalist>`
+
+/** The name of a currency, under its code; nothing until the code is one. */
+export function currencyNameOf(currency: Currency | undefined): string {
+  return currency === undefined || currency.name === currency.code ? '' : currency.name
 }
 
 /** What a field needs besides being filled in, when it needs something more. */
