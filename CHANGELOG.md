@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-08
+
 ### Changed
 
 - A file is checked when it is added. A file of another format, a damaged one, a PDF
