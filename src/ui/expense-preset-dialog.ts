@@ -9,7 +9,7 @@ import type {
   PresetParameter,
   PresetValues,
 } from '../domain/expense-preset.ts'
-import { expenseWording, fieldRules } from '../domain/findings.ts'
+import { expenseWording, fieldRules, notAfterTodayRule } from '../domain/findings.ts'
 import type { Report } from '../domain/report.ts'
 import { textOrAbsent } from '../domain/text.ts'
 import { currencies, currencyNameOf, fieldName, latestDate, requiredMark } from './field.ts'
@@ -56,13 +56,19 @@ function foreignFieldOf(parameter: PresetParameter): Markup {
 }
 
 /** The field of a preset parameter, by its type. */
-function parameterField(parameter: PresetParameter): Markup {
+function parameterField(parameter: PresetParameter, today: CalendarDate): Markup {
   const name = fieldOf(parameter)
   switch (parameter.type) {
     case 'text':
       return html`<label class="field">${nameOf(parameter)}<input name="${name}" type="text" autocomplete="off" /></label>`
     case 'date':
-      return html`<label class="field">${nameOf(parameter)}<input name="${name}" type="date" max="${latestDate}" /></label>`
+      return parameter.isNotAfterToday
+        ? html`<label class="field">
+            ${nameOf(parameter)}
+            <input name="${name}" type="date" max="${today.toString()}" />
+            <span class="rule" data-rule-of="${name}">${notAfterTodayRule}</span>
+          </label>`
+        : html`<label class="field">${nameOf(parameter)}<input name="${name}" type="date" max="${latestDate}" /></label>`
     case 'month':
       return html`<label class="field">${nameOf(parameter)}<select name="${name}" disabled><option value=""></option></select></label>`
     case 'amount':
@@ -86,7 +92,11 @@ interface ReadParameters {
 }
 
 /** Reads the fields of the parameters of a preset. */
-function readParameters(dialog: HTMLElement, preset: ExpensePreset): ReadParameters {
+function readParameters(
+  dialog: HTMLElement,
+  preset: ExpensePreset,
+  today: CalendarDate,
+): ReadParameters {
   const broken: string[] = []
   const typedIn = (name: string) =>
     dialog.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)?.value ?? ''
@@ -112,9 +122,15 @@ function readParameters(dialog: HTMLElement, preset: ExpensePreset): ReadParamet
       case 'text':
         keep(texts, parameter.id, textOrAbsent(typedIn(name)))
         break
-      case 'date':
-        keep(dates, parameter.id, read(name, CalendarDate.parse))
+      case 'date': {
+        const date = read(name, CalendarDate.parse)
+        if (parameter.isNotAfterToday && date !== undefined && today.isBefore(date)) {
+          broken.push(name)
+        } else {
+          keep(dates, parameter.id, date)
+        }
         break
+      }
       case 'month':
         keep(months, parameter.id, read(name, CalendarMonth.parse))
         break
@@ -137,15 +153,20 @@ function readParameters(dialog: HTMLElement, preset: ExpensePreset): ReadParamet
 }
 
 /** The list of a month parameter, the month chosen kept while the list still holds it. */
-function offerMonths(dialog: HTMLElement, preset: ExpensePreset, values: PresetValues): void {
+function offerMonths(
+  dialog: HTMLElement,
+  preset: ExpensePreset,
+  values: PresetValues,
+  today: CalendarDate,
+): void {
   for (const parameter of preset.parameters) {
     const select = dialog.querySelector<HTMLSelectElement>(`select[name="${fieldOf(parameter)}"]`)
     if (select !== null) {
-      const months = preset.monthsOffered(parameter, values)
-      const startingAt = months[0]?.toString() ?? ''
-      if (select.dataset.startingAt !== startingAt) {
+      const months = preset.monthsOffered(parameter, values, today)
+      const offered = months.join(' ')
+      if (select.dataset.offered !== offered) {
         const chosen = select.value
-        select.dataset.startingAt = startingAt
+        select.dataset.offered = offered
         select.innerHTML = html`<option value=""></option>${months.map(
           (month) => html`<option value="${month.toString()}">${month.inFull}</option>`,
         )}`.text
@@ -210,6 +231,7 @@ export function expensesFromPreset(
 ): Promise<readonly Expense[]> {
   const [first] = presets
   if (first === undefined) return Promise.resolve([])
+  const today = CalendarDate.today()
   const dialog = page.createElement('dialog')
   dialog.className = 'expense-preset'
   dialog.setAttribute('aria-labelledby', 'expense-preset-heading')
@@ -244,12 +266,13 @@ export function expensesFromPreset(
   }
   const update = () => {
     showForeignFields(dialog, preset)
-    const { values, broken, lacksCurrency } = readParameters(dialog, preset)
-    offerMonths(dialog, preset, values)
+    const { values, broken, lacksCurrency } = readParameters(dialog, preset, today)
+    offerMonths(dialog, preset, values, today)
     for (const rule of dialog.querySelectorAll<HTMLElement>('[data-rule-of]')) {
       rule.classList.toggle('is-broken', broken.includes(rule.dataset.ruleOf ?? ''))
     }
-    expenses = broken.length > 0 || lacksCurrency ? [] : (preset.expensesFor(values, report) ?? [])
+    expenses =
+      broken.length > 0 || lacksCurrency ? [] : (preset.expensesFor(values, report, today) ?? [])
     if (proposed !== null) {
       proposed.innerHTML = expenses.length > 0 ? expensesOf(expenses, unticked).text : ''
     }
@@ -257,7 +280,8 @@ export function expensesFromPreset(
   }
   const showPreset = () => {
     if (parameters !== null) {
-      parameters.innerHTML = html`${preset.parameters.map(parameterField)}`.text
+      parameters.innerHTML =
+        html`${preset.parameters.map((parameter) => parameterField(parameter, today))}`.text
     }
     unticked.clear()
     update()

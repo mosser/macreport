@@ -35,6 +35,8 @@ export interface PresetParameter {
   readonly startingFrom: string | undefined
   /** How many months a month parameter's list holds. */
   readonly atMost: number | undefined
+  /** Whether a date, or the expense of a month, cannot fall after today. */
+  readonly isNotAfterToday: boolean
 }
 
 /** A foreign amount given: its currency, and its amount when the Claimant knows it. */
@@ -95,10 +97,10 @@ function isParameterType(value: unknown): value is ParameterType {
 }
 
 function parameterOf(value: unknown): PresetParameter {
-  const { id, label, type, isOptional, startingFrom, atMost } = fieldsOf(
+  const { id, label, type, isOptional, startingFrom, atMost, isNotAfterToday } = fieldsOf(
     value,
     'A preset parameter',
-    ['id', 'label', 'type', 'isOptional', 'startingFrom', 'atMost'],
+    ['id', 'label', 'type', 'isOptional', 'startingFrom', 'atMost', 'isNotAfterToday'],
   )
   const parameterId = textOf(id, 'The id of a preset parameter')
   const subject = `Preset parameter ${parameterId}`
@@ -111,6 +113,12 @@ function parameterOf(value: unknown): PresetParameter {
   if (isOptional !== undefined && typeof isOptional !== 'boolean') {
     throw new TypeError(`${subject} says isOptional with something else than a boolean`)
   }
+  if (isNotAfterToday !== undefined && typeof isNotAfterToday !== 'boolean') {
+    throw new TypeError(`${subject} says isNotAfterToday with something else than a boolean`)
+  }
+  if (isNotAfterToday === true && type !== 'date' && type !== 'month') {
+    throw new RangeError(`${subject} cannot be not after today: only a date or a month can`)
+  }
   checkOptional(subject, type, isOptional === true)
   checkMonth(subject, type, startingFrom, atMost)
   return {
@@ -120,6 +128,7 @@ function parameterOf(value: unknown): PresetParameter {
     isOptional: isOptional === true,
     startingFrom: optionalTextOf(startingFrom, `What ${subject} starts from`),
     atMost: atMost as number | undefined,
+    isNotAfterToday: isNotAfterToday === true,
   }
 }
 
@@ -278,6 +287,16 @@ function isGiven(parameter: PresetParameter, values: PresetValues): boolean {
   return given[parameter.type].has(parameter.id)
 }
 
+/** Whether a date parameter holds what it may: a date not after today, when it cannot be. */
+function isDateAllowed(
+  parameter: PresetParameter,
+  values: PresetValues,
+  today: CalendarDate,
+): boolean {
+  const date = parameter.type === 'date' ? values.dates.get(parameter.id) : undefined
+  return !parameter.isNotAfterToday || date === undefined || !today.isBefore(date)
+}
+
 /**
  * Expenses the system adds to a report together, as `config/expense-presets.json` configures them,
  * offered to a business travel or to another report. An expense added from a preset is like any
@@ -346,34 +365,52 @@ export class ExpensePreset {
 
   /**
    * The months a month parameter offers: from the month of the date it starts from, as many as the
-   * preset sets; none until that date is given.
+   * preset sets; none until that date is given. A month not after today is offered only when its
+   * expense, on the day of that date, does not fall after today.
    */
-  monthsOffered(parameter: PresetParameter, values: PresetValues): readonly CalendarMonth[] {
+  monthsOffered(
+    parameter: PresetParameter,
+    values: PresetValues,
+    today: CalendarDate,
+  ): readonly CalendarMonth[] {
     const start = values.dates.get(parameter.startingFrom ?? '')
-    return start === undefined ? [] : CalendarMonth.of(start).andFollowing(parameter.atMost ?? 0)
+    if (start === undefined) return []
+    const months = CalendarMonth.of(start).andFollowing(parameter.atMost ?? 0)
+    return parameter.isNotAfterToday
+      ? months.filter((month) => !today.isBefore(month.dateOn(start.day)))
+      : months
   }
 
   /**
    * The expenses the preset adds to a report, in order, each with what the preset says of it and
-   * nothing else; none to work out until every required parameter is given and a month chosen is
-   * one the list offers. A repeating expense stands for one expense per month, from the month of
+   * nothing else; none to work out until every required parameter is given, a date is not after
+   * today when it cannot be, and a month chosen is one the list offers. A repeating expense stands for one expense per month, from the month of
    * its date to the month chosen, both included, on the day of the month of its date, or on the
    * last day of a shorter month.
    */
-  expensesFor(values: PresetValues, report: Report): readonly Expense[] | undefined {
+  expensesFor(
+    values: PresetValues,
+    report: Report,
+    today: CalendarDate,
+  ): readonly Expense[] | undefined {
     const isComplete = this.parameters.every(
       (parameter) =>
         (parameter.isOptional || isGiven(parameter, values)) &&
-        this.isMonthOffered(parameter, values),
+        isDateAllowed(parameter, values, today) &&
+        this.isMonthOffered(parameter, values, today),
     )
     if (!isComplete) return undefined
     return this.expenses.flatMap((expense) => expensesOf(expense, values, report))
   }
 
-  private isMonthOffered(parameter: PresetParameter, values: PresetValues): boolean {
+  private isMonthOffered(
+    parameter: PresetParameter,
+    values: PresetValues,
+    today: CalendarDate,
+  ): boolean {
     if (parameter.type !== 'month') return true
     const chosen = values.months.get(parameter.id)?.toString()
-    return this.monthsOffered(parameter, values).some((month) => month.toString() === chosen)
+    return this.monthsOffered(parameter, values, today).some((month) => month.toString() === chosen)
   }
 }
 

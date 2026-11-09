@@ -14,7 +14,7 @@ project adheres to [Semantic Versioning](https://semver.org/).
   asks for its receipt and bank statement.
 - **Monthly subscription**, offered when the report is not a business travel: from a title,
   the first expense and an end month, one expense per month, described as
-  *title - January 2026*. An amount, a currency and a foreign amount can be given for every
+  *title - January 2026*, none of them after today. An amount, a currency and a foreign amount can be given for every
   month, or left to fill in month by month.
 - **Travel to conference (Air)**, offered for a business travel once its dates are valid:
   the transports to and from the airport on its first and last days, and a hotel without

@@ -178,8 +178,8 @@ unless the table of presets says optional:
 | Parameter | Rule |
 |---|---|
 | Text | On one line. |
-| Date | A calendar date. |
-| Month | Chosen in a list, by its month in full and its year, as *January 2026*: from the month of the date the preset names, as many months as it sets. Not offered until that date is valid. When that date changes, the month chosen stays while the list still holds it, and goes otherwise. |
+| Date | A calendar date, not after today when the table of presets says so. |
+| Month | Chosen in a list, by its month in full and its year, as *January 2026*: from the month of the date the preset names, as many months as it sets; when the table of presets says not after today, only the months whose expense does not fall after today. Not offered until that date is valid. When that date changes, the month chosen stays while the list still holds it, and goes otherwise. |
 | Amount | In Canadian dollars, more than zero, at most two decimals. |
 | Foreign amount | **Paid in another currency**, ticked or not. When ticked, **Currency**, required, a three-letter ISO 4217 code other than CAD, its name shown under it, and **Foreign amount**, optional, more than zero, at most two decimals. |
 
@@ -203,7 +203,7 @@ the last day of a shorter month: from January 31, February 28, then March 31.
 
 | Preset | Offered to | Preset parameters | Expenses |
 |---|---|---|---|
-| Monthly subscription | Another report | Title (text); First expense (date); End month (month, from First expense, 36 months); Monthly amount (CAD) (amount, optional); Paid in another currency (foreign amount, optional) | Repeating from First expense to End month: *<title> - <month> <year>*, with the amount and the foreign amount given. |
+| Monthly subscription | Another report | Title (text); First expense (date, not after today); End month (month, from First expense, 36 months, not after today); Monthly amount (CAD) (amount, optional); Paid in another currency (foreign amount, optional) | Repeating from First expense to End month: *<title> - <month> <year>*, with the amount and the foreign amount given. |
 | Travel to conference (Air) | A business travel | None | On the first day: *Transport: home to airport*, *Transport: airport to hotel*. Without a date: *Hotel*. On the last day: *Transport: hotel to airport*, *Transport: airport to home*. |
 
 Continue is offered once there is at least one expense or a meal claimed,

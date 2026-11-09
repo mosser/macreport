@@ -82,7 +82,7 @@ Options considered for where a repetition ends:
   |---|---|
   | `name` | The name of the preset, not empty, and unique. |
   | `offeredFor` | `businessTravel` or `otherReport`. |
-  | `parameters` | Each with an `id`, a `label` and a `type`: `text`, `date`, `month`, `amount` or `foreignAmount`. Only `amount` and `foreignAmount` may have `isOptional`, and a `foreignAmount`, which stands behind a tick box, has it. A `month` names the date it starts from in `startingFrom`, and its list's length in `atMost`. |
+  | `parameters` | Each with an `id`, a `label` and a `type`: `text`, `date`, `month`, `amount` or `foreignAmount`. Only `amount` and `foreignAmount` may have `isOptional`, and a `foreignAmount`, which stands behind a tick box, has it. A `month` names the date it starts from in `startingFrom`, and its list's length in `atMost`. A `date` or a `month` may have `isNotAfterToday`: the date cannot fall after today, nor can the expense of a month chosen. |
   | `expenses` | At least one. Each has a `description`; and may have a `date`, a `claimedAmount` naming an `amount` parameter, and a `foreignAmount` naming a `foreignAmount` parameter. |
   | `date` | A `date` parameter; `firstDay` or `lastDay`, of a preset for a business travel only; or `repetition`, of a repeating expense only. Left out, the expense has no date. |
   | `repeat` | `every`, today only `month`; `from`, a `date` parameter; `until`, a `month` parameter starting from it. |

@@ -84,6 +84,9 @@ export const fieldRules: Partial<Record<Field, string>> = {
 export const claimedAmountInAnotherCurrencyRule =
   'In Canadian dollars, more than zero, at most two decimals; left empty, McSCert works it out.'
 
+/** The rule of a date of a preset that cannot fall after today. */
+export const notAfterTodayRule = 'Not after today.'
+
 /** What is said under a receipt or a bank statement added again: the document already there is chosen. */
 export function alreadyInReportWording(document: Document): string {
   return `Already in the report, as ${document.name}: chosen.`

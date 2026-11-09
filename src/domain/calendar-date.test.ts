@@ -1,7 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CalendarDate } from './calendar-date.ts'
 
 describe('CalendarDate', () => {
+  it('knows the date of today, on the computer of the Claimant', () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 8, 23, 30))
+    expect(CalendarDate.today().toString()).toBe('2026-11-08')
+    vi.useRealTimers()
+  })
+
   it('is a day that exists in the calendar', () => {
     expect(new CalendarDate(2024, 2, 29).toString()).toBe('2024-02-29')
     expect(() => new CalendarDate(2026, 2, 29)).toThrow(RangeError)

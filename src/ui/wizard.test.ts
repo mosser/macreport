@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { readFileSync } from 'node:fs'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CalendarDate } from '../domain/calendar-date.ts'
 import { Document } from '../domain/document.ts'
 import type { DocumentWeight, ReportWeights } from '../domain/document-sizes.ts'
@@ -1894,6 +1894,15 @@ describe('a missing receipt', () => {
 })
 
 describe('expense presets', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2030, 0, 15, 12))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   const offer = () => button('[data-action="add-from-preset"]')
   const dialog = () => document.querySelector('dialog.expense-preset')
   const add = () => dialog()?.querySelector<HTMLButtonElement>('[data-answer="add"]')
@@ -1998,6 +2007,35 @@ describe('expense presets', () => {
     expect(end().value).toBe('')
     expect(lines()).toHaveLength(0)
     expect(add()?.disabled).toBe(true)
+  })
+
+  it('offers no end month whose expense would fall after today', async () => {
+    vi.setSystemTime(new Date(2026, 10, 8, 12))
+    await subscription()
+    typeInDialog('parameter-first', '2026-09-15')
+    expect([...(parameter('end') as HTMLSelectElement).options].map((o) => o.textContent)).toEqual([
+      '',
+      'September 2026',
+      'October 2026',
+    ])
+    typeInDialog('parameter-first', '2026-09-05')
+    expect((parameter('end') as HTMLSelectElement).options).toHaveLength(4)
+  })
+
+  it('shows the rule of a first expense after today, and offers no end month', async () => {
+    vi.setSystemTime(new Date(2026, 10, 8, 12))
+    await subscription()
+    expect(parameter('first')?.getAttribute('max')).toBe('2026-11-08')
+    const rule = dialog()?.querySelector('[data-rule-of="parameter-first"]')
+    expect(rule?.textContent).toBe('Not after today.')
+    typeInDialog('parameter-title', 'Overleaf')
+    typeInDialog('parameter-first', '2026-11-09')
+    expect(rule?.classList.contains('is-broken')).toBe(true)
+    expect((parameter('end') as HTMLSelectElement).disabled).toBe(true)
+    expect(add()?.disabled).toBe(true)
+    typeInDialog('parameter-first', '2026-11-08')
+    expect(rule?.classList.contains('is-broken')).toBe(false)
+    expect((parameter('end') as HTMLSelectElement).disabled).toBe(false)
   })
 
   it('shows the expenses once every required parameter is given, all ticked', async () => {

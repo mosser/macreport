@@ -46,6 +46,7 @@ function values(given: Partial<PresetValues> = {}): PresetValues {
 }
 
 const otherReport = new Report()
+const today = date('2030-01-01')
 const businessTravel = new Report({
   isBusinessTravel: true,
   firstDay: date('2026-10-03'),
@@ -90,7 +91,7 @@ describe('the presets of config/expense-presets.json', () => {
   it('adds the expenses of Travel to conference (Air), without asking for anything', () => {
     const preset = presetNamed('Travel to conference (Air)')
     expect(preset.parameters).toEqual([])
-    expect(summary(preset.expensesFor(values(), businessTravel))).toEqual([
+    expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'Transport: home to airport'],
       ['2026-10-03', 'Transport: airport to hotel'],
       [undefined, 'Hotel'],
@@ -101,7 +102,7 @@ describe('the presets of config/expense-presets.json', () => {
 
   it('adds one expense per month of Monthly subscription, both ends included', () => {
     const preset = presetNamed('Monthly subscription')
-    expect(summary(preset.expensesFor(subscription(), otherReport))).toEqual([
+    expect(summary(preset.expensesFor(subscription(), otherReport, today))).toEqual([
       ['2026-01-15', 'Overleaf - January 2026'],
       ['2026-02-15', 'Overleaf - February 2026'],
       ['2026-03-15', 'Overleaf - March 2026'],
@@ -110,16 +111,16 @@ describe('the presets of config/expense-presets.json', () => {
 
   it('adds one expense when the end month is the month of the first expense', () => {
     const preset = presetNamed('Monthly subscription')
-    expect(summary(preset.expensesFor(subscription('2026-01-15', '2026-01'), otherReport))).toEqual(
-      [['2026-01-15', 'Overleaf - January 2026']],
-    )
+    expect(
+      summary(preset.expensesFor(subscription('2026-01-15', '2026-01'), otherReport, today)),
+    ).toEqual([['2026-01-15', 'Overleaf - January 2026']])
   })
 
   it('falls on the last day of a shorter month, going back to the day after it', () => {
     const preset = presetNamed('Monthly subscription')
     expect(
       preset
-        .expensesFor(subscription('2026-01-31', '2026-03'), otherReport)
+        .expensesFor(subscription('2026-01-31', '2026-03'), otherReport, today)
         ?.map((expense) => expense.date?.toString()),
     ).toEqual(['2026-01-31', '2026-02-28', '2026-03-31'])
   })
@@ -128,14 +129,14 @@ describe('the presets of config/expense-presets.json', () => {
     const preset = presetNamed('Monthly subscription')
     expect(
       preset
-        .expensesFor(subscription('2026-12-01', '2027-01'), otherReport)
+        .expensesFor(subscription('2026-12-01', '2027-01'), otherReport, today)
         ?.map((expense) => expense.description),
     ).toEqual(['Overleaf - December 2026', 'Overleaf - January 2027'])
   })
 
   it('leaves the amounts of Monthly subscription empty unless they are given', () => {
     const [expense] =
-      presetNamed('Monthly subscription').expensesFor(subscription(), otherReport) ?? []
+      presetNamed('Monthly subscription').expensesFor(subscription(), otherReport, today) ?? []
     expect(expense?.claimedAmount).toBeUndefined()
     expect(expense?.isPaidInAnotherCurrency).toBe(false)
   })
@@ -146,6 +147,7 @@ describe('the presets of config/expense-presets.json', () => {
     const expenses = presetNamed('Monthly subscription').expensesFor(
       subscription('2026-01-15', '2026-02', { amounts: new Map([['amount', amount]]) }),
       otherReport,
+      today,
     )
     expect(expenses?.map((expense) => expense.claimedAmount?.typed)).toEqual(['21.00', '21.00'])
   })
@@ -158,6 +160,7 @@ describe('the presets of config/expense-presets.json', () => {
           foreignAmounts: new Map([['foreign', { currency: euro, amount }]]),
         }),
         otherReport,
+        today,
       ) ?? []
     expect(expense?.isPaidInAnotherCurrency).toBe(true)
     expect(expense?.foreignAmountText).toBe('EUR 19.50')
@@ -170,6 +173,7 @@ describe('the presets of config/expense-presets.json', () => {
           foreignAmounts: new Map([['foreign', { currency: euro, amount: undefined }]]),
         }),
         otherReport,
+        today,
       ) ?? []
     expect(expense?.isPaidInAnotherCurrency).toBe(true)
     expect(expense?.currency).toBe(euro)
@@ -180,6 +184,7 @@ describe('the presets of config/expense-presets.json', () => {
     for (const expense of presetNamed('Monthly subscription').expensesFor(
       subscription(),
       otherReport,
+      today,
     ) ?? []) {
       expect(expense.documents).toEqual([])
       expect(expense.missingReceipt).toBeUndefined()
@@ -194,6 +199,7 @@ describe('the presets of config/expense-presets.json', () => {
         preset.expensesFor(
           subscription('2026-01-15', '2026-03', { [missing]: new Map() }),
           otherReport,
+          today,
         ),
         missing,
       ).toBeUndefined()
@@ -204,8 +210,8 @@ describe('the presets of config/expense-presets.json', () => {
     const preset = presetNamed('Monthly subscription')
     const end = preset.parameters.find((parameter) => parameter.id === 'end')
     if (end === undefined) throw new TypeError('Monthly subscription has an end month')
-    expect(preset.monthsOffered(end, values())).toEqual([])
-    const months = preset.monthsOffered(end, subscription('2026-01-15'))
+    expect(preset.monthsOffered(end, values(), today)).toEqual([])
+    const months = preset.monthsOffered(end, subscription('2026-01-15'), today)
     expect(months).toHaveLength(36)
     expect(months[0]?.inFull).toBe('January 2026')
     expect(months[35]?.inFull).toBe('December 2028')
@@ -213,8 +219,54 @@ describe('the presets of config/expense-presets.json', () => {
 
   it('works out nothing for a month the list does not offer', () => {
     const preset = presetNamed('Monthly subscription')
-    expect(preset.expensesFor(subscription('2026-03-15', '2026-02'), otherReport)).toBeUndefined()
-    expect(preset.expensesFor(subscription('2026-01-15', '2029-01'), otherReport)).toBeUndefined()
+    expect(
+      preset.expensesFor(subscription('2026-03-15', '2026-02'), otherReport, today),
+    ).toBeUndefined()
+    expect(
+      preset.expensesFor(subscription('2026-01-15', '2029-01'), otherReport, today),
+    ).toBeUndefined()
+  })
+})
+
+describe('Monthly subscription, as of a day', () => {
+  const preset = presetNamed('Monthly subscription')
+  const end = preset.parameters.find((parameter) => parameter.id === 'end')
+  if (end === undefined) throw new TypeError('Monthly subscription has an end month')
+  const november8 = date('2026-11-08')
+  const lastOffered = (first: string, day: CalendarDate) =>
+    preset.monthsOffered(end, subscription(first), day).at(-1)?.inFull
+
+  it('offers no month whose expense would fall after today', () => {
+    expect(lastOffered('2026-01-15', november8)).toBe('October 2026')
+  })
+
+  it('offers the month of today when its expense falls by today', () => {
+    expect(lastOffered('2026-01-05', november8)).toBe('November 2026')
+    expect(lastOffered('2026-01-08', november8)).toBe('November 2026')
+  })
+
+  it('counts a shorter month by its last day', () => {
+    expect(lastOffered('2026-01-31', date('2026-02-28'))).toBe('February 2026')
+    expect(lastOffered('2026-01-31', date('2026-02-27'))).toBe('January 2026')
+  })
+
+  it('still offers 36 months at most', () => {
+    expect(preset.monthsOffered(end, subscription('2020-01-15'), november8)).toHaveLength(36)
+  })
+
+  it('works out nothing for a month after today', () => {
+    expect(
+      preset.expensesFor(subscription('2026-01-15', '2026-11'), otherReport, november8),
+    ).toBeUndefined()
+    expect(
+      preset.expensesFor(subscription('2026-01-15', '2026-10'), otherReport, november8),
+    ).toHaveLength(10)
+  })
+
+  it('offers nothing and works out nothing from a first expense after today', () => {
+    const later = subscription('2026-11-09', '2026-11')
+    expect(preset.monthsOffered(end, later, november8)).toEqual([])
+    expect(preset.expensesFor(later, otherReport, november8)).toBeUndefined()
   })
 })
 
@@ -242,6 +294,7 @@ describe('a preset, read from its configuration', () => {
         preset.expensesFor(
           values({ dates: new Map([['first', date('2026-05-02')]]) }),
           otherReport,
+          today,
         ),
       ),
     ).toEqual([['2026-05-02', 'One']])
@@ -254,7 +307,7 @@ describe('a preset, read from its configuration', () => {
       expenses: [{ description: '{title} and {title}' }],
     })
     const given = values({ texts: new Map([['title', 'A{month}$&']]) })
-    expect(summary(preset.expensesFor(given, otherReport))).toEqual([
+    expect(summary(preset.expensesFor(given, otherReport, today))).toEqual([
       [undefined, 'A{month}$& and A{month}$&'],
     ])
   })
@@ -374,6 +427,32 @@ describe('a preset, read from its configuration', () => {
     }
   })
 
+  it('lets only a date or a month be not after today', () => {
+    expect(() =>
+      ExpensePreset.from({
+        ...simple,
+        parameters: [{ ...title, isNotAfterToday: true }],
+        expenses: [{ description: '{title}' }],
+      }),
+    ).toThrow(RangeError)
+    expect(() =>
+      ExpensePreset.from({
+        ...simple,
+        parameters: [{ ...first, isNotAfterToday: 'yes' }],
+        expenses: [{ date: 'first', description: 'One' }],
+      }),
+    ).toThrow(TypeError)
+  })
+
+  it('leaves a date free, and every month of the list, unless not after today', () => {
+    const preset = ExpensePreset.from(repeating)
+    const given = values({
+      dates: new Map([['first', date('2031-05-02')]]),
+      months: new Map([['end', month('2031-06')]]),
+    })
+    expect(preset.expensesFor(given, otherReport, today)).toHaveLength(2)
+  })
+
   it('refuses two parameters of one id, or two presets of one name', () => {
     expect(() =>
       ExpensePreset.from({
@@ -407,7 +486,7 @@ describe('a preset, read from its configuration', () => {
         { date: 'lastDay', description: 'Back' },
       ],
     })
-    expect(summary(preset.expensesFor(values(), businessTravel))).toEqual([
+    expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'There'],
       ['2026-10-07', 'Back'],
     ])

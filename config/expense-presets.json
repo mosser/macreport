@@ -5,13 +5,19 @@
       "offeredFor": "otherReport",
       "parameters": [
         { "id": "title", "label": "Title", "type": "text" },
-        { "id": "first", "label": "First expense", "type": "date" },
+        {
+          "id": "first",
+          "label": "First expense",
+          "type": "date",
+          "isNotAfterToday": true
+        },
         {
           "id": "end",
           "label": "End month",
           "type": "month",
           "startingFrom": "first",
-          "atMost": 36
+          "atMost": 36,
+          "isNotAfterToday": true
         },
         {
           "id": "amount",
