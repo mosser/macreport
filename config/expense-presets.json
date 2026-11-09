@@ -58,8 +58,8 @@
       "isOncePerReport": true,
       "expenses": [
         { "date": "firstDay", "description": "Transport: home to airport" },
-        { "date": "firstDay", "description": "Transport: airport to hotel" },
-        { "date": "lastDay", "description": "Transport: hotel to airport" },
+        { "date": "firstDay", "description": "Transport: airport to accommodation" },
+        { "date": "lastDay", "description": "Transport: accommodation to airport" },
         { "date": "lastDay", "description": "Transport: airport to home" }
       ]
     },
@@ -69,8 +69,8 @@
       "isOncePerReport": true,
       "expenses": [
         { "date": "firstDay", "description": "Transport: home to train station" },
-        { "date": "firstDay", "description": "Transport: train station to hotel" },
-        { "date": "lastDay", "description": "Transport: hotel to train station" },
+        { "date": "firstDay", "description": "Transport: train station to accommodation" },
+        { "date": "lastDay", "description": "Transport: accommodation to train station" },
         { "date": "lastDay", "description": "Transport: train station to home" }
       ]
     }

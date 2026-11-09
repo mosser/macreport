@@ -8,7 +8,7 @@
 
 Some expenses come in sets the Claimant types again each time: a subscription, one
 expense per month with the same words; a conference reached by air, the same
-transports around the same hotel. Everything but the documents, and sometimes the
+transports around the same accommodation. Everything but the documents, and sometimes the
 amounts, is known before the first field is filled in. More such sets will come,
 and each is a matter of words and dates rather than of behaviour.
 

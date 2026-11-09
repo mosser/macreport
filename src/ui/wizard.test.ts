@@ -2258,8 +2258,8 @@ describe('expense presets', () => {
         ]),
       ).toEqual([
         ['2026-10-03', 'Transport: home to train station'],
-        ['2026-10-03', 'Transport: train station to hotel'],
-        ['2026-10-07', 'Transport: hotel to train station'],
+        ['2026-10-03', 'Transport: train station to accommodation'],
+        ['2026-10-07', 'Transport: accommodation to train station'],
         ['2026-10-07', 'Transport: train station to home'],
       ])
     })

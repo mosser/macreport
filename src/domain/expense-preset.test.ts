@@ -105,8 +105,8 @@ describe('the presets of config/expense-presets.json', () => {
     expect(preset.parameters).toEqual([])
     expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'Transport: home to airport'],
-      ['2026-10-03', 'Transport: airport to hotel'],
-      ['2026-10-07', 'Transport: hotel to airport'],
+      ['2026-10-03', 'Transport: airport to accommodation'],
+      ['2026-10-07', 'Transport: accommodation to airport'],
       ['2026-10-07', 'Transport: airport to home'],
     ])
   })
@@ -116,8 +116,8 @@ describe('the presets of config/expense-presets.json', () => {
     expect(preset.parameters).toEqual([])
     expect(summary(preset.expensesFor(values(), businessTravel, today))).toEqual([
       ['2026-10-03', 'Transport: home to train station'],
-      ['2026-10-03', 'Transport: train station to hotel'],
-      ['2026-10-07', 'Transport: hotel to train station'],
+      ['2026-10-03', 'Transport: train station to accommodation'],
+      ['2026-10-07', 'Transport: accommodation to train station'],
       ['2026-10-07', 'Transport: train station to home'],
     ])
   })
