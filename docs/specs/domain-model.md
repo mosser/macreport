@@ -14,7 +14,7 @@ document.
 | Concept | Meaning |
 |---|---|
 | Claimant | The person asking to be reimbursed, and the only user of the system. |
-| Report | What the Claimant prepares: the claimant's name, position, email and extension, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its locations, the account, the expenses, the per diems, the travel justifications and the additional documents. There is one report at a time. |
+| Report | What the Claimant prepares: the claimant's name, position and email, the supervisor of a student or a postdoctoral fellow, or the host of a visitor, the purpose, its dates and its locations, the account, the expenses, the per diems, the travel justifications and the additional documents. There is one report at a time. |
 | Position | What the claimant is at McSCert: Faculty, Postdoctoral fellow, Student, Staff or Visitor. The report of a student or a postdoctoral fellow names their supervisor, a visitor's their host. |
 | Supervisor | The faculty member who supervises a student or postdoctoral fellow claimant, named in the report by their name and email. |
 | Host | The McSCert member who hosts a visiting claimant, named in the report by their name and email. |
@@ -35,7 +35,12 @@ document.
 | Rate | What a meal claimed is worth, in Canadian dollars for a domestic meal, in US dollars for an international one. The rates are configured, one for each meal and each of domestic and international, in `config/per-diems.json`: today breakfast 28.40, lunch 27.40 and dinner 57.70, either way. |
 | Total | What the report claims: the sum of the claimed amounts and of the domestic meals claimed, then, for each currency, the sum of the foreign amounts of the expenses without a claimed amount, and, in US dollars, of the international meals claimed. |
 | Paid in cash | An expense paid in cash has no bank statement. Any other expense was paid by card or transfer and has one. |
-| Missing receipt | An expense whose Claimant has no receipt. It states the reason and who was paid; the system writes a missing receipt authorization for it. |
+| Missing receipt | An expense whose Claimant has no receipt. It states the reason, who was paid and the job title, and the phone extension when the Claimant gives one; the system writes a missing receipt authorization for it. |
+| Paid to | Who was paid for an expense with a missing receipt, in the Claimant's words: its payee, as the section of missing receipt authorizations heads it. |
+| Job title | What the claimant's job is called, in the Claimant's words, given with each missing receipt and written under *Title* on its missing receipt authorization: Associate Prof, Research Engineer, PhD Student. |
+| Phone extension | The claimant's telephone extension, given or not with each missing receipt, and written under *Extension* on its missing receipt authorization. |
+| Accounts Payable | The McMaster office that reimburses. It may not accept a missing receipt authorization, and may return the report. |
+| Take back | The Claimant goes back on a missing receipt or on an expense paid in cash: the expense asks for its receipt or its bank statement again. |
 | Document | A file the Claimant adds to the report: a PDF, a JPEG image or a PNG image, of one kind, with a name. A document is in the report once, whatever the number of expenses that refer to it. |
 | Name | What a document is called in the report and in the report document: its file name without its extension, unless the Claimant gives it another. No two documents of a report have the same name, whatever its case. |
 | Kind | What a document is, among the kinds of the table below. The kind decides the section a document goes to and the letter of its label. |

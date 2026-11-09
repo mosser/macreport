@@ -7,6 +7,7 @@ import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
 import { Meal } from '../domain/meal.ts'
+import { MissingReceipt } from '../domain/missing-receipt.ts'
 import { PerDiem } from '../domain/per-diem.ts'
 import { Report } from '../domain/report.ts'
 import { openDraftStore } from './draft-store.ts'
@@ -74,6 +75,91 @@ describe('the draft store', () => {
     expect(expense?.receipts[0]?.fileName).toBe('reçu.pdf')
     expect([...(expense?.receipts[0]?.content ?? [])]).toEqual([37, 80, 68, 70])
     expect(expense?.bankStatements[0]?.kind).toBe(Kind.bankStatement)
+  })
+
+  it('keeps an expense paid in cash', async () => {
+    const factory = new IDBFactory()
+    const paid = report.afterAdding(new Expense({ description: 'Taxi', isPaidInCash: true }))
+    expect(await (await openDraftStore(factory)).keep(paid)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.isPaidInCash)).toEqual([false, true])
+  })
+
+  it('restores an expense of a draft that does not say how it was paid as not paid in cash', async () => {
+    const factory = new IDBFactory()
+    await written(factory, { expenses: [{ description: 'Taxi' }] }, {})
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.isPaidInCash).toBe(false)
+  })
+
+  it('keeps the bank statement of a damaged draft that also says the expense was paid in cash', async () => {
+    const factory = new IDBFactory()
+    await written(
+      factory,
+      { expenses: [{ bankStatements: ['one'], isPaidInCash: true }] },
+      { one: { letter: 'S', fileName: 'october.png', content: new Uint8Array([137, 80]) } },
+    )
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses[0]?.hasBankStatement).toBe(true)
+    expect(restored.expenses[0]?.isPaidInCash).toBe(false)
+  })
+
+  it('keeps a missing receipt, its phone extension included', async () => {
+    const factory = new IDBFactory()
+    const stated = report
+      .afterAdding(
+        new Expense({
+          description: 'Taxi',
+          missingReceipt: new MissingReceipt({
+            reason: 'Lost\nin a taxi',
+            paidTo: 'Taxi Rio',
+            jobTitle: 'PhD Student',
+            phoneExtension: '24242',
+          }),
+        }),
+      )
+      .afterAdding(
+        new Expense({
+          missingReceipt: new MissingReceipt({ reason: 'Lost', paidTo: 'Bus', jobTitle: 'Staff' }),
+        }),
+      )
+    expect(await (await openDraftStore(factory)).keep(stated)).toBe(true)
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.missingReceipt)).toEqual([
+      undefined,
+      new MissingReceipt({
+        reason: 'Lost\nin a taxi',
+        paidTo: 'Taxi Rio',
+        jobTitle: 'PhD Student',
+        phoneExtension: '24242',
+      }),
+      new MissingReceipt({ reason: 'Lost', paidTo: 'Bus', jobTitle: 'Staff' }),
+    ])
+  })
+
+  it('restores no missing receipt that lacks what one must hold, or of an expense with a receipt', async () => {
+    const factory = new IDBFactory()
+    const stated = { reason: 'Lost', paidTo: 'Taxi', jobTitle: 'PhD Student' }
+    await written(
+      factory,
+      {
+        expenses: [
+          { missingReceipt: { reason: 'Lost', paidTo: 'Taxi' } },
+          { missingReceipt: 'Lost' },
+          { receipts: ['one'], missingReceipt: stated },
+          { missingReceipt: stated },
+        ],
+      },
+      { one: { letter: 'R', fileName: 'reçu.pdf', content: new Uint8Array([37, 80]) } },
+    )
+    const restored = await (await openDraftStore(factory)).restore()
+    expect(restored.expenses.map((expense) => expense.missingReceipt?.paidTo)).toEqual([
+      undefined,
+      undefined,
+      undefined,
+      'Taxi',
+    ])
+    expect(restored.expenses[2]?.hasReceipt).toBe(true)
   })
 
   it('keeps the travel justifications, the additional documents and the name of each document', async () => {

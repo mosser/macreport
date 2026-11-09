@@ -1,7 +1,7 @@
 # ADR 0008: The draft is kept in the browser's IndexedDB, best effort
 
 - **Status:** Accepted
-- **Date:** 2026-11-07
+- **Date:** 2026-11-08
 - **Deciders:** Sébastien Mosser
 
 ## Context
@@ -35,7 +35,9 @@ Options considered:
   one draft. Each document's content is kept as its bytes, apart from the
   report's fields and expenses, which refer to documents by an identifier
   given when the document is added.
-- **Every change is written at once.** There is no "save draft" action.
+- **Every change is written at once.** There is no "save draft" action. What is
+  typed in the dialog of a missing receipt is a change once Done closes it
+  (ADR 0005).
 - **At opening**, the system restores the draft when there is one.
 - **Best effort.** Every access is guarded: when IndexedDB is unavailable,
   refused or fails, the system works without it and the wizard shows a notice

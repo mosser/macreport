@@ -7,12 +7,13 @@ import {
   type LabelledDocument,
   type Layout,
   layoutOf,
+  nameOf,
   type Section,
 } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
-import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
+import { type DocumentLinks, type LinkOf, linksAnew, separated } from './document-link.ts'
 import { html, type Markup } from './html.ts'
 import { reduceArrows } from './icons.ts'
 import type { Context, Step } from './step.ts'
@@ -36,7 +37,7 @@ function emptyRow(columns: number, wording: string): Markup {
 
 /**
  * The cover: its fields, then, under Itemized expenses, each expense on two lines, the second its
- * documents, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
+ * documents, Missing receipt and Paid in cash, or No expense entered; the per diems of a business travel, under their own heading; then the total of the
  * report.
  */
 function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Markup {
@@ -46,12 +47,14 @@ function coverOf(layout: Layout, linkOf: LinkOf, isBusinessTravel: boolean): Mar
   const rows = layout.expenses
     .filter((row) => row.perDiem === undefined)
     .map((row) => {
-      const documents = row.supportingDocuments.map((supporting) => supporting.document)
+      const support = row.supportingDocuments.map(({ document, name }) =>
+        document === undefined ? html`${name}` : linkOf(document),
+      )
       return html`<tr class="expense">
         <td>${row.number}</td><td class="date">${row.date}</td><td class="description">${row.description}</td>
         <td>${row.foreignAmount}</td><td>${row.claimedAmount}</td>
       </tr>
-      <tr class="supporting"><td></td><td></td><td colspan="3">${namesOf(documents, linkOf)}</td></tr>`
+      <tr class="supporting"><td></td><td></td><td colspan="3">${separated(support)}</td></tr>`
     })
   return html`<table class="cover-fields">${fields}</table>
     <h3>Itemized expenses</h3>
@@ -167,7 +170,9 @@ function sizesOf(
   linkOf: LinkOf,
 ): Markup {
   const rows = layout.sections.flatMap((section) =>
-    section.documents.flatMap((entry) => sizeRowOf(entry, report, weights, linkOf)),
+    section.documents.flatMap((entry) =>
+      'document' in entry ? sizeRowOf(entry, report, weights, linkOf) : [],
+    ),
   )
   const reportSize = reportSizeOf(weights)
   if (rows.length === 0 && reportSize.text === '') return html``
@@ -201,11 +206,11 @@ function sectionsOf(layout: Layout, linkOf: LinkOf): Markup[] {
           ({ description }) => html`<div>${description}</div>`,
         )
         const numbers = html`<td>${descriptions}</td>`
-        return html`<tr><td>${entry.label}</td><td>${linkOf(entry.document)}</td>${expenses(numbers)}</tr>`
+        return html`<tr><td>${entry.label}</td><td>${'document' in entry ? linkOf(entry.document) : nameOf(entry)}</td>${expenses(numbers)}</tr>`
       })
       return html`<table class="documents">
         <colgroup><col class="label" /><col />${expenses(html`<col />`)}</colgroup>
-        <thead><tr><th>Label</th><th>Name</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
+        <thead><tr><th>Label</th><th>${section.nameColumn}</th>${expenses(html`<th>Expenses</th>`)}</tr></thead>
         <tbody>${rows}</tbody>
       </table>`
     }
@@ -246,6 +251,19 @@ function keepingFocus(panel: HTMLElement, render: () => void): void {
   again?.focus({ preventScroll: true })
 }
 
+/**
+ * What the step says of each missing receipt authorization, when there is one: it is to be signed,
+ * once the bank statements, when there are some, are redacted: a change may invalidate a signature.
+ */
+function signatureReminderOf(report: Report): Markup {
+  if (report.lastMissingReceipt === undefined) return html``
+  const when =
+    report.documentsOf(Kind.bankStatement).length > 0
+      ? 'once the bank statements are redacted'
+      : 'before you submit the report document'
+  return html`<p class="status reminder">Sign each missing receipt authorization, ${when}.</p>`
+}
+
 /** What became of the last save: the report it was for, and its file name or that it failed. */
 type Outcome =
   | { readonly report: Report; readonly fileName: string }
@@ -266,7 +284,7 @@ function statusOf(outcome: Outcome | undefined, report: Report, isDraftKept: boo
     report.documentsOf(Kind.bankStatement).length > 0
       ? html`<p class="status reminder">Redact the bank statements in the report document before you submit it.</p>`
       : html``
-  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${redaction}${draft}`
+  return html`<p class="status">The report document was handed to the browser: ${outcome.fileName}.</p>${redaction}${signatureReminderOf(report)}${draft}`
 }
 
 /**

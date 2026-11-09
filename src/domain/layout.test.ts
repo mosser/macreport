@@ -8,7 +8,9 @@ import { Kind } from './kind.ts'
 import {
   layoutOf,
   mealsNotClaimedOf,
+  nameOf,
   perDiemDescriptionsOf,
+  type SectionEntry,
   type TotalLine,
   totalOf,
 } from './layout.ts'
@@ -18,9 +20,14 @@ const linesOf = (total: readonly TotalLine[]) =>
   total.map(({ currencyCode, amount }) => `${currencyCode} ${amount}`)
 
 import { Meal } from './meal.ts'
+import { MissingReceipt } from './missing-receipt.ts'
 import { PerDiem } from './per-diem.ts'
 import { policy } from './policy.ts'
 import { Report } from './report.ts'
+
+/** The document of what a section holds, which is one unless it is a form. */
+const documentOf = (entry: SectionEntry | undefined) =>
+  entry !== undefined && 'document' in entry ? entry.document : undefined
 
 const receipt = new Document(Kind.receipt, 'air-canada.pdf', new Uint8Array([1]))
 const statement = new Document(Kind.bankStatement, 'statement-october.pdf', new Uint8Array([2]))
@@ -311,6 +318,153 @@ describe('layoutOf', () => {
     ])
   })
 
+  describe('a missing receipt', () => {
+    const missing = new MissingReceipt({
+      reason: 'Lost in a taxi',
+      paidTo: 'Taxis Parisiens',
+      jobTitle: 'PhD Student',
+      phoneExtension: '24242',
+    })
+    const taxi = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      claimedAmount: new Amount(5500),
+      missingReceipt: missing,
+      bankStatements: [statement],
+    })
+    const stated = report.afterAdding(taxi)
+    const authorizationsOf = (of: Report) =>
+      layoutOf(of).sections.find(({ kind }) => kind === Kind.missingReceiptAuthorization)
+
+    it('has its section between the receipts and the bank statements', () => {
+      expect(layoutOf(stated).sections.map(({ title }) => title)).toEqual([
+        'Additional documents',
+        'Receipts',
+        'Missing receipt authorizations',
+        'Bank statements',
+      ])
+    })
+
+    it('ticks its box among the attached information', () => {
+      const attached = (of: Report) =>
+        layoutOf(of).attachedInformation.find(
+          ({ kind }) => kind === Kind.missingReceiptAuthorization,
+        )?.isAttached
+      expect(attached(report)).toBe(false)
+      expect(attached(stated)).toBe(true)
+    })
+
+    it('is called Missing receipt on the cover, a link by its label, where its receipt would be', () => {
+      const row = layoutOf(stated).expenses[1]
+      expect(row?.supportingDocuments.map(({ label, name }) => [label, name])).toEqual([
+        ['M1', 'Missing receipt'],
+        ['S1', 'Statement'],
+      ])
+      expect(row?.supportingDocuments[0]?.document).toBeUndefined()
+    })
+
+    it('labels each authorization by the number of its expense, naming who was paid and the expense', () => {
+      const earlier = new Expense({
+        date: new CalendarDate(2026, 10, 1),
+        description: 'Bus',
+        claimedAmount: new Amount(300),
+        missingReceipt: new MissingReceipt({ reason: 'Lost', paidTo: 'Bus', jobTitle: 'Staff' }),
+        isPaidInCash: true,
+      })
+      const entries = authorizationsOf(stated.afterAdding(earlier))?.documents ?? []
+      expect(entries.map((entry) => [entry.label, nameOf(entry), entry.expenseNumbers])).toEqual([
+        ['M1', 'Bus', [1]],
+        ['M2', 'Taxis Parisiens', [3]],
+      ])
+      expect(entries[1]?.expenses).toEqual([
+        { number: 3, description: 'Taxi', name: 'Expense 3: Taxi' },
+      ])
+      expect(authorizationsOf(stated)?.listsExpenses).toBe(true)
+    })
+
+    it('fills the authorization in from the expense, the report and what was stated', () => {
+      const entry = authorizationsOf(stated)?.documents[0]
+      expect(entry !== undefined && 'authorization' in entry && entry.authorization).toEqual({
+        reason: 'Lost in a taxi',
+        paidTo: 'Taxis Parisiens',
+        dated: '2026-10-05',
+        amount: 'CAD 55.00',
+        description: 'Taxi',
+        printedName: 'Zoë Lefèvre-Smith',
+        title: 'PhD Student',
+        extension: '24242',
+        email: 'zoe@mcmaster.ca',
+      })
+    })
+
+    it('writes the amount of an expense paid in another currency, with its foreign amount or as that alone', () => {
+      const amountOf = (claimedAmount: Amount | undefined) => {
+        const entry = authorizationsOf(
+          new Report({
+            claimantName: 'Zoë',
+            position: 'Faculty',
+            email: 'zoe@mcmaster.ca',
+            purpose: 'ICSE',
+            accountName: 'NSERC',
+          }).afterAdding(
+            new Expense({
+              date: new CalendarDate(2026, 10, 5),
+              description: 'Taxi',
+              claimedAmount,
+              isPaidInAnotherCurrency: true,
+              foreignAmount: new Amount(3500),
+              currency: Currency.parse('EUR'),
+              missingReceipt: missing,
+              isPaidInCash: true,
+            }),
+          ),
+        )?.documents[0]
+        return entry !== undefined && 'authorization' in entry
+          ? entry.authorization.amount
+          : undefined
+      }
+      expect(amountOf(new Amount(5500))).toBe('CAD 55.00 (EUR 35.00)')
+      expect(amountOf(undefined)).toBe('EUR 35.00')
+    })
+
+    it('leaves the phone extension blank when it is not given', () => {
+      const entry = authorizationsOf(
+        report.afterAdding(
+          taxi.afterChanging({
+            missingReceipt: new MissingReceipt({
+              reason: 'Lost',
+              paidTo: 'Taxi',
+              jobTitle: 'Staff',
+            }),
+          }),
+        ),
+      )?.documents[0]
+      expect(entry !== undefined && 'authorization' in entry && entry.authorization.extension).toBe(
+        '',
+      )
+    })
+  })
+
+  it('says Paid in cash where the statement of an expense would be, which is no link', () => {
+    const taxi = new Expense({
+      date: new CalendarDate(2026, 10, 5),
+      description: 'Taxi',
+      claimedAmount: new Amount(5500),
+      receipts: [new Document(Kind.receipt, 'taxi.pdf', new Uint8Array([9]))],
+      isPaidInCash: true,
+    })
+    const layout = layoutOf(report.afterAdding(taxi))
+    expect(layout.expenses[1]?.supportingDocuments.map(({ label, name }) => [label, name])).toEqual(
+      [
+        ['R2', 'Receipt'],
+        [undefined, 'Paid in cash'],
+      ],
+    )
+    expect(layout.sections.find(({ kind }) => kind === Kind.bankStatement)?.documents).toHaveLength(
+      1,
+    )
+  })
+
   it('opens a section per kind held, additional documents first, bank statements last, each document with the expenses it supports', () => {
     const sections = layoutOf(report).sections
     expect(sections.map((section) => section.title)).toEqual([
@@ -424,7 +578,7 @@ describe('layoutOf', () => {
     const first = layout.sections[0]
     expect(first?.title).toBe('Additional documents')
     expect(first?.listsExpenses).toBe(false)
-    expect(first?.documents.map((entry) => [entry.label, entry.document])).toEqual([
+    expect(first?.documents.map((entry) => [entry.label, documentOf(entry)])).toEqual([
       ['A1', invitation],
       ['A2', itinerary],
       ['A3', poster],
@@ -470,7 +624,7 @@ describe('layoutOf', () => {
       additionalDocuments: [itinerary],
     })
     const section = layoutOf(elsewhere).sections[0]
-    expect(section?.documents.map((entry) => entry.document)).toEqual([itinerary])
+    expect(section?.documents.map(documentOf)).toEqual([itinerary])
     expect(section?.subsections).toEqual([])
     expect(layoutOf(report).sections[1]?.subsections).toEqual([])
   })

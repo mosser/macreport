@@ -18,16 +18,16 @@ as **one self-contained `dist/macreport-vX.Y.Z.html`** that opens from
 `file://`. Nothing crosses a network. See
 [ADR 0001](docs/adr/0001-typescript-frontend-only-single-file-pinned-build.md).
 
-**Current state:** v0.3.1, plus a heavy document reduced on request (ADR 0011), on top of the list of expenses and per
-diems: one report, its expenses listed by date, each added, changed or
-removed, with one receipt and one bank statement, chosen again among those
-already in the report, and a foreign amount and currency; the locations and
-per diems of a business travel (meals per day, domestic or international);
-travel justifications and additional documents, every document named, saved
-as the report document (cover with Entered boxes, per diem rows and a total
-by currency, sections, stamps). Not yet built: missing receipts, cash, the
-number of pages on the Additional documents step, and refusing a
-file.
+**Current state:** v0.4.0, plus an expense paid in cash and a missing receipt, on top of
+the list of expenses and per diems: one report, its expenses listed by date, each added,
+changed or removed, with one receipt and one bank statement, chosen again among those
+already in the report, and a foreign amount and currency; a missing receipt and an expense
+paid in cash, stated and taken back, the first written as a missing receipt authorization;
+the locations and per diems of a business travel (meals per day, domestic or international);
+travel justifications and additional documents, every document named, saved as the report
+document (cover with Entered boxes, per diem rows and a total by currency, sections, stamps);
+a heavy document reduced on request (ADR 0011). Not yet built: the number of pages on the
+Additional documents step, and refusing a file.
 The
 specification and the ADRs describe the full system; code follows them.
 
@@ -59,7 +59,8 @@ src/domain/   the object model of a report and its rules: pure, no DOM, no PDF l
 src/io/       reading documents, writing the report document (@cantoo/pdf-lib),
               the draft store (IndexedDB), saving a file
 src/ui/       the wizard and its four steps: Report, Expenses, Additional documents, Review
-src/assets/   McSCert logos, as supplied; fonts/: Noto Sans, cut down, with its licence
+src/assets/   McSCert logos, as supplied; the McMaster logo, cut and scaled;
+              fonts/: Noto Sans, cut down, with its licence
 src/main.ts   entry point, mounted from index.html
 config/       per-diems.json: the per diem rates; document-sizes.json: when a
               document is heavy; policy.json: the documents of the policy; inlined
@@ -94,7 +95,9 @@ first.
   takes its colours from the same tokens.
 - Maroon dominates, gold is secondary, accents signal. Never gold text on a
   light background. Approved text pairings are tabled in the ADR.
-- The McSCert logos are used as supplied, never redrawn or recoloured.
+- The McSCert logos are used as supplied, never redrawn or recoloured. The
+  McMaster logo, cut to its marks and scaled down once, heads the missing receipt
+  authorizations; it is never redrawn or recoloured either.
 
 ### ADR 0003: releases
 
@@ -199,7 +202,7 @@ first.
   sentence that introduces a screen or a section, restates its heading or
   explains how to read it. Text is content, a heading or label, a status, a
   finding, or a notice a decision asks for (the draft notice of ADR 0008, the
-  privacy statement of ADR 0005).
+  privacy statement of ADR 0005, the notice of a missing receipt of ADR 0010).
 - Words are the glossary's, in the interface as in the code.
 
 ## Git

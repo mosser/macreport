@@ -86,18 +86,21 @@ no colour literal of its own.
 
 ### Logo
 
-The McSCert logo is used as supplied by McMaster, never redrawn or recoloured:
+The logos are never redrawn or recoloured. The McSCert logos are used as
+supplied by McMaster. The McMaster logo is cut to its marks and scaled to a
+width of 600 pixels, from the 1200-pixel square supplied: it heads the missing
+receipt authorizations, as it heads McMaster's form they reproduce, and the
+single file holds no more of it than a form needs.
 
 | File | Use |
 |---|---|
-| `src/assets/mcscert-left-col.png` | Colour, horizontal: the generated pages of the report document (cover, section pages, missing receipt authorizations), and the interface on a light background. |
+| `src/assets/mcscert-left-col.png` | Colour, horizontal: the cover and the section pages of the report document, and the interface on a light background. |
 | `src/assets/mcscert-left-rev.png` | Reversed, horizontal: the interface's maroon header bar. |
 | `src/assets/mcscert-stack-col.png` | Colour, stacked: the favicon. |
+| `src/assets/mcmaster-col.png` | McMaster, in colour: the missing receipt authorizations of the report document. |
 
 They are imported from `src/` so the build inlines them (ADR 0001). As
-supplied images, they are exempt from the colour-literal rule. The McSCert
-logo carries McMaster's wordmark and crest, so it also heads the missing
-receipt authorizations the system writes in place of McMaster's form.
+supplied images, they are exempt from the colour-literal rule.
 
 ## Consequences
 
@@ -110,8 +113,8 @@ receipt authorizations the system writes in place of McMaster's form.
 **Negative / accepted trade-offs**
 
 - Gold is unusable for text on light surfaces.
-- The logos are raster images inlined in the single file; they are kept at the
-  resolution supplied, which is enough for print at the size used.
+- The logos are raster images inlined in the single file; their resolution is
+  enough for print at the size used.
 
 ## Compliance
 

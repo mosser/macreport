@@ -23,13 +23,16 @@ import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
 import { layoutOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
+import { MissingReceipt } from '../domain/missing-receipt.ts'
 import { PerDiem } from '../domain/per-diem.ts'
 import { type PolicyDocument, policy } from '../domain/policy.ts'
 import { Report } from '../domain/report.ts'
 import { DocumentsAsWritten } from './documents-as-written.ts'
+import { wrap } from './generated-page.ts'
 import type { ImageEncoder } from './image-encoder.ts'
+import { justified } from './missing-receipt-form.ts'
 import { paletteFrom } from './palette.ts'
-import { wrap, writeReportDocument } from './write-report-document.ts'
+import { writeReportDocument } from './write-report-document.ts'
 
 /** The documents of these tests are small: nothing is encoded again. */
 const neverEncoding: ImageEncoder = {
@@ -1006,6 +1009,312 @@ describe('writeReportDocument', () => {
     const text = covers.flat().join(' ')
     expect(text).toContain('Attendee 160 (McMaster)')
     expect(text).toContain('Total')
+  })
+})
+
+describe('a missing receipt authorization', () => {
+  const stated = (
+    fields: Partial<ConstructorParameters<typeof MissingReceipt>[0]> = {},
+    description = 'Taxi from CDG to the hotel',
+  ) =>
+    new Report({
+      claimantName: 'Zoë Łukasiewicz',
+      position: 'Faculty',
+      email: 'zoe@mcmaster.ca',
+      purpose: 'ICSE 2026',
+      accountName: '20-123-456',
+    }).afterAdding(
+      new Expense({
+        date: new CalendarDate(2026, 10, 5),
+        description,
+        claimedAmount: new Amount(5500),
+        isPaidInAnotherCurrency: true,
+        foreignAmount: new Amount(3500),
+        currency: Currency.parse('EUR'),
+        isPaidInCash: true,
+        missingReceipt: new MissingReceipt({
+          reason: 'The driver had no receipt book.',
+          paidTo: 'Taxis Parisiens',
+          jobTitle: 'Associate Prof',
+          phoneExtension: '24242',
+          ...fields,
+        }),
+      }),
+    )
+  const imageWidthsOf = (pdf: PDFDocument, page: PDFPage) => {
+    const images = page.node.Resources()?.lookupMaybe(PDFName.of('XObject'), PDFDict)
+    return [...(images?.entries() ?? [])].map(([, reference]) => {
+      const image = pdf.context.lookup(reference) as PDFRawStream
+      return (image.dict.lookup(PDFName.of('Width')) as PDFNumber).asNumber()
+    })
+  }
+  const wording = [
+    'Missing Receipt Authorization Form',
+    'Original invoices on company letterhead or official receipts are required for reimbursements. Where the original invoice or receipt is not issued or lost, then a copy of the official invoice or receipt or a credit card statement will be accepted as a substitute with a brief explanation and notation of "original lost" clearly indicated on the substituting support.',
+    'EXPLANATORY NOTE',
+    'Please accept this as proof of expenditure for the missing original receipt.',
+    'Reason for missing original receipt or boarding pass(es):',
+    'I certify that this expense has not and will not be claimed for reimbursement from other sources or institutions.',
+  ]
+
+  it("reproduces McMaster's wording, filled in, on one page, its signature left blank", async () => {
+    const pdf = await written(stated())
+    expect(pdf.getPageCount()).toBe(3)
+    const page = pdf.getPage(2)
+    const texts = textsOf(pdf, page)
+    const joined = texts.join(' ')
+    for (const sentence of wording) expect(joined).toContain(sentence)
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        'The driver had no receipt book.',
+        'Paid to:',
+        'Taxis Parisiens',
+        'Dated:',
+        '2026-10-05',
+        'Amount:',
+        'CAD 55.00 (EUR 35.00)',
+        'Description of Expense(s):',
+        'Taxi from CDG to the hotel',
+        'Signature of Claimant:',
+        'Printed Name:',
+        'Zoë Łukasiewicz',
+        'Title:',
+        'Associate Prof',
+        'Extension:',
+        '24242',
+        'Email:',
+        'zoe@mcmaster.ca',
+      ]),
+    )
+    const at = (text: string) => texts.indexOf(text)
+    expect(at('Printed Name:') - at('Signature of Claimant:')).toBe(1)
+  })
+
+  it('writes each name left of its value, on the same line', async () => {
+    const pdf = await written(stated())
+    const places = placesOf(pdf, pdf.getPage(2))
+    const placeOf = (text: string) => places.find((place) => place.text === text)
+    for (const [name, value] of [
+      ['Paid to:', 'Taxis Parisiens'],
+      ['Dated:', '2026-10-05'],
+      ['Amount:', 'CAD 55.00 (EUR 35.00)'],
+      ['Printed Name:', 'Zoë Łukasiewicz'],
+      ['Title:', 'Associate Prof'],
+      ['Extension:', '24242'],
+      ['Email:', 'zoe@mcmaster.ca'],
+    ] as const) {
+      expect(placeOf(value)?.y).toBe(placeOf(name)?.y)
+      expect(placeOf(value)?.x).toBeGreaterThan(placeOf(name)?.x ?? Number.POSITIVE_INFINITY)
+    }
+    expect(placeOf('Dated:')?.y).toBe(placeOf('Amount:')?.y)
+    expect(placeOf('Extension:')?.y).toBe(placeOf('Email:')?.y)
+  })
+
+  it("goes under McMaster's logo, which a report document without a form does not hold", async () => {
+    const pdf = await written(stated())
+    expect(imageWidthsOf(pdf, pdf.getPage(2))).toEqual([600])
+    expect(imageWidthsOf(pdf, pdf.getPage(0))).not.toContain(600)
+    const without = await written(await reportOf('Air Canada'))
+    const widths = without.getPages().flatMap((page) => imageWidthsOf(without, page))
+    expect(widths).not.toContain(600)
+  })
+
+  it('uses the height of the page: its last line ends just above the bottom margin, on one page', async () => {
+    const lowest = async (report: Report) => {
+      const pdf = await written(report)
+      expect(pdf.getPageCount()).toBe(3)
+      return placesOf(pdf, pdf.getPage(2)).find(({ text }) => text === 'Email:')?.y ?? 0
+    }
+    // The bottom margin, the space under the last line of the frame, and the space under its text.
+    const expected = 54 + 12 + 3
+    expect(await lowest(stated())).toBeCloseTo(expected, 1)
+    const longer = Array.from({ length: 20 }, () => 'A reason that takes room').join(' ')
+    expect(await lowest(stated({ reason: longer }))).toBeCloseTo(expected, 1)
+  })
+
+  it('moves what is signed to another page only when it does not fit on the first', async () => {
+    const description = 'One\nTwo\nThree\nFour'
+    const reasonOf = (lines: number) =>
+      Array.from({ length: lines }, (_, index) => `Line${index}`).join('\n')
+    const withLines = (lines: number) => written(stated({ reason: reasonOf(lines) }, description))
+    // The shortest reason that takes a second page: 5 lines fit on one, 45 do not.
+    let [fitting, tooLong] = [5, 45]
+    while (tooLong - fitting > 1) {
+      const middle = Math.floor((fitting + tooLong) / 2)
+      if ((await withLines(middle)).getPageCount() === 3) fitting = middle
+      else tooLong = middle
+    }
+    const pdf = await withLines(tooLong)
+    expect(pdf.getPageCount()).toBe(4)
+    const yOn = (index: number, text: string) =>
+      placesOf(pdf, pdf.getPage(index)).find((place) => place.text === text)?.y ?? 0
+    // A text stands 3 points above its line; the frame closes 12 points under the last line.
+    const roomLeft = yOn(2, 'Four') - 3 - (54 + 12)
+    const signedHeight = 792 - 54 - (yOn(3, 'Email:') - 3)
+    expect(signedHeight).toBeGreaterThan(roomLeft)
+  })
+
+  it('gives the phone extension a short line, and the email most of the line they share', async () => {
+    const pdf = await written(stated())
+    const places = placesOf(pdf, pdf.getPage(2))
+    const start = (text: string) => places.find((place) => place.text === text)?.x ?? 0
+    expect(start('Email:') - start('Extension:')).toBeLessThan(160)
+    expect(start('Amount:')).toBeGreaterThan(start('Email:'))
+  })
+
+  it('draws 5 lines for a reason and 3 across the frame for a description, however short they are', async () => {
+    const pdf = await written(stated())
+    const content = streamsOf(pdf, pdf.getPage(2)).map(decoded).join('\n')
+    const across = [...content.matchAll(/^54 ([\d.]+) m\n558 \1 l$/gm)]
+    // Under the opening paragraph, then the 5 of the reason and the 3 of the description.
+    expect(across).toHaveLength(9)
+  })
+
+  it('heads its column of names Payee, and no other section', async () => {
+    const pdf = await written(stated())
+    expect(textsOf(pdf, pdf.getPage(1))).not.toContain('Name')
+    const other = await written(await reportOf('Air Canada'))
+    const sectionPage = other.getPage(1)
+    expect(textsOf(other, sectionPage)).toContain('Name')
+    expect(textsOf(other, sectionPage)).not.toContain('Payee')
+  })
+
+  it('justifies the paragraph that opens it: each of its words on its own, its last line as it is', async () => {
+    const pdf = await written(stated())
+    const places = placesOf(pdf, pdf.getPage(2))
+    const first = places.find(({ text }) => text === 'Original')
+    const line = places.filter(({ y }) => y === first?.y)
+    expect(line.map(({ text }) => text).slice(0, 3)).toEqual(['Original', 'invoices', 'on'])
+    expect(
+      places.some(({ text }) => text === 'clearly indicated on the substituting support.'),
+    ).toBe(true)
+  })
+
+  it('has a section page naming who was paid and the expense, and a stamp naming the expense', async () => {
+    const pdf = await written(stated())
+    expect(textsOf(pdf, pdf.getPage(1))).toEqual(
+      expect.arrayContaining([
+        'Missing receipt authorizations',
+        'Payee',
+        'M1',
+        'Taxis Parisiens',
+        '3',
+        'Taxi from CDG to the hotel',
+      ]),
+    )
+    expect(stampedTextsOf(pdf, pdf.getPage(2))).toContain(
+      'M1 · Expense 1: Taxi from CDG to the hotel · 3 / 3',
+    )
+  })
+
+  it('is linked from the cover and from its section page, and links back to its expense', async () => {
+    const pdf = await written(stated())
+    expect(textsOf(pdf, pdf.getPage(0))).toEqual(
+      expect.arrayContaining(['Missing receipt', 'Paid in cash']),
+    )
+    expect(linksOf(pdf, pdf.getPage(0)).map(({ to }) => to)).toEqual([3])
+    expect(linksOf(pdf, pdf.getPage(1)).map(({ to }) => to)).toEqual(expect.arrayContaining([3, 1]))
+    expect(linksOf(pdf, pdf.getPage(2)).map(({ to }) => to)).toEqual([1])
+  })
+
+  it('never cuts a long reason or description: it continues, the signature under what is signed', async () => {
+    const reason = Array.from({ length: 80 }, (_, index) => `Reason${index}`).join(' and then ')
+    const description = Array.from({ length: 200 }, (_, index) => `Attendee${index}`).join(', ')
+    const pdf = await written(stated({ reason }, description))
+    const isStamped = (page: PDFPage) =>
+      stampedTextsOf(pdf, page).some((text) => text.startsWith('M1 ·'))
+    const pages = pdf.getPages().filter(isStamped)
+    expect(pages.length).toBeGreaterThan(1)
+    const all = pages.flatMap((page) => textsOf(pdf, page)).join(' ')
+    expect(all).toContain('Reason79')
+    expect(all).toContain('Attendee199')
+    const last = pages.at(-1) as PDFPage
+    const signed = textsOf(pdf, last)
+    expect(signed.join(' ')).toContain(wording[5])
+    for (const text of ['Signature of Claimant:', 'Printed Name:', 'Title:', 'Email:']) {
+      expect(signed).toContain(text)
+    }
+    pages.forEach((page, index) => {
+      expect(placesOf(pdf, page).every(({ y }) => y >= 54 || y < 40)).toBe(true)
+      expect(index === 0 || !textsOf(pdf, page).includes('EXPLANATORY NOTE')).toBe(true)
+    })
+  })
+
+  it('keeps the line breaks of a reason and a description, and cuts no word too long for a line', async () => {
+    const word = 'x'.repeat(200)
+    const pdf = await written(stated({ reason: 'First line\nSecond line' }, `One\n${word}\nThree`))
+    const texts = textsOf(pdf, pdf.getPage(2))
+    expect(texts).toEqual(expect.arrayContaining(['First line', 'Second line', 'One', 'Three']))
+    expect(texts.join('')).toContain(word)
+  })
+
+  it('starts a long description next to its name and goes on across the frame', async () => {
+    const description = Array.from({ length: 30 }, (_, index) => `Attendee${index}`).join(' ')
+    const pdf = await written(stated({}, description))
+    const places = placesOf(pdf, pdf.getPage(2))
+    const named = places.find(({ text }) => text === 'Description of Expense(s):')
+    const first = places.find(({ text }) => text.startsWith('Attendee0'))
+    const next = places.find(({ text }) => text.includes('Attendee29'))
+    expect(first?.y).toBe(named?.y)
+    expect(next?.x).toBeLessThan(first?.x ?? 0)
+    expect(next?.y).toBeLessThan(first?.y ?? 0)
+  })
+})
+
+describe('an expense paid in cash', () => {
+  it('says Paid in cash on the cover, no link and no section page for it', async () => {
+    const receipt = new Document(Kind.receipt, 'taxi.png', png)
+    const report = new Report({
+      claimantName: 'Zoë Łukasiewicz',
+      position: 'Faculty',
+      email: 'zoe@mcmaster.ca',
+      purpose: 'ICSE 2026',
+      accountName: '20-123-456',
+    }).afterAdding(
+      new Expense({
+        date: new CalendarDate(2026, 10, 3),
+        description: 'Taxi',
+        claimedAmount: new Amount(5500),
+        receipts: [receipt],
+        isPaidInCash: true,
+      }),
+    )
+    const pdf = await written(report)
+    const cover = pdf.getPage(0)
+    expect(textsOf(pdf, cover)).toEqual(expect.arrayContaining(['Receipt', 'Paid in cash']))
+    expect(pdf.getPageCount()).toBe(3)
+    expect(linksOf(pdf, cover).map(({ to }) => to)).toEqual([3])
+  })
+})
+
+describe('justified', () => {
+  it('spreads the words of a line, the first starting it and the last ending it, the spaces alike', async () => {
+    const pdf = await PDFDocument.create()
+    const font = await pdf.embedFont(StandardFonts.Helvetica)
+    const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+    const widthOf = (text: string, of = font) => of.widthOfTextAtSize(text, 10)
+    const placed = justified(
+      [
+        { text: 'one', font: bold },
+        { text: 'two three', font },
+      ],
+      300,
+    )
+    expect(placed.map(({ text }) => text)).toEqual(['one', 'two', 'three'])
+    expect(placed.map(({ font: used }) => used)).toEqual([bold, font, font])
+    const [one, two, three] = placed
+    expect(one?.offset).toBe(0)
+    expect((three?.offset ?? 0) + widthOf('three')).toBeCloseTo(300, 5)
+    expect((two?.offset ?? 0) - widthOf('one', bold)).toBeCloseTo(
+      (three?.offset ?? 0) - (two?.offset ?? 0) - widthOf('two'),
+      5,
+    )
+  })
+
+  it('starts a line of one word', async () => {
+    const pdf = await PDFDocument.create()
+    const font = await pdf.embedFont(StandardFonts.Helvetica)
+    expect(justified([{ text: 'one', font }], 300).map(({ offset }) => offset)).toEqual([0])
   })
 })
 

@@ -96,7 +96,7 @@ the template's fields and its table, so that nothing else needs filling in.
   | 1 | 2026-10-03 | Air Canada, YYZ–CDG return | EUR 640.00 | $1,012.35 | ☐ |
   | | | *Receipt ↗ · Statement ↗* | | | |
   | 2 | 2026-10-05 | Taxi, CDG–hotel | EUR 55.00 | | ☐ |
-  | | | *Receipt ↗ · cash* | | | |
+  | | | *Receipt ↗ · Paid in cash* | | | |
   | 3 | 2026-10-05 | Per diem, international: breakfast, dinner | USD 86.10 | | ☐ |
   | | | *Not claimed: lunch (provided by the conference)* | | | |
   | 4 | 2026-10-06 | Per diem, domestic: breakfast, lunch | | $55.80 | ☐ |
@@ -113,8 +113,8 @@ the template's fields and its table, so that nothing else needs filling in.
   none, McSCert working it out from the foreign amount. The supporting documents are
   the expense's documents, in grey, separated by a middle dot, in the order of
   the report document, each called by its kind whatever its name, *Receipt*,
-  *Missing receipt* or *Statement*, followed by the arrow of a link, and *cash*
-  for an expense paid in cash. They run from under
+  *Missing receipt* or *Statement*, followed by the arrow of a link, and *Paid in
+  cash* for an expense paid in cash. They run from under
   the description to the claimed amount, and on to the next line when they
   do not fit. *Entered* is an empty box, a form field that McSCert's
   administrative staff tick on screen, or by hand on a printed copy, once
@@ -153,7 +153,8 @@ Pages are the pages of the report document. The expenses a document
 supports are named by their description, one per line, a description longer
 than 30 characters cut to its first 30 followed by an ellipsis, as in the
 stamp. Missing receipt authorizations
-have no name: the column shows the expense's description. The Expenses column
+have no name: the column, headed *Payee*, shows who was paid, and the Expenses
+column names the expense, as for any other document. The Expenses column
 is left out of the section of additional documents. Of a business travel,
 that section page splits its table in two subsections, each under its
 subheading and with its own header: *Travel justifications*, then
@@ -167,41 +168,54 @@ stamped as one, and the section's documents start after the last of them.
 ## Missing receipt authorization
 
 One per expense with a missing receipt, which reproduces McMaster's Missing
-Receipt Authorization Form, filled in, on one page when it fits. Under the
-McSCert logo:
+Receipt Authorization Form, filled in, on one page when it fits. Its text and
+lines are black. A frame runs across the page, within its margins, and rules
+across the frame divide it in four parts. On one page, the frame runs down to the
+bottom margin, the height left over shared among the gaps and the lines:
 
-> **Missing Receipt Authorization Form**
->
-> **Original invoices** on company letterhead or official receipts are
-> required for reimbursements. Where the original invoice or receipt is not
-> issued or lost, then a copy of the official invoice or receipt or a credit
-> card statement will be accepted as a substitute with a brief explanation and
-> notation of "original lost" clearly indicated on the substituting support.
->
-> **EXPLANATORY NOTE**
->
-> Please accept this as proof of expenditure for the missing **original**
-> receipt.
+1. The McMaster logo, on the left; level with its bottom, centred, bold and
+   underlined, *Missing Receipt Authorization Form*; then, justified:
 
-Then the fields, each on its line:
+   > **Original invoices** on company letterhead or official receipts are
+   > required for reimbursements. Where the original invoice or receipt is not
+   > issued or lost, then a copy of the official invoice or receipt or a credit
+   > card statement will be accepted as a substitute with a brief explanation and
+   > notation of "original lost" clearly indicated on the substituting support.
 
-| Field | Written |
-|---|---|
-| Reason for missing original receipt or boarding pass(es) | The expense's reason |
-| Paid to | The expense's *paid to* |
-| Dated | The expense's date |
-| Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses, or stands alone when the expense has no claimed amount |
-| Description of Expense(s) | The expense's description |
+2. Centred and bold, *EXPLANATORY NOTE*; then:
 
-Then, in bold: *I certify that this expense has not and will not be claimed
-for reimbursement from other sources or institutions.* and the lines
-*Signature of Claimant* (left blank), *Printed Name* (the claimant), *Title*
-(the position), *Extension* (from the report, blank when not given) and
-*Email* (the claimant's).
+   > Please accept this as proof of expenditure for the missing **original**
+   > receipt.
+
+   Then *Reason for missing original receipt or boarding pass(es):*, and its
+   lines.
+3. *Paid to:*, then *Dated:* and *Amount:* on one line, then *Description of
+   Expense(s):*, its first line next to it.
+4. In bold: *I certify that this expense has not and will not be claimed for
+   reimbursement from other sources or institutions.* Then *Signature of
+   Claimant:*, *Printed Name:* and *Title:*, their names ending at the same
+   place, then *Extension:* and *Email:* on one line.
+
+| Field | Written | Lines, at least |
+|---|---|---|
+| Reason for missing original receipt or boarding pass(es) | The expense's reason | 5, across the frame |
+| Paid to | The expense's *paid to* | 1 |
+| Dated | The expense's date | 1 |
+| Amount | The claimed amount; for an expense paid in another currency, the foreign amount follows in parentheses, or stands alone when the expense has no claimed amount; each names its currency, as *CAD 55.00 (EUR 35.00)* | 1 |
+| Description of Expense(s) | The expense's description | One next to its name, then 3 across the frame |
+| Signature of Claimant | Left blank | 1 |
+| Printed Name | The claimant | 1 |
+| Title | The expense's job title | 1 |
+| Extension | The expense's phone extension, blank when not given; a short line, the email taking the rest | 1 |
+| Email | The claimant's | 1 |
+
+Each value is written in bold, standing on a line drawn to the end of its place. A
+line a value leaves empty is still drawn.
 
 A field's value wraps over as many lines as it needs: a reason, a payee or a
 description, a long list of meal attendees included, is never cut. When the
-form no longer fits a page, it continues on the next one, and the
+form no longer fits a page, its frame closes there and it continues on the next
+one in a frame of its own, and the
 certification and the signature lines stay together on its last page, so
 that what is signed is under the signature. The form's label and stamp cover
 all its pages.
@@ -249,7 +263,7 @@ label of their row already showing where they go.
 | Stamp | The label of an additional document, which has no expense to go back to | The document's row on its section page |
 
 Going to a row opens the page that holds it, with the row at the top of the
-window. *cash*, a document's name and page numbers in the stamp are not links. A link changes
+window. *Paid in cash*, a document's name and page numbers in the stamp are not links. A link changes
 nothing on a printed copy, where the stamp does its work.
 
 ## Text
@@ -266,8 +280,9 @@ names included, is a finding at the Review step
 
 The colours are those of the McMaster palette: maroon titles and table
 headers, grey secondary text and rules. The logo is the McSCert
-logo, in colour, as supplied, on the cover, on section pages and on missing
-receipt authorizations.
+logo, in colour, as supplied, on the cover and on section pages. A missing
+receipt authorization, as McMaster's form, is black, under the McMaster logo, in
+colour.
 
 ## Properties
 

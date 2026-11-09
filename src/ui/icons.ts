@@ -17,5 +17,8 @@ export const trashCan = icon(
   '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
 )
 
+/** A cross: Take back. */
+export const cross = icon('<path d="M6 6l12 12"/><path d="M18 6L6 18"/>')
+
 /** A pen: Change. */
 export const pen = icon('<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>')

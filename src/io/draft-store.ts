@@ -5,6 +5,7 @@ import { Document } from '../domain/document.ts'
 import { Expense } from '../domain/expense.ts'
 import { Kind } from '../domain/kind.ts'
 import { Meal } from '../domain/meal.ts'
+import { MissingReceipt } from '../domain/missing-receipt.ts'
 import { PerDiem } from '../domain/per-diem.ts'
 import { positions, Report } from '../domain/report.ts'
 import { isEmailAddress, textOrAbsent } from '../domain/text.ts'
@@ -30,6 +31,14 @@ const draftStore = 'draft'
 const documentStore = 'documents'
 const draftKey = 'report'
 
+/** What IndexedDB keeps of a missing receipt. */
+interface MissingReceiptRecord {
+  readonly reason: string
+  readonly paidTo: string
+  readonly jobTitle: string
+  readonly phoneExtension?: string
+}
+
 /** What IndexedDB keeps of an expense: its documents by their identifiers. */
 interface ExpenseRecord {
   readonly date?: string
@@ -40,6 +49,8 @@ interface ExpenseRecord {
   readonly currency?: string
   readonly receipts: readonly string[]
   readonly bankStatements: readonly string[]
+  readonly isPaidInCash?: boolean
+  readonly missingReceipt?: MissingReceiptRecord
 }
 
 /**
@@ -268,6 +279,23 @@ class IndexedDraftStore implements DraftStore {
   }
 }
 
+function missingReceiptRecordOf(missing: MissingReceipt): MissingReceiptRecord {
+  const { reason, paidTo, jobTitle, phoneExtension } = missing
+  return { reason, paidTo, jobTitle, ...(phoneExtension === undefined ? {} : { phoneExtension }) }
+}
+
+/** The missing receipt a record holds; none unless it holds all that one must. */
+function missingReceiptOf(record: unknown): MissingReceipt | undefined {
+  if (typeof record !== 'object' || record === null) return undefined
+  const fields = record as Record<string, unknown>
+  const reason = text(fields.reason)
+  const paidTo = text(fields.paidTo)
+  const jobTitle = text(fields.jobTitle)
+  return reason === undefined || paidTo === undefined || jobTitle === undefined
+    ? undefined
+    : new MissingReceipt({ reason, paidTo, jobTitle, phoneExtension: text(fields.phoneExtension) })
+}
+
 /** What IndexedDB keeps of a report, its documents by the identifiers its transaction chose. */
 function recordOf(
   report: Report,
@@ -283,6 +311,10 @@ function recordOf(
     ...(expense.currency === undefined ? {} : { currency: expense.currency.code }),
     receipts: expense.receipts.map(identifier),
     bankStatements: expense.bankStatements.map(identifier),
+    isPaidInCash: expense.isPaidInCash,
+    ...(expense.missingReceipt === undefined
+      ? {}
+      : { missingReceipt: missingReceiptRecordOf(expense.missingReceipt) }),
   }))
   const perDiems: PerDiemRecord[] = report.perDiems.map((perDiem) => ({
     date: perDiem.date.toString(),
@@ -349,6 +381,8 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       string,
       unknown
     >
+    const receipts = documentsAmong(expense.receipts, Kind.receipt)
+    const bankStatements = documentsAmong(expense.bankStatements, Kind.bankStatement)
     return new Expense({
       date: date(expense.date),
       description: text(expense.description),
@@ -356,8 +390,10 @@ function reportOf(record: unknown, documents: ReadonlyMap<string, Document>): Re
       isPaidInAnotherCurrency: expense.isPaidInAnotherCurrency === true,
       foreignAmount: amountOf(expense.foreignAmount),
       currency: typeof expense.currency === 'string' ? Currency.parse(expense.currency) : undefined,
-      receipts: documentsAmong(expense.receipts, Kind.receipt),
-      bankStatements: documentsAmong(expense.bankStatements, Kind.bankStatement),
+      receipts,
+      bankStatements,
+      isPaidInCash: expense.isPaidInCash === true && bankStatements.length === 0,
+      missingReceipt: receipts.length === 0 ? missingReceiptOf(expense.missingReceipt) : undefined,
     })
   })
   const isBusinessTravel = fields.isBusinessTravel === true

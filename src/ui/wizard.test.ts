@@ -1187,6 +1187,392 @@ describe('the Expenses step', () => {
   })
 })
 
+describe('an expense paid in cash', () => {
+  const offer = () => button('[data-state="bankStatements"]')
+  const takeBack = () => button('[data-take-back="bankStatements"]')
+  const lastExpense = () => kept.at(-1)?.expenses.at(-1)
+
+  async function paidInCash(): Promise<void> {
+    fillReport()
+    proceed()
+    openExpense()
+    type('date', '2026-10-05')
+    type('description', 'Taxi')
+    type('claimedAmount', '55')
+    await add('receipts', 'taxi.pdf')
+    offer()?.click()
+    await vi.waitFor(() => expect(takeBack()).not.toBeNull())
+  }
+
+  it('takes the place of the bank statement, and no bank statement is required', async () => {
+    await paidInCash()
+    expect(lastExpense()?.isPaidInCash).toBe(true)
+    expect(root.querySelector('[data-field="bankStatements"] .stated')?.textContent).toContain(
+      'Paid in cash',
+    )
+    expect(root.querySelector('input[name="bankStatements"]')).toBeNull()
+    expect(root.querySelector('[data-field="bankStatements"] .field-name')).toBeNull()
+    expect(offer()).toBeNull()
+    expect(takeBack()?.getAttribute('aria-label')).toBe('Take back: Paid in cash')
+    expect(takeBack()?.querySelector('svg')).not.toBeNull()
+    expect(document.activeElement).toBe(takeBack())
+    proceed()
+    expect(root.querySelector('h2')?.textContent).toBe('Additional documents')
+  })
+
+  it('shows in the list of expenses', async () => {
+    await paidInCash()
+    button('[data-action="done"]')?.click()
+    const support = root.querySelector('table.expense-list tr.supporting')
+    expect(support?.textContent?.replace(/\s+/g, ' ').trim()).toBe('taxi · Paid in cash')
+    expect(support?.querySelector('.lacks')).toBeNull()
+    expect(continueButton()?.disabled).toBe(false)
+  })
+
+  it('shows on the Review step', async () => {
+    await paidInCash()
+    proceed()
+    proceed()
+    const support = root.querySelector('table.expenses tr.supporting')
+    expect(support?.textContent?.replace(/\s+/g, ' ').trim()).toBe('taxi · Paid in cash')
+    expect([...(support?.querySelectorAll('a') ?? [])].map((link) => link.textContent)).toEqual([
+      'taxi',
+    ])
+  })
+
+  it('is taken back with its cross: the bank statement is asked for again and can be added', async () => {
+    await paidInCash()
+    takeBack()?.click()
+    expect(lastExpense()?.isPaidInCash).toBe(false)
+    expect(takeBack()).toBeNull()
+    expect(document.activeElement).toBe(offer())
+    button('[data-action="done"]')?.click()
+    expect(root.querySelector('.lacks')?.textContent).toContain('Bank statement is required.')
+    button('[data-change]')?.click()
+    await add('bankStatements', 'statement.pdf')
+    expect(lastExpense()?.bankStatements.map((document) => document.name)).toEqual(['statement'])
+    expect(lastExpense()?.isPaidInCash).toBe(false)
+  })
+
+  it('is offered only while the bank statement holds no document', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    expect(offer()?.textContent).toBe('Paid in cash')
+    await add('bankStatements', 'statement.pdf')
+    expect(offer()).toBeNull()
+    button('[data-remove="bankStatements"]')?.click()
+    expect(offer()).not.toBeNull()
+  })
+
+  it('is not offered while a file is being added', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    const finish = giveSlowly('bankStatements', 'statement.pdf')
+    expect(offer()?.disabled).toBe(true)
+    finish()
+    await vi.waitFor(() => expect(root.textContent).toContain('statement.pdf'))
+    expect(offer()).toBeNull()
+  })
+
+  it('is undone by Discard, as any change to the expense', async () => {
+    await paidInCash()
+    button('[data-action="done"]')?.click()
+    button('[data-change]')?.click()
+    takeBack()?.click()
+    expect(lastExpense()?.isPaidInCash).toBe(false)
+    button('[data-action="discard"]')?.click()
+    expect(lastExpense()?.isPaidInCash).toBe(true)
+  })
+})
+
+describe('a missing receipt', () => {
+  const offer = () => button('[data-state="receipts"]')
+  const takeBack = () => button('[data-take-back="receipts"]')
+  const changeIt = () => button('[data-change-stated="receipts"]')
+  const lastExpense = () => kept.at(-1)?.expenses.at(-1)
+  const dialog = () => document.querySelector('dialog.missing-receipt')
+  const done = () => dialog()?.querySelector<HTMLButtonElement>('[data-answer="done"]')
+  const cancel = () => dialog()?.querySelector<HTMLButtonElement>('[data-answer="cancel"]')
+  const fieldOfDialog = (name: string) =>
+    dialog()?.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`)
+
+  function typeInDialog(name: string, value: string): void {
+    const field = fieldOfDialog(name)
+    if (field === null || field === undefined) throw new TypeError(`No field ${name}`)
+    field.value = value
+    field.dispatchEvent(new Event('input', { bubbles: true }))
+  }
+
+  async function openDialog(from = offer()): Promise<void> {
+    from?.click()
+    await vi.waitFor(() => expect(dialog()).not.toBeNull())
+  }
+
+  async function answerDialog(answering: () => HTMLButtonElement | null | undefined) {
+    answering()?.click()
+    await vi.waitFor(() => expect(dialog()).toBeNull())
+  }
+
+  async function state(paidTo = 'Taxis Parisiens', jobTitle = 'PhD Student'): Promise<void> {
+    await openDialog()
+    typeInDialog('reasonForMissingReceipt', 'Lost in a taxi')
+    typeInDialog('paidTo', paidTo)
+    typeInDialog('jobTitle', jobTitle)
+    await answerDialog(done)
+    await vi.waitFor(() => expect(takeBack()).not.toBeNull())
+  }
+
+  async function anExpense(description = 'Taxi'): Promise<void> {
+    openExpense()
+    type('date', '2026-10-05')
+    type('description', description)
+    type('claimedAmount', '55')
+    await add('bankStatements', 'statement.pdf')
+  }
+
+  /** Fills the report in, then opens an expense that only lacks its receipt. */
+  async function ready(): Promise<void> {
+    fillReport()
+    proceed()
+    await anExpense()
+  }
+
+  it('is asked in a dialog, Done offered once what is required is filled in', async () => {
+    await ready()
+    expect(offer()?.textContent).toBe('Missing receipt')
+    await openDialog()
+    expect(dialog()?.querySelector('h2')?.textContent).toBe('Missing receipt')
+    expect(dialog()?.querySelector('.notice')?.textContent).toBe(
+      "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it in the final PDF. Accounts Payable may not accept it, and may return the report.",
+    )
+    expect(dialog()?.querySelector('.notice strong')?.textContent).toBe(
+      'Accounts Payable may not accept it, and may return the report.',
+    )
+    expect(
+      [...(dialog()?.querySelectorAll('.field-name') ?? [])].map((name) => name.textContent),
+    ).toEqual([
+      'Reason for missing original receipt *',
+      'Paid to *',
+      'Your job title *',
+      'Phone extension',
+    ])
+    expect(dialog()?.textContent).toContain('E.g., Associate Prof, Research Engineer, PhD Student.')
+    const about = dialog()?.querySelector('fieldset.section')
+    expect(about?.querySelector('legend')?.textContent).toBe(
+      'Additional information on the claimant',
+    )
+    expect(
+      [...(about?.querySelectorAll('input') ?? [])].map((input) => input.getAttribute('name')),
+    ).toEqual(['jobTitle', 'phoneExtension'])
+    expect(done()?.disabled).toBe(true)
+    typeInDialog('reasonForMissingReceipt', 'Lost in a taxi')
+    typeInDialog('paidTo', 'Taxis Parisiens')
+    expect(done()?.disabled).toBe(true)
+    typeInDialog('jobTitle', '  ')
+    expect(done()?.disabled).toBe(true)
+    typeInDialog('jobTitle', 'PhD Student')
+    expect(done()?.disabled).toBe(false)
+    expect(lastExpense()?.missingReceipt).toBeUndefined()
+    await answerDialog(done)
+    await vi.waitFor(() => expect(lastExpense()?.missingReceipt).toBeDefined())
+    expect(lastExpense()?.missingReceipt).toEqual(
+      expect.objectContaining({
+        reason: 'Lost in a taxi',
+        paidTo: 'Taxis Parisiens',
+        jobTitle: 'PhD Student',
+        phoneExtension: undefined,
+      }),
+    )
+  })
+
+  it('takes the place of the receipt, with a pen and a cross, and no receipt is required', async () => {
+    await ready()
+    await state()
+    expect(root.querySelector('[data-field="receipts"] .stated')?.textContent).toContain(
+      'Missing receipt',
+    )
+    expect(root.querySelector('input[name="receipts"]')).toBeNull()
+    expect(root.querySelector('[data-field="receipts"] .field-name')).toBeNull()
+    expect(takeBack()?.getAttribute('aria-label')).toBe('Take back: Missing receipt')
+    expect(changeIt()?.getAttribute('aria-label')).toBe('Change: Missing receipt')
+    expect(document.activeElement).toBe(takeBack())
+    proceed()
+    expect(root.querySelector('h2')?.textContent).toBe('Additional documents')
+  })
+
+  it('leaves the expense as it was with Cancel', async () => {
+    await ready()
+    await openDialog()
+    typeInDialog('reasonForMissingReceipt', 'Lost')
+    await answerDialog(cancel)
+    expect(lastExpense()?.missingReceipt).toBeUndefined()
+    expect(offer()).not.toBeNull()
+    expect(root.querySelector('input[name="receipts"]')).not.toBeNull()
+  })
+
+  it('leaves the expense as it was with Escape', async () => {
+    await ready()
+    await openDialog()
+    typeInDialog('reasonForMissingReceipt', 'Lost')
+    ;(dialog() as HTMLDialogElement).close()
+    await vi.waitFor(() => expect(dialog()).toBeNull())
+    expect(lastExpense()?.missingReceipt).toBeUndefined()
+  })
+
+  it('opens filled in with its pen, and Cancel keeps it as it was', async () => {
+    await ready()
+    await state()
+    await openDialog(changeIt())
+    expect(fieldOfDialog('reasonForMissingReceipt')?.value).toBe('Lost in a taxi')
+    expect(fieldOfDialog('paidTo')?.value).toBe('Taxis Parisiens')
+    expect(fieldOfDialog('jobTitle')?.value).toBe('PhD Student')
+    expect(done()?.disabled).toBe(false)
+    typeInDialog('paidTo', 'Another')
+    await answerDialog(cancel)
+    expect(lastExpense()?.missingReceipt?.paidTo).toBe('Taxis Parisiens')
+    await openDialog(changeIt())
+    typeInDialog('paidTo', 'Taxis <Lyonnais>')
+    typeInDialog('phoneExtension', '24242')
+    await answerDialog(done)
+    await vi.waitFor(() => expect(lastExpense()?.missingReceipt?.paidTo).toBe('Taxis <Lyonnais>'))
+    expect(lastExpense()?.missingReceipt?.phoneExtension).toBe('24242')
+    await vi.waitFor(() => expect(changeIt()).not.toBeNull())
+    await openDialog(changeIt())
+    expect(fieldOfDialog('paidTo')?.value).toBe('Taxis <Lyonnais>')
+    await answerDialog(cancel)
+  })
+
+  it('starts with the job title and the phone extension of the last expense added that has one, changed for its expense only', async () => {
+    await ready()
+    await openDialog()
+    expect(fieldOfDialog('jobTitle')?.value).toBe('')
+    typeInDialog('reasonForMissingReceipt', 'Lost')
+    typeInDialog('paidTo', 'Taxi')
+    typeInDialog('jobTitle', 'Research Engineer')
+    typeInDialog('phoneExtension', '24242')
+    await answerDialog(done)
+    await vi.waitFor(() => expect(takeBack()).not.toBeNull())
+    button('[data-action="done"]')?.click()
+    await anExpense('Bus')
+    await openDialog()
+    expect(fieldOfDialog('reasonForMissingReceipt')?.value).toBe('')
+    expect(fieldOfDialog('paidTo')?.value).toBe('')
+    expect(fieldOfDialog('jobTitle')?.value).toBe('Research Engineer')
+    expect(fieldOfDialog('phoneExtension')?.value).toBe('24242')
+    typeInDialog('reasonForMissingReceipt', 'Lost too')
+    typeInDialog('paidTo', 'Bus')
+    typeInDialog('jobTitle', 'Associate Prof')
+    await answerDialog(done)
+    await vi.waitFor(() => expect(lastExpense()?.missingReceipt?.jobTitle).toBe('Associate Prof'))
+    expect(kept.at(-1)?.expenses[0]?.missingReceipt?.jobTitle).toBe('Research Engineer')
+  })
+
+  it('is taken back with its cross: the receipt is asked for again and can be added', async () => {
+    await ready()
+    await state()
+    takeBack()?.click()
+    expect(lastExpense()?.missingReceipt).toBeUndefined()
+    expect(document.activeElement).toBe(offer())
+    button('[data-action="done"]')?.click()
+    expect(root.querySelector('.lacks')?.textContent).toContain('Receipt is required.')
+    button('[data-change]')?.click()
+    await add('receipts', 'found-it.pdf')
+    expect(lastExpense()?.receipts.map((document) => document.name)).toEqual(['found-it'])
+  })
+
+  it('is offered only while the receipt holds no document, and not while a file is being added', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    const finish = giveSlowly('receipts', 'taxi.pdf')
+    expect(offer()?.disabled).toBe(true)
+    finish()
+    await vi.waitFor(() => expect(root.textContent).toContain('taxi.pdf'))
+    expect(offer()).toBeNull()
+  })
+
+  it('is undone by Discard, as any change to the expense', async () => {
+    await ready()
+    await state()
+    button('[data-action="done"]')?.click()
+    button('[data-change]')?.click()
+    takeBack()?.click()
+    expect(lastExpense()?.missingReceipt).toBeUndefined()
+    button('[data-action="discard"]')?.click()
+    expect(lastExpense()?.missingReceipt?.paidTo).toBe('Taxis Parisiens')
+  })
+
+  it('shows in the list of expenses', async () => {
+    await ready()
+    await state()
+    button('[data-action="done"]')?.click()
+    const support = root.querySelector('table.expense-list tr.supporting')
+    expect(support?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Missing receipt · statement')
+    expect(support?.querySelector('.lacks')).toBeNull()
+  })
+
+  it('shows on the Review step, its section naming who was paid and the expense, without a link', async () => {
+    await ready()
+    await state()
+    proceed()
+    proceed()
+    expect(
+      root.querySelector('table.expenses tr.supporting')?.textContent?.replace(/\s+/g, ' ').trim(),
+    ).toBe('Missing receipt · statement')
+    const heading = [...root.querySelectorAll('h3')].find(
+      (each) => each.textContent === 'Missing receipt authorizations',
+    )
+    const table = heading?.nextElementSibling
+    expect([...(table?.querySelectorAll('th') ?? [])].map((title) => title.textContent)).toEqual([
+      'Label',
+      'Payee',
+      'Expenses',
+    ])
+    expect(
+      [...(table?.querySelectorAll('tbody td') ?? [])].map((cell) => cell.textContent?.trim()),
+    ).toEqual(['M1', 'Taxis Parisiens', 'Taxi'])
+    expect(table?.querySelector('a')).toBeNull()
+  })
+
+  it('reminds the Claimant to sign, once the bank statements are redacted, only for the report saved', async () => {
+    await ready()
+    await state()
+    proceed()
+    proceed()
+    expect(root.textContent).not.toContain('Sign each missing receipt authorization')
+    button('[data-action="save"]')?.click()
+    await vi.waitFor(() => expect(saved).toHaveLength(1))
+    await vi.waitFor(() =>
+      expect(root.textContent).toContain(
+        'Sign each missing receipt authorization, once the bank statements are redacted.',
+      ),
+    )
+  })
+
+  it('reminds the Claimant to sign before submitting, when there is no bank statement', async () => {
+    fillReport()
+    proceed()
+    openExpense()
+    type('date', '2026-10-05')
+    type('description', 'Taxi')
+    type('claimedAmount', '55')
+    button('[data-state="bankStatements"]')?.click()
+    await vi.waitFor(() => expect(button('[data-take-back="bankStatements"]')).not.toBeNull())
+    await state()
+    proceed()
+    proceed()
+    button('[data-action="save"]')?.click()
+    await vi.waitFor(() =>
+      expect(root.textContent).toContain(
+        'Sign each missing receipt authorization, before you submit the report document.',
+      ),
+    )
+    expect(root.textContent).not.toContain('Redact the bank statements')
+  })
+})
+
 describe('Discard', () => {
   const descriptions = () => kept.at(-1)?.expenses.map((expense) => expense.description)
 

@@ -5,6 +5,7 @@ import type { Document } from './document.ts'
 import { Expense } from './expense.ts'
 import { fieldNames, findingsOf } from './findings.ts'
 import { Kind } from './kind.ts'
+import type { MissingReceipt } from './missing-receipt.ts'
 import type { PerDiem } from './per-diem.ts'
 import { type PolicyDocument, policy } from './policy.ts'
 import type { Report } from './report.ts'
@@ -21,11 +22,15 @@ export interface AttachedInformation {
   readonly isAttached: boolean
 }
 
-/** A document supporting an expense on the cover: called by its kind, and a link to it by its label. */
+/**
+ * What stands under an expense on the cover: a document supporting it, called by its kind, and a
+ * link to it by its label; a missing receipt authorization, the same, with no file behind it; or
+ * Paid in cash where its bank statement would be, which is no link.
+ */
 export interface SupportingDocument {
-  readonly label: string
+  readonly label?: string
   readonly name: string
-  readonly document: Document
+  readonly document?: Document
 }
 
 /** A line of the total, in one currency. */
@@ -43,7 +48,7 @@ export interface ExpenseRow {
   readonly description: string
   readonly foreignAmount: string
   readonly claimedAmount: string
-  /** The documents supporting the expense, one per line, in the order of the report document. */
+  /** What supports the expense, in the order of the report document. */
   readonly supportingDocuments: readonly SupportingDocument[]
   /** The per diem of a row that is one; none for an expense. */
   readonly perDiem?: PerDiem
@@ -69,10 +74,9 @@ export interface StampedExpense {
 /** The number of characters of a description a stamp keeps. */
 const stampedDescriptionLength = 30
 
-/** A document of a section: its label, and the expenses it supports. */
-export interface LabelledDocument {
+/** What a section holds of a document or of a form: its label, and the expenses it supports. */
+interface Labelled {
   readonly label: string
-  readonly document: Document
   /** The numbers of the expenses the document supports. */
   readonly expenseNumbers: readonly number[]
   /** The expenses it supports, as its stamp names them. */
@@ -82,6 +86,46 @@ export interface LabelledDocument {
    * ellipsis. A document that supports expenses is stamped with them instead.
    */
   readonly stampedName?: string
+}
+
+/** A document of a section. */
+export interface LabelledDocument extends Labelled {
+  readonly document: Document
+}
+
+/** What a missing receipt authorization writes, each field as the form names it. */
+export interface MissingReceiptAuthorization {
+  readonly reason: string
+  readonly paidTo: string
+  readonly dated: string
+  /**
+   * The claimed amount; for an expense paid in another currency, the foreign amount follows in
+   * parentheses, or stands alone when the expense has no claimed amount. Each names its currency.
+   */
+  readonly amount: string
+  readonly description: string
+  readonly printedName: string
+  readonly title: string
+  /** Blank when not given. */
+  readonly extension: string
+  readonly email: string
+}
+
+/** A missing receipt authorization of its section: written for one expense, it has no name. */
+export interface LabelledAuthorization extends Labelled {
+  readonly expense: Expense
+  readonly authorization: MissingReceiptAuthorization
+}
+
+/** What a section holds: a document the Claimant added, or a form the system writes. */
+export type SectionEntry = LabelledDocument | LabelledAuthorization
+
+/**
+ * What a section page calls what it holds: a document by its name, a missing receipt authorization
+ * by who was paid.
+ */
+export function nameOf(entry: SectionEntry): string {
+  return 'document' in entry ? entry.document.name : entry.authorization.paidTo
 }
 
 /** A part of a section page, its documents under a subheading of their own. */
@@ -94,10 +138,12 @@ export interface Subsection {
 export interface Section {
   readonly kind: Kind
   readonly title: string
+  /** What its section page heads the column of names with: Name, or Payee for a form, which has none. */
+  readonly nameColumn: string
   /** Whether its section page lists the expenses each document supports. */
   readonly listsExpenses: boolean
   /** Its documents, in order. */
-  readonly documents: readonly LabelledDocument[]
+  readonly documents: readonly SectionEntry[]
   /** How its section page splits its documents under subheadings; none when it does not. */
   readonly subsections: readonly Subsection[]
 }
@@ -152,11 +198,14 @@ export function layoutOf(report: Report): Layout {
   const sections = [
     sectionOfAdditionalDocuments(report),
     sectionOf(Kind.receipt, numbered),
+    sectionOfAuthorizations(complete, numbered),
     sectionOf(Kind.bankStatement, numbered),
   ].filter((section) => section.documents.length > 0)
-  const labels = new Map(
+  const labels = new Map<Document | Expense, string>(
     sections.flatMap((section) =>
-      section.documents.map((entry) => [entry.document, entry.label] as const),
+      section.documents.map(
+        (entry) => ['document' in entry ? entry.document : entry.expense, entry.label] as const,
+      ),
     ),
   )
   return {
@@ -329,7 +378,65 @@ function sectionOf(kind: Kind, expenses: readonly NumberedExpense[]): Section {
     expenseNumbers: stamped.map((expense) => expense.number),
     expenses: stamped,
   }))
-  return { kind, title: kind.plural, listsExpenses: true, documents, subsections: [] }
+  return {
+    kind,
+    title: kind.plural,
+    nameColumn: 'Name',
+    listsExpenses: true,
+    documents,
+    subsections: [],
+  }
+}
+
+/** The section of the missing receipt authorizations: one per expense with a missing receipt. */
+function sectionOfAuthorizations(
+  complete: Complete,
+  expenses: readonly NumberedExpense[],
+): Section {
+  const kind = Kind.missingReceiptAuthorization
+  const documents = expenses
+    .flatMap(({ expense, number }) =>
+      expense.missingReceipt === undefined
+        ? []
+        : [{ expense, number, missing: expense.missingReceipt }],
+    )
+    .map(({ expense, number, missing }, rank) => ({
+      label: `${kind.letter}${rank + 1}`,
+      expense,
+      expenseNumbers: [number],
+      expenses: [stampedExpenseOf(expense, number)],
+      authorization: authorizationOf(complete, expense, missing),
+    }))
+  return {
+    kind,
+    title: kind.plural,
+    nameColumn: 'Payee',
+    listsExpenses: true,
+    documents,
+    subsections: [],
+  }
+}
+
+/** What the missing receipt authorization of an expense writes, filled in from the report. */
+function authorizationOf(
+  complete: Complete,
+  expense: Expense,
+  missing: MissingReceipt,
+): MissingReceiptAuthorization {
+  const claimed = expense.claimedAmount && `CAD ${expense.claimedAmount.grouped}`
+  const foreign = expense.foreignAmountText
+  const inParentheses = claimed !== undefined && foreign !== '' ? ` (${foreign})` : ''
+  return {
+    reason: missing.reason,
+    paidTo: missing.paidTo,
+    dated: expense.date?.toString() ?? '',
+    amount: `${claimed ?? foreign}${inParentheses}`,
+    description: expense.description ?? '',
+    printedName: complete.claimantName,
+    title: missing.jobTitle,
+    extension: missing.phoneExtension ?? '',
+    email: complete.email,
+  }
 }
 
 /**
@@ -356,7 +463,14 @@ function sectionOfAdditionalDocuments(report: Report): Section {
         { title: subheadings.others, documents: documents.slice(count) },
       ].filter((subsection) => subsection.documents.length > 0)
     : []
-  return { kind, title: kind.plural, listsExpenses: false, documents, subsections }
+  return {
+    kind,
+    title: kind.plural,
+    nameColumn: 'Name',
+    listsExpenses: false,
+    documents,
+    subsections,
+  }
 }
 
 /** Expense 1: and the first 30 characters of its description, an ellipsis when it is longer. */
@@ -385,12 +499,29 @@ function attachedInformationOf(kind: Kind, sections: readonly Section[]): Attach
   return { kind, isAttached }
 }
 
-function rowOf(expense: Expense, number: number, labels: Map<Document, string>): ExpenseRow {
-  const supporting = [...expense.receipts, ...expense.bankStatements].map((document) => ({
+function rowOf(
+  expense: Expense,
+  number: number,
+  labels: Map<Document | Expense, string>,
+): ExpenseRow {
+  const linkOf = (document: Document): SupportingDocument => ({
     label: labels.get(document) ?? '',
     name: document.kind.coverName,
     document,
-  }))
+  })
+  const supporting = [
+    ...expense.receipts.map(linkOf),
+    ...(expense.missingReceipt === undefined
+      ? []
+      : [
+          {
+            label: labels.get(expense) ?? '',
+            name: Kind.missingReceiptAuthorization.coverName,
+          },
+        ]),
+    ...expense.bankStatements.map(linkOf),
+    ...(expense.isPaidInCash ? [{ name: fieldNames.paidInCash }] : []),
+  ]
   return {
     number,
     date: expense.date?.toString() ?? '',

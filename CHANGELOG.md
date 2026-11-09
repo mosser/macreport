@@ -6,6 +6,23 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Paid in cash**, offered under an empty Bank statement, replaces the need for one.
+  The expense list, the Review step and the cover of the report document all say
+  *Paid in cash*. Its cross takes it back, and the bank statement is asked for again.
+- **Missing receipt**, offered under an empty Receipt, opens a dialog that says the form
+  will be written on your behalf, that you will have to sign it in the final PDF, and that Accounts Payable
+  may not accept it and may return the report. It asks for the reason, who was paid, the
+  job title and, optionally, the phone extension. The job title and the phone extension
+  are prefilled from the last missing receipt of the report. The expense list, the Review
+  step and the cover say *Missing receipt*; its pen changes what was stated, and its
+  cross takes it back so that a receipt can be added.
+- The report document has a **Missing receipt authorizations** section: one form per
+  missing receipt, laid out as McMaster's form, under McMaster's logo, filled in from the
+  report, its signature left blank. The Review step reminds you to sign each one, once
+  the bank statements are redacted.
+
 ## [0.4.0] - 2026-11-08
 
 ### Added

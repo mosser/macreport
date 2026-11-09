@@ -2,6 +2,7 @@ import type { CalendarDate } from './calendar-date.ts'
 import type { Document } from './document.ts'
 import type { Expense } from './expense.ts'
 import { Kind } from './kind.ts'
+import type { MissingReceipt } from './missing-receipt.ts'
 import { PerDiem, type PerDiemFields } from './per-diem.ts'
 import { isEmailAddress } from './text.ts'
 
@@ -314,6 +315,14 @@ export class Report {
         ? report
         : report.afterRenaming(current, document.name)
     }, replaced)
+  }
+
+  /**
+   * The missing receipt of the last expense added that has one: another missing receipt starts with
+   * its job title and its phone extension.
+   */
+  get lastMissingReceipt(): MissingReceipt | undefined {
+    return this.expenses.findLast((expense) => expense.missingReceipt !== undefined)?.missingReceipt
   }
 
   /** The receipts and bank statements that leave the report with an expense removed. */

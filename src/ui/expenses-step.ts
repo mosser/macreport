@@ -15,6 +15,7 @@ import {
 import { Kind } from '../domain/kind.ts'
 import { mealsNotClaimedOf, perDiemDescriptionsOf } from '../domain/layout.ts'
 import { Meal } from '../domain/meal.ts'
+import type { MissingReceiptFields } from '../domain/missing-receipt.ts'
 import type { PerDiem } from '../domain/per-diem.ts'
 import type { Report } from '../domain/report.ts'
 import { textOrAbsent } from '../domain/text.ts'
@@ -24,11 +25,13 @@ import {
   documentFieldOf,
   listenToDocumentFields,
   type ReadFile,
+  type StatedInstead,
 } from './document-field.ts'
-import { type DocumentLinks, type LinkOf, linksAnew, namesOf } from './document-link.ts'
+import { type DocumentLinks, type LinkOf, linksAnew, supportOf } from './document-link.ts'
 import { fieldName, fieldRule, latestDate } from './field.ts'
 import { html, type Markup } from './html.ts'
 import { pen, trashCan } from './icons.ts'
+import { statedMissingReceipt } from './missing-receipt-dialog.ts'
 import type { Context, Step } from './step.ts'
 
 /**
@@ -76,7 +79,9 @@ function afterChanging(
 
 /**
  * The receipt and the bank statement of the expense of a rank: one each, added from a file or
- * chosen among those already in the report, and taken out of this expense only.
+ * chosen among those already in the report, and taken out of this expense only; a missing receipt
+ * and Paid in cash, stated in their place. The dialog of an expense without a missing receipt
+ * starts with the job title and the phone extension of the last expense added that has one.
  */
 function documentFieldsOf(index: number): readonly DocumentField[] {
   const expenseIn = (report: Report) => report.expenses[index] ?? new Expense()
@@ -85,6 +90,7 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
     kind: Kind,
     documentsOf: (expense: Expense) => readonly Document[],
     changes: (documents: readonly Document[]) => ExpenseFields,
+    statedInstead?: StatedInstead,
   ): DocumentField => ({
     field,
     kind,
@@ -98,19 +104,56 @@ function documentFieldsOf(index: number): readonly DocumentField[] {
       report
         .documentsOf(kind)
         .filter((document) => !expenseIn(report).documents.includes(document)),
+    ...(statedInstead === undefined ? {} : { statedInstead }),
   })
+  const changing = (context: Context, changes: ExpenseFields) =>
+    context.change(
+      afterChanging(context.report, index, (expense) => expense.afterChanging(changes)),
+    )
+  const startOf = (report: Report): Partial<MissingReceiptFields> => {
+    const own = expenseIn(report).missingReceipt
+    if (own !== undefined) return own
+    const last = report.lastMissingReceipt
+    return { jobTitle: last?.jobTitle ?? '', phoneExtension: last?.phoneExtension }
+  }
   return [
     fieldOf(
       'receipts',
       Kind.receipt,
       (expense) => expense.receipts,
       (receipts) => ({ receipts }),
+      {
+        wording: fieldNames.missingReceipt,
+        isChangeable: true,
+        isStatedIn: (report) => expenseIn(report).missingReceipt !== undefined,
+        state: async (context, page) => {
+          const missingReceipt = await statedMissingReceipt(page, startOf(context.report))
+          if (missingReceipt === undefined) return false
+          changing(context, { missingReceipt })
+          return true
+        },
+        afterTakingBack: (report) =>
+          afterChanging(report, index, (expense) =>
+            expense.afterChanging({ missingReceipt: undefined }),
+          ),
+      },
     ),
     fieldOf(
       'bankStatements',
       Kind.bankStatement,
       (expense) => expense.bankStatements,
       (bankStatements) => ({ bankStatements }),
+      {
+        wording: fieldNames.paidInCash,
+        isChangeable: false,
+        isStatedIn: (report) => expenseIn(report).isPaidInCash,
+        state: async (context) => {
+          changing(context, { isPaidInCash: true })
+          return true
+        },
+        afterTakingBack: (report) =>
+          afterChanging(report, index, (expense) => expense.afterChanging({ isPaidInCash: false })),
+      },
     ),
   ]
 }
@@ -202,7 +245,7 @@ function formOf(
 function listOf(report: Report, linkOf: LinkOf): Markup {
   const rows = report.expensesByDate.map((expense) => {
     const index = report.expenses.indexOf(expense)
-    const names = namesOf(expense.documents, linkOf)
+    const support = supportOf(expense, linkOf)
     const lacks = lacksOf(report, expense).map((lack) => html`<li>${lack}</li>`)
     const lackList = lacks.length > 0 ? html`<ul class="lacks">${lacks}</ul>` : ''
     return html`<tr class="expense">
@@ -217,7 +260,7 @@ function listOf(report: Report, linkOf: LinkOf): Markup {
             aria-label="Remove" title="Remove">${trashCan}</button>
         </td>
       </tr>
-      <tr class="supporting"><td></td><td colspan="3">${names}${lackList}</td></tr>`
+      <tr class="supporting"><td></td><td colspan="3">${support}${lackList}</td></tr>`
   })
   const table =
     rows.length > 0

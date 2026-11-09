@@ -40,6 +40,12 @@ export const fieldNames = {
   currency: 'Currency',
   receipts: 'Receipt',
   bankStatements: 'Bank statement',
+  paidInCash: 'Paid in cash',
+  missingReceipt: 'Missing receipt',
+  reasonForMissingReceipt: 'Reason for missing original receipt',
+  paidTo: 'Paid to',
+  jobTitle: 'Your job title',
+  phoneExtension: 'Phone extension',
   travelJustifications: 'Travel justification(s)',
   additionalDocuments: 'Additional document(s)',
   documentName: 'Name',
@@ -64,6 +70,7 @@ export const fieldRules: Partial<Record<Field, string>> = {
   currency: 'A three-letter ISO 4217 code, other than CAD.',
   receipts: 'A PDF, a JPEG image or a PNG image.',
   bankStatements: 'A PDF, a JPEG image or a PNG image.',
+  jobTitle: 'E.g., Associate Prof, Research Engineer, PhD Student.',
   travelJustifications:
     'An invitation letter, a conference programme: a PDF, a JPEG image or a PNG image.',
   additionalDocuments: 'A PDF, a JPEG image or a PNG image.',
@@ -81,6 +88,15 @@ export function alreadyInReportWording(document: Document): string {
   return `Already in the report, as ${document.name}: chosen.`
 }
 
+/**
+ * What the Claimant is told before stating a missing receipt: what follows from it, and, stressed,
+ * what may come of it.
+ */
+export const missingReceiptNotice = {
+  text: "McMaster's official Missing Receipt Authorization Form will be written on your behalf. You will have to sign it in the final PDF.",
+  stressed: 'Accounts Payable may not accept it, and may return the report.',
+} as const
+
 /** What is said under the name of a document that a document before it already has. */
 export const nameTakenWording = 'Another document already has this name.'
 
@@ -89,6 +105,9 @@ const optionalFields: ReadonlySet<Field> = new Set<Field>([
   'businessTravel',
   'accountCode',
   'paidInAnotherCurrency',
+  'paidInCash',
+  'missingReceipt',
+  'phoneExtension',
   'additionalDocuments',
   'documentName',
   'domestic',
@@ -122,8 +141,8 @@ export function missingFieldsOf(expense: Expense): readonly Field[] {
     values.push(['foreignAmount', expense.foreignAmount], ['currency', expense.currency])
   }
   values.push(
-    ['receipts', expense.hasReceipt || undefined],
-    ['bankStatements', expense.hasBankStatement || undefined],
+    ['receipts', expense.hasReceipt || expense.missingReceipt !== undefined || undefined],
+    ['bankStatements', expense.hasBankStatement || expense.isPaidInCash || undefined],
   )
   return values
     .filter(([field, value]) => value === undefined && isRequired(field, expense))
@@ -272,22 +291,32 @@ const writtenReportFields = [
 
 /**
  * Every text the Claimant gave that the report document writes: the fields of the report, the
- * description of each expense, the reason of each meal not claimed of a day with a meal claimed,
- * and the name of each document.
+ * description of each expense and what its missing receipt states, the reason of each meal not
+ * claimed of a day with a meal claimed, and the name of each document.
  */
 function writtenTextsOf(report: Report): readonly WrittenText[] {
   return [
     ...writtenReportFields.map(
       (field): WrittenText => ({ step: 'Report', subject: '', field, value: report[field] }),
     ),
-    ...report.expensesByDate.map(
-      (expense): WrittenText => ({
-        step: 'Expenses',
-        subject: `${expenseWording(expense)}: `,
-        field: 'description',
-        value: expense.description,
-      }),
-    ),
+    ...report.expensesByDate.flatMap((expense) => {
+      const missing = expense.missingReceipt
+      const fields: readonly [Field, string | undefined][] = [
+        ['description', expense.description],
+        ['reasonForMissingReceipt', missing?.reason],
+        ['paidTo', missing?.paidTo],
+        ['jobTitle', missing?.jobTitle],
+        ['phoneExtension', missing?.phoneExtension],
+      ]
+      return fields.map(
+        ([field, value]): WrittenText => ({
+          step: 'Expenses',
+          subject: `${expenseWording(expense)}: `,
+          field,
+          value,
+        }),
+      )
+    }),
     ...report.claimedPerDiems.flatMap((perDiem) =>
       perDiem.mealsNotClaimed.map(
         (meal): WrittenText => ({

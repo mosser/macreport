@@ -578,6 +578,18 @@ td.size-action button {
   }
 }
 
+/* What is stated in place of a document field: Paid in cash, with what takes it back. */
+.stated {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.stated-wording {
+  font-weight: 600;
+}
+
 button.quiet {
   display: inline-block;
   margin: 0.5rem 1.25rem 0 0;
@@ -645,8 +657,9 @@ td.expense-actions button + button {
   margin: 0.5rem 0 0;
 }
 
-/* A confirmation, over the step, holding everything else until it is answered. */
-dialog.confirmation {
+/* A confirmation or a missing receipt, over the step, holding everything else until it is answered. */
+dialog.confirmation,
+dialog.missing-receipt {
   max-width: 32rem;
   padding: 1.25rem 1.5rem;
   border: 1px solid var(--color-accent);
@@ -655,11 +668,25 @@ dialog.confirmation {
   color: var(--color-text);
 }
 
-dialog.confirmation::backdrop {
+dialog.missing-receipt {
+  width: min(32rem, 100%);
+}
+
+dialog.missing-receipt .notice {
+  margin-top: 0;
+}
+
+dialog.missing-receipt textarea {
+  min-height: 5rem;
+}
+
+dialog.confirmation::backdrop,
+dialog.missing-receipt::backdrop {
   background: color-mix(in srgb, var(--mac-black) 50%, transparent);
 }
 
-dialog.confirmation .actions {
+dialog.confirmation .actions,
+dialog.missing-receipt .actions {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1rem;
