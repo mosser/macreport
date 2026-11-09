@@ -180,6 +180,11 @@ class FormFlow {
     return this.y - frameClosing - margin
   }
 
+  /** A height of gaps and lines, once made higher. */
+  higher(height: number): number {
+    return height * this.stretch
+  }
+
   /** A height of a gap or a line, once made higher, counted. */
   private stretched(height: number): number {
     this.stretchableHeight += height
@@ -463,15 +468,18 @@ function formFlowOf(
   const certificationHeight = wrapRuns(certification, textWidth).length * paragraphHeight
   const runsOn = (lines: readonly string[], height: number) =>
     height + (lines.length - 1) * lineHeight
+  // What is drawn below, once its gaps and its lines are made higher.
   flow.ensure(
     Math.min(
       flow.pageRoom,
-      partGap +
-        certificationHeight +
-        signatureHeight +
-        runsOn(printedName, fieldHeight) +
-        runsOn(title, fieldHeight) +
-        runsOn(extension.length > email.length ? extension : email, fieldHeight),
+      certificationHeight +
+        flow.higher(
+          partGap / 2 +
+            signatureHeight +
+            runsOn(printedName, fieldHeight) +
+            runsOn(title, fieldHeight) +
+            runsOn(extension.length > email.length ? extension : email, fieldHeight),
+        ),
     ),
   )
   flow.gap(partGap / 2)

@@ -1132,6 +1132,25 @@ describe('a missing receipt authorization', () => {
     expect(await lowest(stated({ reason: longer }))).toBeCloseTo(expected, 1)
   })
 
+  it('moves what is signed to another page only when it does not fit on the first', async () => {
+    const description = 'One\nTwo\nThree\nFour'
+    const reasonOf = (lines: number) =>
+      Array.from({ length: lines }, (_, index) => `Line${index}`).join('\n')
+    let lines = 5
+    let pdf = await written(stated({ reason: reasonOf(lines) }, description))
+    while (pdf.getPageCount() === 3 && lines < 60) {
+      lines += 1
+      pdf = await written(stated({ reason: reasonOf(lines) }, description))
+    }
+    expect(pdf.getPageCount()).toBe(4)
+    const yOn = (index: number, text: string) =>
+      placesOf(pdf, pdf.getPage(index)).find((place) => place.text === text)?.y ?? 0
+    // A text stands 3 points above its line; the frame closes 12 points under the last line.
+    const roomLeft = yOn(2, 'Four') - 3 - (54 + 12)
+    const signedHeight = 792 - 54 - (yOn(3, 'Email:') - 3)
+    expect(signedHeight).toBeGreaterThan(roomLeft)
+  })
+
   it('gives the phone extension a short line, and the email most of the line they share', async () => {
     const pdf = await written(stated())
     const places = placesOf(pdf, pdf.getPage(2))
