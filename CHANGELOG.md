@@ -6,6 +6,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-09
+
 ### Changed
 
 - **Back** is no longer offered while an expense is being entered or changed, or while the
