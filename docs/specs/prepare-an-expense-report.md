@@ -169,7 +169,7 @@ and every expense follows the rules above.
 ### 3. Additional documents
 
 The travel justifications of a business travel, then the additional
-documents, each with its name, its file name and its number of pages. The
+documents, each with its name and its file name. The
 Claimant adds and removes them, dropped on the zone of their kind or chosen
 from the computer.
 

@@ -26,8 +26,7 @@ paid in cash, stated and taken back, the first written as a missing receipt auth
 the locations and per diems of a business travel (meals per day, domestic or international);
 travel justifications and additional documents, every document named, saved as the report
 document (cover with Entered boxes, per diem rows and a total by currency, sections, stamps);
-a heavy document reduced on request (ADR 0011). Not yet built: the number of pages on the
-Additional documents step, and refusing a file.
+a heavy document reduced on request (ADR 0011). Not yet built: refusing a file.
 The
 specification and the ADRs describe the full system; code follows them.
 
