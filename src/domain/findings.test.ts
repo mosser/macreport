@@ -388,7 +388,7 @@ describe('findings of the Additional documents step', () => {
       'a.pdf is refused: it is a PDF without pages.',
     )
     expect(refusalWording('a.pdf', 'password')).toBe(
-      'a.pdf is refused: it is protected by a password.',
+      'a.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
     )
     expect(
       refusedAsAlreadyInReportWording(

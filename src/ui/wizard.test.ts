@@ -1250,10 +1250,12 @@ describe('a file refused', () => {
     failures.set('b.txt', new RefusedFile('b.txt', 'format'))
     failures.set('d.pdf', new RefusedFile('d.pdf', 'password'))
     give('additionalDocuments', ['a.pdf'], ['b.txt'], ['c.pdf'], ['d.pdf'])
-    await refused('d.pdf is refused: it is protected by a password.')
+    await refused(
+      'd.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
+    )
     expect(errors()).toEqual([
       'b.txt is refused: it is not a PDF, a JPEG image or a PNG image.',
-      'd.pdf is refused: it is protected by a password.',
+      'd.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
     ])
     expect(documentsOfStep()).toEqual(['a', 'c'])
   })

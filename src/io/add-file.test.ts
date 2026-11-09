@@ -64,7 +64,7 @@ describe('documentOf', () => {
     pdf.addPage()
     pdf.encrypt({ userPassword: 'secret', ownerPassword: 'secret' })
     await expect(documentOf(fileOf(await pdf.save(), 'a.pdf'), Kind.receipt)).rejects.toThrow(
-      'a.pdf is refused: it is protected by a password.',
+      'a.pdf is refused: it is protected in some way by a password, and cannot be used as is.',
     )
   })
 
